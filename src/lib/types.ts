@@ -1,9 +1,3 @@
-// src/lib/types.ts
-
-/**
- * Representa a estrutura de um único episódio,
- * alinhada com a tabela 'episodes' no banco de dados.
- */
 export type Episode = {
   id: string;
   title: string;
@@ -12,7 +6,7 @@ export type Episode = {
   file_name: string;
   category_id: string | null;
   subcategory_id: string | null;
-  tags: string[] | null;
+  // A propriedade 'tags' foi removida daqui.
   published_at: string;
   created_at: string;
   updated_at: string;
@@ -22,8 +16,7 @@ export type Episode = {
 };
 
 /**
- * Representa a estrutura de uma categoria,
- * alinhada com a tabela 'categories'.
+ * Representa a estrutura de uma categoria.
  */
 export type Category = {
   id: string;
@@ -32,14 +25,22 @@ export type Category = {
 };
 
 /**
- * Representa a estrutura de uma subcategoria,
- * alinhada com a tabela 'subcategories'.
+ * Representa a estrutura de uma subcategoria.
  */
 export type Subcategory = {
   id: string;
   name: string;
   category_id: string;
   created_at: string;
-  // Propriedade opcional para JOIN
   categories?: { name: string };
+};
+
+/**
+ * NOVO: Representa a estrutura de uma tag,
+ * alinhada com a nova tabela 'tags'.
+ */
+export type Tag = {
+  id: string;
+  name: string;
+  created_at: string;
 };

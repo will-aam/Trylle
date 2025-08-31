@@ -3,15 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Home,
   LogOut,
-  List,
-  PlusCircle,
-  Tag,
   ChevronLeft,
   ChevronRight,
-  Users2,
   Users,
+  Settings,
+  MonitorCog,
 } from "lucide-react";
 import {
   Tooltip,
@@ -72,9 +69,21 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
           <div className="flex-1 overflow-y-auto py-4">
             <nav className="grid items-start px-2 text-sm font-medium space-y-1">
               <SidebarLink
-                href="#"
+                href="/admin"
+                icon={<MonitorCog className="h-4 w-4" />}
+                label={"Painel"}
+                isCollapsed={isCollapsed}
+              />
+              <SidebarLink
+                href="/admin/config"
                 icon={<Users className="h-4 w-4" />}
                 label="Gerenciador de usuários"
+                isCollapsed={isCollapsed}
+              />
+              <SidebarLink
+                href="/admin/config"
+                icon={<Settings className="h-4 w-4" />}
+                label="Configurações"
                 isCollapsed={isCollapsed}
               />
             </nav>
@@ -85,7 +94,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
               <div className="flex flex-col gap-2">
                 <Button
                   onClick={handleLogout}
-                  variant="outline"
+                  variant="destructive"
                   size="icon"
                   className="w-full"
                 >
@@ -95,7 +104,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
             ) : (
               <Button
                 onClick={handleLogout}
-                variant="outline"
+                variant="destructive"
                 className="w-full justify-start"
               >
                 <LogOut className="h-4 w-4 mr-2" />

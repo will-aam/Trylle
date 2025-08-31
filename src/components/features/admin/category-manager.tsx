@@ -1,497 +1,445 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Edit, Trash2, ChevronDown, ChevronRight } from "lucide-react";
-import { Button } from "../../ui/button";
-import { Input } from "../../ui/input";
-import { Label } from "../../ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
+import { useState, useEffect, useCallback } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../ui/dialog";
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/src/components/ui/card";
+import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/src/components/ui/tooltip";
+import { createClient } from "@/src/lib/supabase-client";
+import { Category, Subcategory, Tag } from "@/src/lib/types"; // Importa o novo tipo Tag
 import { useToast } from "@/src/hooks/use-toast";
+import { Plus, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/src/components/ui/alert-dialog";
+import { Badge } from "@/src/components/ui/badge";
 
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  episodeCount: number;
-}
-
-interface Subcategory {
-  id: string;
-  name: string;
-  category_id: string;
-  description?: string;
-  episodeCount?: number;
-}
-
-interface ExpandedCategories {
-  [key: string]: boolean;
-}
-
-const mockCategories: Category[] = [
-  {
-    id: "1",
-    name: "Tecnologia",
-    description: "IA, programação, inovação",
-    episodeCount: 245,
-  },
-  {
-    id: "2",
-    name: "Educação",
-    description: "Aprendizado, métodos, ensino",
-    episodeCount: 189,
-  },
-  {
-    id: "3",
-    name: "Saúde",
-    description: "Bem-estar, medicina, fitness",
-    episodeCount: 156,
-  },
-];
-
-const mockSubcategories: Subcategory[] = [
-  {
-    id: "10",
-    name: "Entrevistas",
-    category_id: "1",
-    description: "Conversas com especialistas",
-    episodeCount: 45,
-  },
-  {
-    id: "11",
-    name: "Tecnologia",
-    category_id: "1",
-    description: "Inovações tecnológicas",
-    episodeCount: 120,
-  },
-  {
-    id: "12",
-    name: "Programação",
-    category_id: "1",
-    description: "Desenvolvimento de software",
-    episodeCount: 80,
-  },
-  {
-    id: "20",
-    name: "Online",
-    category_id: "2",
-    description: "Educação digital",
-    episodeCount: 95,
-  },
-  {
-    id: "21",
-    name: "Presencial",
-    category_id: "2",
-    description: "Educação tradicional",
-    episodeCount: 94,
-  },
-  {
-    id: "30",
-    name: "Fitness",
-    category_id: "3",
-    description: "Exercícios e bem-estar",
-    episodeCount: 78,
-  },
-  {
-    id: "31",
-    name: "Nutrição",
-    category_id: "3",
-    description: "Alimentação saudável",
-    episodeCount: 78,
-  },
-];
-
+// O nome do componente é alterado para refletir sua nova função
 export function CategoryManager() {
-  const [categories, setCategories] = useState<Category[]>(mockCategories);
-  const [subcategories, setSubcategories] =
-    useState<Subcategory[]>(mockSubcategories);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSubDialogOpen, setIsSubDialogOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [editingSubcategory, setEditingSubcategory] =
-    useState<Subcategory | null>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
-  const [expandedCategories, setExpandedCategories] =
-    useState<ExpandedCategories>({});
+  const supabase = createClient();
   const { toast } = useToast();
 
-  const toggleCategory = (categoryId: string) => {
-    setExpandedCategories((prev) => ({
-      ...prev,
-      [categoryId]: !prev[categoryId],
-    }));
-  };
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]); // Estado para as tags
+  const [loading, setLoading] = useState(true);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newTagName, setNewTagName] = useState(""); // Estado para a nova tag
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const [newSubcategoryNames, setNewSubcategoryNames] = useState<{
+    [key: string]: string;
+  }>({});
 
-    if (editingCategory) {
-      // Update existing category
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    // Busca todos os dados em paralelo para mais eficiência
+    const [catRes, subRes, tagRes] = await Promise.all([
+      supabase.from("categories").select("*").order("name"),
+      supabase.from("subcategories").select("*").order("name"),
+      supabase.from("tags").select("*").order("name"),
+    ]);
+
+    if (catRes.error || subRes.error || tagRes.error) {
+      console.error(
+        "Erro ao buscar dados:",
+        catRes.error || subRes.error || tagRes.error
+      );
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar a taxonomia.",
+        variant: "destructive",
+      });
+    } else {
+      setCategories(catRes.data || []);
+      setSubcategories(subRes.data || []);
+      setTags(tagRes.data || []);
+    }
+    setLoading(false);
+  }, [supabase, toast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // --- Funções de Manipulação ---
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    const { data, error } = await supabase
+      .from("categories")
+      .insert([{ name: newCategoryName.trim() }])
+      .select()
+      .single();
+
+    if (error) {
+      toast({
+        title: "Erro ao criar categoria",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
       setCategories(
-        categories.map((cat) =>
-          cat.id === editingCategory.id ? { ...cat, name, description } : cat
-        )
+        [...categories, data].sort((a, b) => a.name.localeCompare(b.name))
       );
-      toast({
-        title: "Categoria atualizada!",
-        description: "A categoria foi atualizada com sucesso.",
-      });
-    } else {
-      // Add new category
-      const newCategory: Category = {
-        id: Date.now().toString(),
-        name,
-        description,
-        episodeCount: 0,
-      };
-      setCategories([...categories, newCategory]);
-      toast({
-        title: "Categoria criada!",
-        description: "A nova categoria foi adicionada.",
-      });
+      setNewCategoryName("");
+      toast({ title: "Sucesso!", description: "Categoria criada." });
     }
-
-    setName("");
-    setDescription("");
-    setEditingCategory(null);
-    setIsDialogOpen(false);
   };
 
-  const handleSubcategorySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddSubcategory = async (categoryId: string) => {
+    const subcategoryName = newSubcategoryNames[categoryId];
+    if (!subcategoryName || !subcategoryName.trim()) return;
+    const { data, error } = await supabase
+      .from("subcategories")
+      .insert([{ name: subcategoryName.trim(), category_id: categoryId }])
+      .select()
+      .single();
 
-    if (editingSubcategory) {
-      // Update existing subcategory
+    if (error) {
+      toast({
+        title: "Erro ao criar subcategoria",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
       setSubcategories(
-        subcategories.map((sub) =>
-          sub.id === editingSubcategory.id
-            ? { ...sub, name, description, category_id: selectedCategoryId }
-            : sub
-        )
+        [...subcategories, data].sort((a, b) => a.name.localeCompare(b.name))
       );
+      setNewSubcategoryNames({ ...newSubcategoryNames, [categoryId]: "" });
+      toast({ title: "Sucesso!", description: "Subcategoria criada." });
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    const { error: subError } = await supabase
+      .from("subcategories")
+      .delete()
+      .eq("category_id", categoryId);
+    if (subError) {
       toast({
-        title: "Subcategoria atualizada!",
-        description: "A subcategoria foi atualizada com sucesso.",
+        title: "Erro ao excluir subcategorias",
+        description: subError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    const { error: catError } = await supabase
+      .from("categories")
+      .delete()
+      .eq("id", categoryId);
+    if (catError) {
+      toast({
+        title: "Erro ao excluir categoria",
+        description: catError.message,
+        variant: "destructive",
       });
     } else {
-      // Add new subcategory
-      const newSubcategory: Subcategory = {
-        id: Date.now().toString(),
-        name,
-        description: description || "",
-        category_id: selectedCategoryId,
-        episodeCount: 0,
-      };
-      setSubcategories([...subcategories, newSubcategory]);
+      fetchData();
       toast({
-        title: "Subcategoria criada!",
-        description: "A nova subcategoria foi adicionada.",
+        title: "Sucesso!",
+        description: "Categoria e suas subcategorias foram excluídas.",
       });
     }
-
-    setName("");
-    setDescription("");
-    setSelectedCategoryId("");
-    setEditingSubcategory(null);
-    setIsSubDialogOpen(false);
   };
 
-  const handleEdit = (category: Category) => {
-    setEditingCategory(category);
-    setName(category.name);
-    setDescription(category.description);
-    setIsDialogOpen(true);
+  const handleDeleteSubcategory = async (subcategoryId: string) => {
+    const { error } = await supabase
+      .from("subcategories")
+      .delete()
+      .eq("id", subcategoryId);
+    if (error) {
+      toast({
+        title: "Erro ao excluir subcategoria",
+        description: "Verifique se não há episódios associados a ela.",
+        variant: "destructive",
+      });
+    } else {
+      setSubcategories(subcategories.filter((s) => s.id !== subcategoryId));
+      toast({ title: "Sucesso!", description: "Subcategoria excluída." });
+    }
   };
 
-  const handleEditSubcategory = (subcategory: Subcategory) => {
-    setEditingSubcategory(subcategory);
-    setName(subcategory.name);
-    setDescription(subcategory.description || "");
-    setSelectedCategoryId(subcategory.category_id);
-    setIsSubDialogOpen(true);
+  const handleAddTag = async () => {
+    if (!newTagName.trim()) return;
+    const { data, error } = await supabase
+      .from("tags")
+      .insert([{ name: newTagName.trim().toLowerCase() }])
+      .select()
+      .single();
+
+    if (error) {
+      toast({
+        title: "Erro ao criar tag",
+        description: "Talvez essa tag já exista.",
+        variant: "destructive",
+      });
+    } else {
+      setTags([...tags, data].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewTagName("");
+      toast({ title: "Sucesso!", description: "Tag criada." });
+    }
   };
 
-  const handleDelete = (categoryId: string) => {
-    // Remove category and its subcategories
-    setCategories(categories.filter((cat) => cat.id !== categoryId));
-    setSubcategories(
-      subcategories.filter((sub) => sub.category_id !== categoryId)
-    );
-    toast({
-      title: "Categoria removida!",
-      description: "A categoria e suas subcategorias foram removidas.",
-    });
+  const handleDeleteTag = async (tagId: string) => {
+    const { error } = await supabase.from("tags").delete().eq("id", tagId);
+    if (error) {
+      toast({
+        title: "Erro ao excluir tag",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setTags(tags.filter((t) => t.id !== tagId));
+      toast({ title: "Sucesso!", description: "Tag excluída." });
+    }
   };
 
-  const handleDeleteSubcategory = (subcategoryId: string) => {
-    setSubcategories(subcategories.filter((sub) => sub.id !== subcategoryId));
-    toast({
-      title: "Subcategoria removida!",
-      description: "A subcategoria foi removida com sucesso.",
-    });
-  };
-
-  const getSubcategoriesForCategory = (categoryId: string) => {
-    return subcategories.filter((sub) => sub.category_id === categoryId);
-  };
+  if (loading) {
+    return <p>Carregando taxonomia...</p>;
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle>Gerenciar Taxonomia</CardTitle>
-          <div className="flex space-x-2">
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  onClick={() => {
-                    setEditingCategory(null);
-                    setName("");
-                    setDescription("");
-                  }}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nova Categoria
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingCategory ? "Editar Categoria" : "Nova Categoria"}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Nome da Categoria</Label>
-                    <Input
-                      id="name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Digite o nome..."
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Descrição</Label>
-                    <Input
-                      id="description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Digite a descrição..."
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full">
-                    {editingCategory ? "Atualizar" : "Criar"} Categoria
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isSubDialogOpen} onOpenChange={setIsSubDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setEditingSubcategory(null);
-                    setName("");
-                    setDescription("");
-                    setSelectedCategoryId("");
-                  }}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nova Subcategoria
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingSubcategory
-                      ? "Editar Subcategoria"
-                      : "Nova Subcategoria"}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubcategorySubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="subcategory-name">
-                      Nome da Subcategoria
-                    </Label>
-                    <Input
-                      id="subcategory-name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Digite o nome..."
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="subcategory-description">Descrição</Label>
-                    <Input
-                      id="subcategory-description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Digite a descrição..."
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="category-select">Categoria Pai</Label>
-                    <select
-                      id="category-select"
-                      value={selectedCategoryId}
-                      onChange={(e) => setSelectedCategoryId(e.target.value)}
-                      className="w-full p-2 border rounded-md"
-                      required
-                    >
-                      <option value="">Selecione uma categoria</option>
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button type="submit" className="w-full">
-                    {editingSubcategory ? "Atualizar" : "Criar"} Subcategoria
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {categories.map((category) => (
-            <div key={category.id} className="border rounded-md p-4">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => toggleCategory(category.id)}
-                    className="h-6 w-6"
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <div className="lg:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Categorias e Subcategorias</CardTitle>
+            <CardDescription>
+              Adicione, visualize e remova categorias e suas subcategorias.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex space-x-2 border p-4 rounded-lg">
+              <Input
+                placeholder="Nome da nova categoria principal"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+              />
+              <Button onClick={handleAddCategory}>
+                <Plus className="mr-2 h-4 w-4" /> Adicionar Categoria
+              </Button>
+            </div>
+            <div className="border rounded-md p-4 space-y-3 max-h-[60vh] overflow-y-auto">
+              {categories.length > 0 ? (
+                categories.map((category) => (
+                  <div
+                    key={category.id}
+                    className="p-2 border rounded-md bg-card"
                   >
-                    {expandedCategories[category.id] ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <h3 className="font-semibold text-lg">{category.name}</h3>
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(category)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(category.id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <p className="text-sm text-muted-foreground ml-8 mb-2">
-                {category.description}
-              </p>
-              <p className="text-xs font-medium ml-8 mb-3">
-                {category.episodeCount} episódios
-              </p>
-
-              {expandedCategories[category.id] && (
-                <div className="pl-8 mt-3 space-y-3 border-t pt-3">
-                  {getSubcategoriesForCategory(category.id).map(
-                    (subcategory) => (
-                      <div
-                        key={subcategory.id}
-                        className="flex justify-between items-center p-2 bg-muted/50 rounded-md"
-                      >
-                        <div>
-                          <span className="font-medium">
-                            - {subcategory.name}
-                          </span>
-                          {subcategory.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {subcategory.description}
-                            </p>
-                          )}
-                          <p className="text-xs font-medium">
-                            {subcategory.episodeCount || 0} episódios
-                          </p>
-                        </div>
-                        <div className="flex space-x-1">
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-semibold text-lg">{category.name}</h3>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleEditSubcategory(subcategory)}
-                            className="h-6 w-6"
+                            className="text-red-500 hover:text-red-700"
                           >
-                            <Edit className="h-3 w-3" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              handleDeleteSubcategory(subcategory.id)
-                            }
-                            className="h-6 w-6 text-red-600 hover:text-red-700"
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Você tem certeza?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta ação não pode ser desfeita. Isso excluirá
+                              permanentemente a categoria "{category.name}" e
+                              TODAS as suas subcategorias.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteCategory(category.id)}
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                    <div className="pl-4 mt-2 space-y-2">
+                      {subcategories
+                        .filter((sub) => sub.category_id === category.id)
+                        .map((sub) => (
+                          <div
+                            key={sub.id}
+                            className="flex justify-between items-center text-sm group"
                           >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+                            <span className="text-muted-foreground">
+                              - {sub.name}
+                            </span>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Você tem certeza?
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta ação não pode ser desfeita. Isso
+                                    excluirá permanentemente a subcategoria "
+                                    {sub.name}".
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>
+                                    Cancelar
+                                  </AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() =>
+                                      handleDeleteSubcategory(sub.id)
+                                    }
+                                  >
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        ))}
+                      <div className="flex space-x-2 pt-2">
+                        <Input
+                          placeholder="Nova subcategoria"
+                          className="h-8"
+                          value={newSubcategoryNames[category.id] || ""}
+                          onChange={(e) =>
+                            setNewSubcategoryNames({
+                              ...newSubcategoryNames,
+                              [category.id]: e.target.value,
+                            })
+                          }
+                          onKeyDown={(e) =>
+                            e.key === "Enter" &&
+                            handleAddSubcategory(category.id)
+                          }
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddSubcategory(category.id)}
+                        >
+                          <Plus className="mr-1 h-4 w-4" /> Adicionar
+                        </Button>
                       </div>
-                    )
-                  )}
-
-                  <div className="flex space-x-2 pt-2">
-                    <Input
-                      placeholder="Nova subcategoria"
-                      className="flex-1"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                    <Button
-                      onClick={() => {
-                        if (name.trim()) {
-                          const newSubcategory: Subcategory = {
-                            id: Date.now().toString(),
-                            name: name.trim(),
-                            category_id: category.id,
-                            episodeCount: 0,
-                          };
-                          setSubcategories([...subcategories, newSubcategory]);
-                          setName("");
-                          toast({
-                            title: "Subcategoria criada!",
-                            description: "A nova subcategoria foi adicionada.",
-                          });
-                        }
-                      }}
-                    >
-                      Adicionar
-                    </Button>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    Nenhuma categoria encontrada. Adicione uma acima para
+                    começar.
+                  </p>
                 </div>
               )}
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="lg:col-span-1">
+        <Card>
+          <CardHeader>
+            <CardTitle>Tags</CardTitle>
+            <CardDescription>
+              Gerencie todas as tags do seu site.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex space-x-2">
+              <Input
+                placeholder="Nome da nova tag"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+              />
+              <Button onClick={handleAddTag}>
+                <Plus className="mr-2 h-4 w-4" /> Adicionar
+              </Button>
+            </div>
+            <div className="border rounded-md p-4 space-y-2 max-h-[60vh] overflow-y-auto">
+              {tags.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <AlertDialog key={tag.id}>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <AlertDialogTrigger asChild>
+                              <Badge
+                                variant="secondary"
+                                className="cursor-pointer hover:bg-destructive/80"
+                              >
+                                {tag.name}
+                              </Badge>
+                            </AlertDialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Clique para excluir a tag</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Excluir a tag "{tag.name}"?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. A tag será removida
+                            de todos os episódios que a utilizam.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteTag(tag.id)}
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma tag criada.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }

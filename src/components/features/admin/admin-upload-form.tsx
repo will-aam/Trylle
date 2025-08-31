@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -20,20 +20,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/src/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/src/components/ui/popover";
+import { Badge } from "@/src/components/ui/badge";
 import { useToast } from "@/src/hooks/use-toast";
-import { Upload, Plus } from "lucide-react";
+import { Upload, X, ChevronsUpDown } from "lucide-react";
 import { createClient } from "@/src/lib/supabase-client";
-import { Category, Subcategory } from "@/src/lib/types";
+import { Category, Subcategory, Tag } from "@/src/lib/types";
+import { cn } from "@/src/lib/utils";
 
 export function UploadForm() {
   const supabase = createClient();
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [tagInputValue, setTagInputValue] = useState("");
+  const [popoverOpen, setPopoverOpen] = useState(false); // Estado para controlar o Popover
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [newCategory, setNewCategory] = useState("");
-  const [showNewCategory, setShowNewCategory] = useState(false);
+
   const { toast } = useToast();
   const router = useRouter();
 
@@ -42,31 +60,30 @@ export function UploadForm() {
     description: "",
     categoryId: "",
     subcategoryId: "",
-    tags: "",
     publishedAt: new Date().toISOString().split("T")[0],
   });
 
+  // Busca inicial de categorias e tags
   useEffect(() => {
-    const loadCategories = async () => {
-      const { data, error } = await supabase
+    const loadInitialData = async () => {
+      const { data: catData, error: catError } = await supabase
         .from("categories")
         .select("*")
         .order("name");
+      if (catError) console.error("Erro ao carregar categorias:", catError);
+      else setCategories(catData || []);
 
-      if (error) {
-        console.error("Erro ao carregar categorias:", error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar as categorias.",
-          variant: "destructive",
-        });
-      } else {
-        setCategories(data || []);
-      }
+      const { data: tagData, error: tagError } = await supabase
+        .from("tags")
+        .select("*")
+        .order("name");
+      if (tagError) console.error("Erro ao carregar tags:", tagError);
+      else setAllTags(tagData || []);
     };
-    loadCategories();
-  }, [supabase, toast]);
+    loadInitialData();
+  }, [supabase]);
 
+  // Busca subcategorias quando uma categoria é selecionada
   useEffect(() => {
     if (selectedCategory) {
       const loadSubcategories = async () => {
@@ -75,50 +92,14 @@ export function UploadForm() {
           .select("*")
           .eq("category_id", selectedCategory)
           .order("name");
-
-        if (error) {
-          console.error("Erro ao carregar subcategorias:", error);
-          toast({
-            title: "Erro",
-            description: "Não foi possível carregar as subcategorias.",
-            variant: "destructive",
-          });
-        } else {
-          setSubcategories(data || []);
-        }
+        if (error) console.error("Erro ao carregar subcategorias:", error);
+        else setSubcategories(data || []);
       };
       loadSubcategories();
     } else {
       setSubcategories([]);
     }
-  }, [selectedCategory, supabase, toast]);
-
-  const createCategory = async () => {
-    if (!newCategory.trim()) return;
-    const { data, error } = await supabase
-      .from("categories")
-      .insert([{ name: newCategory.trim() }])
-      .select()
-      .single();
-
-    if (error) {
-      toast({
-        title: "Erro ao criar categoria",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      setCategories([...categories, data]);
-      setFormData({ ...formData, categoryId: data.id });
-      setSelectedCategory(data.id);
-      setNewCategory("");
-      setShowNewCategory(false);
-      toast({
-        title: "Categoria criada!",
-        description: "Nova categoria adicionada com sucesso.",
-      });
-    }
-  };
+  }, [selectedCategory, supabase]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -139,96 +120,138 @@ export function UploadForm() {
     }
   };
 
+  const handleTagSelect = (tag: Tag) => {
+    if (!selectedTags.some((t) => t.id === tag.id)) {
+      setSelectedTags([...selectedTags, tag]);
+    }
+    setPopoverOpen(false);
+  };
+
+  const handleTagRemove = (tagId: string) => {
+    setSelectedTags(selectedTags.filter((t) => t.id !== tagId));
+  };
+
+  const handleCreateTag = async (tagName: string) => {
+    const name = tagName.trim().toLowerCase();
+    if (
+      !name ||
+      selectedTags.some((t) => t.name === name) ||
+      allTags.some((t) => t.name === name)
+    ) {
+      setPopoverOpen(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("tags")
+      .insert([{ name }])
+      .select()
+      .single();
+    if (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar a tag.",
+        variant: "destructive",
+      });
+    } else {
+      setAllTags((prevTags) =>
+        [...prevTags, data].sort((a, b) => a.name.localeCompare(b.name))
+      );
+      handleTagSelect(data);
+    }
+    setPopoverOpen(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!audioFile || !formData.title.trim()) {
       toast({
         title: "Campos obrigatórios",
-        description:
-          "Por favor, selecione um arquivo de áudio e preencha o título.",
+        description: "Áudio e Título são necessários.",
         variant: "destructive",
       });
       return;
     }
-
     setIsLoading(true);
 
     try {
-      // 1. Enviar o arquivo para a nossa API de upload segura
       const body = new FormData();
       body.append("file", audioFile);
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body,
-      });
-
+      const response = await fetch("/api/upload", { method: "POST", body });
       const { publicUrl, error: uploadError } = await response.json();
+      if (!response.ok || uploadError)
+        throw new Error(uploadError || "Falha no upload do arquivo.");
 
-      if (!response.ok || uploadError) {
-        throw new Error(uploadError || "Falha ao fazer upload do arquivo.");
-      }
-
-      // 2. Preparar e inserir os dados do episódio no Supabase
-      const tagsArray = formData.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter((tag) => tag);
-
-      const { error: insertError } = await supabase.from("episodes").insert([
-        {
-          title: formData.title.trim(),
-          description: formData.description.trim() || null,
-          audio_url: publicUrl, // A nova URL do Cloudflare R2!
-          file_name: audioFile.name,
-          category_id: formData.categoryId || null,
-          subcategory_id: formData.subcategoryId || null,
-          tags: tagsArray.length > 0 ? tagsArray : null,
-          published_at: new Date(formData.publishedAt).toISOString(),
-        },
-      ]);
+      const { data: episodeData, error: insertError } = await supabase
+        .from("episodes")
+        .insert([
+          {
+            title: formData.title.trim(),
+            description: formData.description.trim() || null,
+            audio_url: publicUrl,
+            file_name: audioFile.name,
+            category_id: formData.categoryId || null,
+            subcategory_id: formData.subcategoryId || null,
+            published_at: new Date(formData.publishedAt).toISOString(),
+          },
+        ])
+        .select()
+        .single();
 
       if (insertError) throw insertError;
+
+      if (selectedTags.length > 0) {
+        const episodeTags = selectedTags.map((tag) => ({
+          episode_id: episodeData.id,
+          tag_id: tag.id,
+        }));
+        const { error: tagsError } = await supabase
+          .from("episode_tags")
+          .insert(episodeTags);
+        if (tagsError) {
+          toast({
+            title: "Aviso",
+            description: `Episódio criado, mas houve um erro ao associar as tags: ${tagsError.message}`,
+            variant: "destructive",
+          });
+        }
+      }
 
       toast({
         title: "Sucesso!",
         description: "Episódio enviado com sucesso!",
       });
-
-      // Limpa o formulário
       setFormData({
         title: "",
         description: "",
         categoryId: "",
         subcategoryId: "",
-        tags: "",
         publishedAt: new Date().toISOString().split("T")[0],
       });
       setAudioFile(null);
+      setSelectedTags([]);
       setSelectedCategory("");
     } catch (error: any) {
       console.error("Erro no processo de upload:", error);
       toast({
         title: "Erro no upload",
-        description: error.message || "Ocorreu um erro ao enviar o episódio.",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
-  // até aqui
+
   return (
     <form onSubmit={handleSubmit} className="h-full flex flex-col">
       <Card className="flex-1 flex flex-col overflow-hidden">
-        <CardHeader>
+        <CardHeader className="border-b">
           <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Novo Episódio
+            <Upload className="h-5 w-5" /> Novo Episódio
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto p-6">
+        <CardContent className="overflow-y-auto p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-6">
               <div>
@@ -273,105 +296,133 @@ export function UploadForm() {
                   </p>
                 )}
               </div>
-              <div>
-                <div className="flex items-center justify-between">
-                  <Label>Categoria</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowNewCategory(!showNewCategory)}
-                  >
-                    <Plus className="h-4 w-4 mr-1" /> Nova
-                  </Button>
-                </div>
-                {showNewCategory && (
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      value={newCategory}
-                      onChange={(e) => setNewCategory(e.target.value)}
-                      placeholder="Nome da nova categoria"
-                    />
-                    <Button type="button" onClick={createCategory}>
-                      Criar
-                    </Button>
-                  </div>
-                )}
-                <Select
-                  value={formData.categoryId}
-                  onValueChange={(value) => {
-                    setFormData({
-                      ...formData,
-                      categoryId: value,
-                      subcategoryId: "",
-                    });
-                    setSelectedCategory(value);
-                  }}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Subcategoria</Label>
-                <Select
-                  value={formData.subcategoryId}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, subcategoryId: value })
-                  }
-                  disabled={!selectedCategory || subcategories.length === 0}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue
-                      placeholder={
-                        !selectedCategory
-                          ? "Selecione uma categoria primeiro"
-                          : "Selecione uma subcategoria"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subcategories.map((subcategory) => (
-                      <SelectItem key={subcategory.id} value={subcategory.id}>
-                        {subcategory.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="tags">Tags</Label>
-                  <Input
-                    id="tags"
-                    value={formData.tags}
-                    onChange={(e) =>
-                      setFormData({ ...formData, tags: e.target.value })
-                    }
-                    placeholder="tech, podcast"
-                    className="mt-1"
-                  />
+                  <Label>Categoria</Label>
+                  <Select
+                    value={formData.categoryId}
+                    onValueChange={(value) => {
+                      setFormData({
+                        ...formData,
+                        categoryId: value,
+                        subcategoryId: "",
+                      });
+                      setSelectedCategory(value);
+                    }}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                  <Label htmlFor="published-at">Data de Publicação</Label>
-                  <Input
-                    id="published-at"
-                    type="date"
-                    value={formData.publishedAt}
-                    onChange={(e) =>
-                      setFormData({ ...formData, publishedAt: e.target.value })
+                  <Label>Subcategoria</Label>
+                  <Select
+                    value={formData.subcategoryId}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, subcategoryId: value })
                     }
-                    className="mt-1"
-                  />
+                    disabled={!selectedCategory || subcategories.length === 0}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue
+                        placeholder={
+                          !selectedCategory ? "Indisponível" : "Selecione"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subcategories.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+              </div>
+              <div>
+                <Label>Tags</Label>
+                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={popoverOpen}
+                      className="w-full justify-between mt-1 font-normal"
+                    >
+                      <span className="truncate">
+                        {selectedTags.length > 0
+                          ? selectedTags.map((t) => t.name).join(", ")
+                          : "Selecione ou crie tags..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput
+                        placeholder="Buscar ou criar tag..."
+                        onValueChange={setTagInputValue}
+                      />
+                      <CommandList>
+                        <CommandEmpty
+                          onSelect={() => handleCreateTag(tagInputValue)}
+                        >
+                          Criar nova tag: "{tagInputValue}"
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {allTags
+                            .filter(
+                              (tag) =>
+                                !selectedTags.some((s) => s.id === tag.id)
+                            )
+                            .map((tag) => (
+                              <CommandItem
+                                key={tag.id}
+                                onSelect={() => handleTagSelect(tag)}
+                              >
+                                {tag.name}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedTags.map((tag) => (
+                    <Badge key={tag.id} variant="secondary">
+                      {tag.name}
+                      <button
+                        type="button"
+                        onClick={() => handleTagRemove(tag.id)}
+                        className="ml-2 rounded-full outline-none hover:bg-destructive/80 p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="published-at">Data de Publicação</Label>
+                <Input
+                  id="published-at"
+                  type="date"
+                  value={formData.publishedAt}
+                  onChange={(e) =>
+                    setFormData({ ...formData, publishedAt: e.target.value })
+                  }
+                  className="mt-1"
+                />
               </div>
             </div>
           </div>
