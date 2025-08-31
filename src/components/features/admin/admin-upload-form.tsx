@@ -22,30 +22,18 @@ import {
 } from "../../ui/select";
 import { useToast } from "@/src/hooks/use-toast";
 import { Upload, Plus } from "lucide-react";
-
-type Category = { id: string; name: string; created_at: string };
-type Subcategory = { id: string; name: string; category_id: string };
+import { createClient } from "@/src/lib/supabase-client";
+import { Category, Subcategory } from "@/src/lib/types";
 
 export function UploadForm() {
+  const supabase = createClient();
   const [isLoading, setIsLoading] = useState(false);
-  const [categories, setCategories] = useState([
-    { id: "1", name: "Podcast", created_at: "" },
-    { id: "2", name: "Música", created_at: "" },
-    { id: "3", name: "Educacional", created_at: "" },
-  ]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-
-  const allMockSubcategories: Subcategory[] = [
-    { id: "10", name: "Entrevistas", category_id: "1" },
-    { id: "11", name: "Tecnologia", category_id: "1" },
-    { id: "20", name: "Rock", category_id: "2" },
-  ];
-
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [newCategory, setNewCategory] = useState("");
   const [showNewCategory, setShowNewCategory] = useState(false);
-
   const { toast } = useToast();
   const router = useRouter();
 
@@ -59,41 +47,75 @@ export function UploadForm() {
   });
 
   useEffect(() => {
+    const loadCategories = async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name");
+
+      if (error) {
+        console.error("Erro ao carregar categorias:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar as categorias.",
+          variant: "destructive",
+        });
+      } else {
+        setCategories(data || []);
+      }
+    };
+    loadCategories();
+  }, [supabase, toast]);
+
+  useEffect(() => {
     if (selectedCategory) {
-      const filteredSubcategories = allMockSubcategories.filter(
-        (sub) => sub.category_id === selectedCategory
-      );
-      setSubcategories(filteredSubcategories);
+      const loadSubcategories = async () => {
+        const { data, error } = await supabase
+          .from("subcategories")
+          .select("*")
+          .eq("category_id", selectedCategory)
+          .order("name");
+
+        if (error) {
+          console.error("Erro ao carregar subcategorias:", error);
+          toast({
+            title: "Erro",
+            description: "Não foi possível carregar as subcategorias.",
+            variant: "destructive",
+          });
+        } else {
+          setSubcategories(data || []);
+        }
+      };
+      loadSubcategories();
     } else {
       setSubcategories([]);
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, supabase, toast]);
 
   const createCategory = async () => {
     if (!newCategory.trim()) return;
+    const { data, error } = await supabase
+      .from("categories")
+      .insert([{ name: newCategory.trim() }])
+      .select()
+      .single();
 
-    try {
-      const newCat = {
-        id: Math.random().toString(36).substring(7),
-        name: newCategory.trim(),
-        created_at: new Date().toISOString(),
-      };
-
-      setCategories([...categories, newCat]);
-      setFormData({ ...formData, categoryId: newCat.id });
-      setSelectedCategory(newCat.id);
+    if (error) {
+      toast({
+        title: "Erro ao criar categoria",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setCategories([...categories, data]);
+      setFormData({ ...formData, categoryId: data.id });
+      setSelectedCategory(data.id);
       setNewCategory("");
       setShowNewCategory(false);
-
       toast({
-        title: "Categoria criada (Simulação)",
-        description: "Nova categoria adicionada com sucesso!",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro (Simulação)",
-        description: error.message || "Erro ao criar categoria",
-        variant: "destructive",
+        title: "Categoria criada!",
+        description: "Nova categoria adicionada com sucesso.",
       });
     }
   };
@@ -109,9 +131,7 @@ export function UploadForm() {
         });
         return;
       }
-
       setAudioFile(file);
-
       if (!formData.title) {
         const fileName = file.name.replace(/\.[^/.]+$/, "");
         setFormData({ ...formData, title: fileName });
@@ -121,18 +141,75 @@ export function UploadForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Envio em simulação!",
-      description: "O formulário seria enviado para o back-end agora.",
-    });
-    console.log("Form Data Submitted:", {
-      ...formData,
-      audioFile: audioFile?.name,
-    });
+    if (!audioFile || !formData.title.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description:
+          "Por favor, selecione um arquivo de áudio e preencha o título.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const fileExt = audioFile.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2)}.${fileExt}`;
+      const filePath = `audios/${fileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from("audio-files")
+        .upload(filePath, audioFile);
+      if (uploadError) throw uploadError;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("audio-files").getPublicUrl(filePath);
+      const tagsArray = formData.tags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag);
+      const { error: insertError } = await supabase.from("episodes").insert([
+        {
+          title: formData.title.trim(),
+          description: formData.description.trim() || null,
+          audio_url: publicUrl,
+          file_name: audioFile.name,
+          category_id: formData.categoryId || null,
+          subcategory_id: formData.subcategoryId || null,
+          tags: tagsArray.length > 0 ? tagsArray : null,
+          published_at: new Date(formData.publishedAt).toISOString(),
+        },
+      ]);
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Sucesso!",
+        description: "Episódio enviado com sucesso!",
+      });
+      setFormData({
+        title: "",
+        description: "",
+        categoryId: "",
+        subcategoryId: "",
+        tags: "",
+        publishedAt: new Date().toISOString().split("T")[0],
+      });
+      setAudioFile(null);
+      setSelectedCategory("");
+    } catch (error: any) {
+      console.error("Erro no upload:", error);
+      toast({
+        title: "Erro no upload",
+        description: error.message || "Ocorreu um erro ao enviar o episódio.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    // O Card agora é um container flexível que ocupa a altura disponível
     <form onSubmit={handleSubmit} className="h-full flex flex-col">
       <Card className="flex-1 flex flex-col overflow-hidden">
         <CardHeader>
@@ -141,10 +218,8 @@ export function UploadForm() {
             Novo Episódio
           </CardTitle>
         </CardHeader>
-        {/* A área de conteúdo agora tem rolagem interna */}
-        <CardContent className="flex-1 overflow-y-auto pr-6">
+        <CardContent className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Coluna 1: Informações Principais */}
             <div className="space-y-6">
               <div>
                 <Label htmlFor="title">Título *</Label>
@@ -172,8 +247,6 @@ export function UploadForm() {
                 />
               </div>
             </div>
-
-            {/* Coluna 2: Metadados e Arquivo */}
             <div className="space-y-6">
               <div>
                 <Label htmlFor="audio-file">Arquivo de Áudio *</Label>
@@ -190,7 +263,6 @@ export function UploadForm() {
                   </p>
                 )}
               </div>
-
               <div>
                 <div className="flex items-center justify-between">
                   <Label>Categoria</Label>
@@ -200,8 +272,7 @@ export function UploadForm() {
                     size="sm"
                     onClick={() => setShowNewCategory(!showNewCategory)}
                   >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Nova
+                    <Plus className="h-4 w-4 mr-1" /> Nova
                   </Button>
                 </div>
                 {showNewCategory && (
@@ -239,7 +310,6 @@ export function UploadForm() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div>
                 <Label>Subcategoria</Label>
                 <Select
@@ -267,7 +337,6 @@ export function UploadForm() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="tags">Tags</Label>
@@ -281,7 +350,6 @@ export function UploadForm() {
                     className="mt-1"
                   />
                 </div>
-
                 <div>
                   <Label htmlFor="published-at">Data de Publicação</Label>
                   <Input
@@ -298,7 +366,6 @@ export function UploadForm() {
             </div>
           </div>
         </CardContent>
-        {/* O botão de envio agora fica em um rodapé fixo */}
         <CardFooter className="border-t pt-6">
           <Button
             type="submit"

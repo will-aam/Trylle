@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS categories (
 -- Create subcategories table
 CREATE TABLE IF NOT EXISTS subcategories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
+  name VARCHAR(255) NOT NULL, 
   category_id UUID REFERENCES categories(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(name, category_id)

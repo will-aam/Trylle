@@ -8,7 +8,7 @@ CREATE POLICY "Allow public uploads" ON storage.objects
 FOR INSERT WITH CHECK (bucket_id = 'audio-files');
 
 CREATE POLICY "Allow public downloads" ON storage.objects
-FOR SELECT USING (bucket_id = 'audio-files');
+FOR SELECT USING (bucket_id = 'audio-files'); 
 
 CREATE POLICY "Allow public deletes" ON storage.objects
 FOR DELETE USING (bucket_id = 'audio-files');

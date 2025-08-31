@@ -1,191 +1,103 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import {
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  Volume2,
-  Repeat,
-  Shuffle,
-  Heart,
-} from "lucide-react";
-import { Button } from "../ui/button";
-import { Slider } from "../ui/slider";
-import { Card } from "../ui/card";
-import Image from "next/image";
-
-interface Episode {
-  id: string;
-  title: string;
-  author: string;
-  thumbnail: string;
-  audioUrl: string;
-  duration: number;
-}
+import { useEffect, useRef, useState } from "react";
+import { usePlayer } from "@/src/hooks/use-player";
+import { Slider } from "@/src/components/ui/slider";
+import { Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { formatTime } from "@/src/lib/utils"; // Vamos adicionar essa função em breve
 
 export function AudioPlayer() {
-  const [currentEpisode, setCurrentEpisode] = useState<Episode | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const { activeEpisode, isPlaying, play, pause } = usePlayer();
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [playbackRate, setPlaybackRate] = useState(1);
-  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration);
+    if (isPlaying) {
+      audio.play();
+    } else {
+      audio.pause();
+    }
+  }, [isPlaying, activeEpisode]);
 
-    audio.addEventListener("timeupdate", updateTime);
-    audio.addEventListener("loadedmetadata", updateDuration);
-
-    return () => {
-      audio.removeEventListener("timeupdate", updateTime);
-      audio.removeEventListener("loadedmetadata", updateDuration);
-    };
-  }, [currentEpisode]);
-
-  const togglePlay = () => {
+  // Efeitos para sincronizar o estado do áudio com o nosso componente
+  useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
+    const updateCurrentTime = () => setCurrentTime(audio.currentTime);
+    const setAudioDuration = () => setDuration(audio.duration);
+
+    audio.addEventListener("timeupdate", updateCurrentTime);
+    audio.addEventListener("loadedmetadata", setAudioDuration);
+
+    return () => {
+      audio.removeEventListener("timeupdate", updateCurrentTime);
+      audio.removeEventListener("loadedmetadata", setAudioDuration);
+    };
+  }, []);
+
+  if (!activeEpisode) {
+    return null; // Não mostra o player se nenhum áudio estiver ativo
+  }
+
+  const handlePlayPause = () => {
     if (isPlaying) {
-      audio.pause();
+      pause();
     } else {
-      audio.play();
+      play();
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleSeek = (value: number[]) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    audio.currentTime = value[0];
-    setCurrentTime(value[0]);
+    if (audioRef.current) {
+      audioRef.current.currentTime = value[0];
+    }
   };
-
-  const handleVolumeChange = (value: number[]) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const newVolume = value[0];
-    audio.volume = newVolume;
-    setVolume(newVolume);
-  };
-
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  };
-
-  if (!currentEpisode) {
-    return null;
-  }
 
   return (
-    <Card className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center justify-between p-4">
-        <div className="flex items-center space-x-4 flex-1">
-          <Image
-            src={currentEpisode.thumbnail || "/placeholder.svg"}
-            alt={currentEpisode.title}
-            width={56}
-            height={56}
-            className="rounded-md"
-          />
-          <div className="min-w-0">
-            <p className="font-medium truncate">{currentEpisode.title}</p>
-            <p className="text-sm text-muted-foreground truncate">
-              {currentEpisode.author}
-            </p>
-          </div>
-          <Button variant="ghost" size="icon">
-            <Heart className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <div className="flex flex-col items-center space-y-2 flex-1 max-w-md">
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon">
-              <Shuffle className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <SkipBack className="h-4 w-4" />
-            </Button>
-            <Button onClick={togglePlay} size="icon">
-              {isPlaying ? (
-                <Pause className="h-4 w-4" />
-              ) : (
-                <Play className="h-4 w-4" />
-              )}
-            </Button>
-            <Button variant="ghost" size="icon">
-              <SkipForward className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Repeat className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="flex items-center space-x-2 w-full">
-            <span className="text-xs text-muted-foreground">
-              {formatTime(currentTime)}
-            </span>
-            <Slider
-              value={[currentTime]}
-              max={duration}
-              step={1}
-              onValueChange={handleSeek}
-              className="flex-1"
-            />
-            <span className="text-xs text-muted-foreground">
-              {formatTime(duration)}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-2 flex-1 justify-end">
-          <Volume2 className="h-4 w-4" />
-          <Slider
-            value={[volume]}
-            max={1}
-            step={0.1}
-            onValueChange={handleVolumeChange}
-            className="w-24"
-          />
-          <select
-            value={playbackRate}
-            onChange={(e) => {
-              const rate = parseFloat(e.target.value);
-              setPlaybackRate(rate);
-              if (audioRef.current) {
-                audioRef.current.playbackRate = rate;
-              }
-            }}
-            className="text-xs bg-transparent border rounded px-2 py-1"
-          >
-            <option value={0.5}>0.5x</option>
-            <option value={0.75}>0.75x</option>
-            <option value={1}>1x</option>
-            <option value={1.25}>1.25x</option>
-            <option value={1.5}>1.5x</option>
-            <option value={2}>2x</option>
-          </select>
-        </div>
-      </div>
-
+    <div className="fixed bottom-0 left-0 right-0 h-20 bg-background border-t z-50">
       <audio
         ref={audioRef}
-        src={currentEpisode.audioUrl}
-        onEnded={() => setIsPlaying(false)}
+        src={activeEpisode.audio_url}
+        onEnded={pause}
+        key={activeEpisode.id} // Força a recriação do elemento ao mudar de áudio
       />
-    </Card>
+      <div className="container mx-auto h-full flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div>
+            <p className="font-bold">{activeEpisode.title}</p>
+            <p className="text-sm text-muted-foreground">
+              {activeEpisode.categories?.name || "Sem categoria"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex-1 flex items-center justify-center gap-4 max-w-2xl">
+          <span className="text-xs w-12 text-right">
+            {formatTime(currentTime)}
+          </span>
+          <Slider
+            value={[currentTime]}
+            max={duration || 100}
+            onValueChange={handleSeek}
+            className="w-full"
+          />
+          <span className="text-xs w-12">{formatTime(duration)}</span>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handlePlayPause}
+            className="p-2 rounded-full bg-primary text-primary-foreground"
+          >
+            {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

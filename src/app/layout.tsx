@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/src/components/theme-provider";
 import { Toaster } from "@/src/components/ui/sonner";
+import { AudioPlayer } from "@/src/components/features/audio-player"; // Importe o player
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,6 +32,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <AudioPlayer />
           <Toaster position="top-center" richColors />
         </ThemeProvider>
       </body>
