@@ -141,6 +141,7 @@ export function UploadForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!audioFile || !formData.title.trim()) {
       toast({
         title: "Campos obrigatórios",
@@ -150,30 +151,36 @@ export function UploadForm() {
       });
       return;
     }
-    setIsLoading(true);
-    try {
-      const fileExt = audioFile.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2)}.${fileExt}`;
-      const filePath = `audios/${fileName}`;
-      const { error: uploadError } = await supabase.storage
-        .from("audio-files")
-        .upload(filePath, audioFile);
-      if (uploadError) throw uploadError;
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("audio-files").getPublicUrl(filePath);
+    setIsLoading(true);
+
+    try {
+      // 1. Enviar o arquivo para a nossa API de upload segura
+      const body = new FormData();
+      body.append("file", audioFile);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body,
+      });
+
+      const { publicUrl, error: uploadError } = await response.json();
+
+      if (!response.ok || uploadError) {
+        throw new Error(uploadError || "Falha ao fazer upload do arquivo.");
+      }
+
+      // 2. Preparar e inserir os dados do episódio no Supabase
       const tagsArray = formData.tags
         .split(",")
         .map((tag) => tag.trim())
         .filter((tag) => tag);
+
       const { error: insertError } = await supabase.from("episodes").insert([
         {
           title: formData.title.trim(),
           description: formData.description.trim() || null,
-          audio_url: publicUrl,
+          audio_url: publicUrl, // A nova URL do Cloudflare R2!
           file_name: audioFile.name,
           category_id: formData.categoryId || null,
           subcategory_id: formData.subcategoryId || null,
@@ -181,12 +188,15 @@ export function UploadForm() {
           published_at: new Date(formData.publishedAt).toISOString(),
         },
       ]);
+
       if (insertError) throw insertError;
 
       toast({
         title: "Sucesso!",
         description: "Episódio enviado com sucesso!",
       });
+
+      // Limpa o formulário
       setFormData({
         title: "",
         description: "",
@@ -198,7 +208,7 @@ export function UploadForm() {
       setAudioFile(null);
       setSelectedCategory("");
     } catch (error: any) {
-      console.error("Erro no upload:", error);
+      console.error("Erro no processo de upload:", error);
       toast({
         title: "Erro no upload",
         description: error.message || "Ocorreu um erro ao enviar o episódio.",
@@ -208,7 +218,7 @@ export function UploadForm() {
       setIsLoading(false);
     }
   };
-
+  // até aqui
   return (
     <form onSubmit={handleSubmit} className="h-full flex flex-col">
       <Card className="flex-1 flex flex-col overflow-hidden">
