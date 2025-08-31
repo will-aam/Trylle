@@ -126,7 +126,7 @@ export function EpisodeManager() {
                       </DropdownMenuItem>
 
                       {/* Opção Visualizar com ícone */}
-                      <DropdownMenuItem>
+                      <DropdownMenuItem> 
                         <Eye className="mr-2 h-4 w-4" />
                         Visualizar
                       </DropdownMenuItem>

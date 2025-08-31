@@ -1,8 +1,7 @@
 "use client";
 
 import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-react";
-import { createClient } from "@/src/lib/supabase-client"; // Importa nosso novo cliente
+import { createClient } from "@/src/lib/supabase-client";
 import {
   Card,
   CardContent,
@@ -23,7 +22,6 @@ export default function LoginPage() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        // Se o login for bem-sucedido, redireciona para o painel de admin
         router.push("/admin");
       }
     });
@@ -43,9 +41,9 @@ export default function LoginPage() {
         <CardContent>
           <Auth
             supabaseClient={supabase}
-            appearance={{ theme: ThemeSupa }}
-            theme="dark"
-            providers={[]} // Deixamos vazio para não mostrar login com Google, etc.
+            // REMOVEU a propriedade appearance completamente
+            theme="dark" // Mantém o tema dark
+            providers={[]}
             localization={{
               variables: {
                 sign_in: {

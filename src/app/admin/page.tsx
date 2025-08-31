@@ -13,13 +13,6 @@ import {
 export default function AdminPage() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Painel Administrativo</h1>
-        <p className="text-muted-foreground">
-          Gerencie episódios, categorias e estatísticas
-        </p>
-      </div>
-
       <Suspense
         fallback={
           <div className="animate-pulse bg-muted h-32 rounded-lg mb-8" />
