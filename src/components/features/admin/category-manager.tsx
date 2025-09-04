@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -17,9 +17,9 @@ import {
   TooltipTrigger,
 } from "@/src/components/ui/tooltip";
 import { createClient } from "@/src/lib/supabase-client";
-import { Category, Subcategory, Tag } from "@/src/lib/types"; // Importa o novo tipo Tag
+import { Category, Subcategory, Tag } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Search } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,25 +33,25 @@ import {
 } from "@/src/components/ui/alert-dialog";
 import { Badge } from "@/src/components/ui/badge";
 
-// O nome do componente é alterado para refletir sua nova função
 export function CategoryManager() {
   const supabase = createClient();
   const { toast } = useToast();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]); // Estado para as tags
+  const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [newTagName, setNewTagName] = useState(""); // Estado para a nova tag
-
+  const [newTagName, setNewTagName] = useState("");
   const [newSubcategoryNames, setNewSubcategoryNames] = useState<{
     [key: string]: string;
   }>({});
 
+  // NOVO: Estado para o termo de busca de categorias
+  const [categorySearchTerm, setCategorySearchTerm] = useState("");
+
   const fetchData = useCallback(async () => {
     setLoading(true);
-    // Busca todos os dados em paralelo para mais eficiência
     const [catRes, subRes, tagRes] = await Promise.all([
       supabase.from("categories").select("*").order("name"),
       supabase.from("subcategories").select("*").order("name"),
@@ -80,7 +80,23 @@ export function CategoryManager() {
     fetchData();
   }, [fetchData]);
 
-  // --- Funções de Manipulação ---
+  // NOVO: Lógica para filtrar as categorias com base na busca
+  const filteredCategories = useMemo(() => {
+    if (!categorySearchTerm.trim()) {
+      return categories;
+    }
+    return categories.filter(
+      (category) =>
+        category.name
+          .toLowerCase()
+          .includes(categorySearchTerm.toLowerCase()) ||
+        subcategories.some(
+          (sub) =>
+            sub.category_id === category.id &&
+            sub.name.toLowerCase().includes(categorySearchTerm.toLowerCase())
+        )
+    );
+  }, [categories, subcategories, categorySearchTerm]);
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
@@ -219,35 +235,49 @@ export function CategoryManager() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      {/* Coluna de Categorias e Subcategorias */}
       <div className="lg:col-span-2">
         <Card>
           <CardHeader>
             <CardTitle>Categorias e Subcategorias</CardTitle>
-            <CardDescription>
-              Adicione, visualize e remova categorias e suas subcategorias.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex space-x-2 border p-4 rounded-lg">
-              <Input
-                placeholder="Nome da nova categoria principal"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-              />
-              <Button onClick={handleAddCategory}>
-                <Plus className="mr-2 h-4 w-4" /> Adicionar Categoria
-              </Button>
+            <div className="flex flex-col sm:flex-row gap-2 mt-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Buscar categorias..."
+                  className="pl-8 sm:w-full"
+                  value={categorySearchTerm}
+                  onChange={(e) => setCategorySearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex space-x-2">
+                <Input
+                  placeholder="Nome da nova categoria"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+                />
+                <Button
+                  onClick={handleAddCategory}
+                  className="whitespace-nowrap"
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Adicionar
+                </Button>
+              </div>
             </div>
-            <div className="border rounded-md p-4 space-y-3 max-h-[60vh] overflow-y-auto">
-              {categories.length > 0 ? (
-                categories.map((category) => (
+          </CardHeader>
+          <CardContent>
+            {/* AJUSTE: Adicionada altura máxima e rolagem interna */}
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+              {filteredCategories.length > 0 ? (
+                filteredCategories.map((category) => (
                   <div
                     key={category.id}
-                    className="p-2 border rounded-md bg-card"
+                    className="p-3 border rounded-md bg-muted/50"
                   >
                     <div className="flex justify-between items-center">
-                      <h3 className="font-semibold text-lg">{category.name}</h3>
+                      <h3 className="font-semibold text-md">{category.name}</h3>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
@@ -357,8 +387,7 @@ export function CategoryManager() {
               ) : (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">
-                    Nenhuma categoria encontrada. Adicione uma acima para
-                    começar.
+                    Nenhuma categoria encontrada.
                   </p>
                 </div>
               )}
@@ -367,16 +396,12 @@ export function CategoryManager() {
         </Card>
       </div>
 
+      {/* Coluna de Tags */}
       <div className="lg:col-span-1">
         <Card>
           <CardHeader>
             <CardTitle>Tags</CardTitle>
-            <CardDescription>
-              Gerencie todas as tags do seu site.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex space-x-2">
+            <div className="flex space-x-2 mt-4">
               <Input
                 placeholder="Nome da nova tag"
                 value={newTagName}
@@ -387,6 +412,9 @@ export function CategoryManager() {
                 <Plus className="mr-2 h-4 w-4" /> Adicionar
               </Button>
             </div>
+          </CardHeader>
+          <CardContent>
+            {/* AJUSTE: Adicionada altura máxima e rolagem interna */}
             <div className="border rounded-md p-4 space-y-2 max-h-[60vh] overflow-y-auto">
               {tags.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
