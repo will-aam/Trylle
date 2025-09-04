@@ -9,6 +9,8 @@ import {
   Users,
   Settings,
   MonitorCog,
+  Wallet,
+  Home,
 } from "lucide-react";
 import {
   Tooltip,
@@ -69,6 +71,12 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
           <div className="flex-1 overflow-y-auto py-4">
             <nav className="grid items-start px-2 text-sm font-medium space-y-1">
               <SidebarLink
+                href="/"
+                icon={<Home className="h-4 w-4" />}
+                label="Início"
+                isCollapsed={isCollapsed}
+              />
+              <SidebarLink
                 href="/admin"
                 icon={<MonitorCog className="h-4 w-4" />}
                 label={"Painel"}
@@ -84,6 +92,12 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 href="/admin/config"
                 icon={<Settings className="h-4 w-4" />}
                 label="Configurações"
+                isCollapsed={isCollapsed}
+              />
+              <SidebarLink
+                href="/admin/config"
+                icon={<Wallet className="h-4 w-4" />}
+                label="Financeiro"
                 isCollapsed={isCollapsed}
               />
             </nav>
