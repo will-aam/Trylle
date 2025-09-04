@@ -274,9 +274,7 @@ export function UploadForm() {
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
-                  placeholder="Descreva o conteúdo do episódio"
-                  rows={8}
-                  className="mt-1"
+                  className="mt-1 min-h-[232px] resize-none"
                 />
               </div>
             </div>
