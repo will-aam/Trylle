@@ -7,6 +7,7 @@ interface PlayerState {
   setEpisode: (episode: Episode) => void;
   play: () => void;
   pause: () => void;
+  reset: () => void; // Adicionamos a função de reset
 }
 
 export const usePlayer = create<PlayerState>((set) => ({
@@ -15,6 +16,5 @@ export const usePlayer = create<PlayerState>((set) => ({
   setEpisode: (episode) => set({ activeEpisode: episode, isPlaying: true }),
   play: () => set({ isPlaying: true }),
   pause: () => set({ isPlaying: false }),
+  reset: () => set({ activeEpisode: null, isPlaying: false }), // Ação para limpar o player
 }));
-
-// Nota: Estamos usando uma pequena e poderosa biblioteca de gerenciamento de estado chamada zustand. Ela já foi incluída no package.json do projeto de referência, então deve funcionar sem instalação adicional. Se der erro, rodamos pnpm install zustand

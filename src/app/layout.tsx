@@ -1,37 +1,33 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+"use client"; // Converte para um Client Component
+
 import "./globals.css";
 import { ThemeProvider } from "@/src/components/theme-provider";
 import { Toaster } from "@/src/components/ui/sonner";
-import { AudioPlayer } from "@/src/components/features/audio-player"; // Importe o player
+import { AudioPlayer } from "@/src/components/features/audio-player";
+import { usePlayer } from "@/src/hooks/use-player"; // Importa o hook
+import { cn } from "@/src/lib/utils";
 
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "PlayCast | Sua plataforma de áudio",
-  description: "Ouça seus podcasts e áudios favoritos.",
-};
-
-/**
- * Este é o Layout Raiz (Root Layout).
- * Ele envolve TODA a aplicação e é o único lugar
- * onde as tags <html> e <body> devem ser definidas.
- */
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Verifica se há um episódio ativo para ajustar o layout
+  const { activeEpisode } = usePlayer();
+
   return (
     <html lang="pt-br" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          {/* O conteúdo principal agora tem um padding-bottom dinâmico */}
+          <main className={cn("pb-20", !activeEpisode && "pb-0")}>
+            {children}
+          </main>
           <AudioPlayer />
           <Toaster position="top-center" richColors />
         </ThemeProvider>
