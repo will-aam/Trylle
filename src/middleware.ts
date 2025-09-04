@@ -14,18 +14,10 @@ export async function middleware(req: NextRequest) {
           return req.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          res.cookies.set({
-            name,
-            value,
-            ...options,
-          });
+          res.cookies.set({ name, value, ...options });
         },
         remove(name: string, options: CookieOptions) {
-          res.cookies.set({
-            name,
-            value: "",
-            ...options,
-          });
+          res.cookies.set({ name, value: "", ...options });
         },
       },
     }
@@ -40,6 +32,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
+  // NOVO: Verifica se o usuário tem a função 'admin' nos seus metadados
+  const userRole = session.user?.user_metadata?.role;
+  if (userRole !== "admin") {
+    // Se não for admin, não pode acessar /admin.
+    // Podemos redirecioná-lo para a home ou mostrar uma página de "acesso negado".
+    // Por enquanto, vamos redirecionar para a home.
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
+  // Se passou por todas as verificações, permite o acesso.
   return res;
 }
 
