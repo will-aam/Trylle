@@ -3,14 +3,13 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/src/components/ui/button";
+import { useRef } from "react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/src/components/ui/dropdown-menu";
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverArrow,
+} from "@/src/components/ui/popover";
 import {
   Avatar,
   AvatarFallback,
@@ -27,6 +26,8 @@ export function Navbar() {
   const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const avatarRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -53,8 +54,13 @@ export function Navbar() {
   const defaultAvatarUrl =
     "https://api.dicebear.com/9.x/thumbs/svg?seed=Destiny";
 
+  // Detecta se está em mobile (simplificado, pode melhorar)
+  const isMobile =
+    typeof window !== "undefined" &&
+    window.matchMedia("(pointer: coarse)").matches;
+
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 backdrop-blur-sm sm:px-6">
       <div className="relative flex-1 md:grow-0">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
@@ -73,12 +79,18 @@ export function Navbar() {
         {loading ? (
           <Skeleton className="h-8 w-8 rounded-full" />
         ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <Avatar className="h-8 w-8">
+          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                ref={avatarRef}
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+                onMouseEnter={() => setPopoverOpen(true)}
+                onMouseLeave={() => setPopoverOpen(false)}
+              >
+                <Avatar className="h-9 w-9">
                   <AvatarImage
-                    // Se o usuário estiver logado, usa o avatar dele. Se não, usa o padrão.
                     src={user?.user_metadata?.avatar_url || defaultAvatarUrl}
                     alt={user?.user_metadata?.name || "Avatar Padrão"}
                   />
@@ -87,33 +99,68 @@ export function Navbar() {
                   </AvatarFallback>
                 </Avatar>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              className="w-48 p-2 z-50 bg-background shadow-lg border rounded-md"
+              onMouseEnter={() => setPopoverOpen(true)}
+              onMouseLeave={() => setPopoverOpen(false)}
+            >
+              <PopoverArrow />
               {user ? (
-                <>
-                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>Perfil</DropdownMenuItem>
-                  <DropdownMenuItem>Biblioteca</DropdownMenuItem>
-                  <DropdownMenuItem>Configurações</DropdownMenuItem>
-                  <DropdownMenuItem>Pagamentos</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
+                <div className="flex flex-col gap-1">
+                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                    Minha Conta
+                  </div>
+                  <Link
+                    href="/profile"
+                    className="hover:bg-accent rounded px-3 py-2 text-sm"
+                  >
+                    Perfil
+                  </Link>
+                  <Link
+                    href="/library"
+                    className="hover:bg-accent rounded px-3 py-2 text-sm"
+                  >
+                    Biblioteca
+                  </Link>
+                  <Link
+                    href="/settings"
+                    className="hover:bg-accent rounded px-3 py-2 text-sm"
+                  >
+                    Configurações
+                  </Link>
+                  <Link
+                    href="/payments"
+                    className="hover:bg-accent rounded px-3 py-2 text-sm"
+                  >
+                    Pagamentos
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="hover:bg-accent rounded px-3 py-2 text-sm text-left"
+                  >
                     Sair
-                  </DropdownMenuItem>
-                </>
+                  </button>
+                </div>
               ) : (
-                <>
-                  <DropdownMenuItem asChild>
-                    <Link href="/login">Login</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/signup">Cadastro</Link>
-                  </DropdownMenuItem>
-                </>
+                <div className="flex flex-col gap-1">
+                  <Link
+                    href="/login"
+                    className="hover:bg-accent rounded px-3 py-2 text-sm"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="hover:bg-accent rounded px-3 py-2 text-sm"
+                  >
+                    Cadastro
+                  </Link>
+                </div>
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </PopoverContent>
+          </Popover>
         )}
       </div>
     </header>

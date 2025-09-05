@@ -1,39 +1,42 @@
+import Link from "next/link";
 import { Button } from "../ui/button";
 import { Play } from "lucide-react";
-import Image from "next/image";
 
 export function Hero() {
   return (
-    <section className="relative bg-gradient-to-r from-primary/10 to-secondary/10 py-20">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-6">
-            <h1 className="text-4xl lg:text-6xl font-bold leading-tight">
-              Descubra o mundo através do
-              <span className="text-primary"> áudio</span>
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              Milhares de episódios educativos sobre tecnologia, ciência, saúde
-              e muito mais. Aprenda enquanto caminha, trabalha ou relaxa.
-            </p>
-            <div className="flex space-x-4">
-              <Button size="lg" className="text-lg px-8">
-                <Play className="mr-2 h-5 w-5" />
-                Começar a Ouvir
-              </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8">
-                Explorar Categorias
-              </Button>
+    <section
+      className="relative bg-cover bg-center bg-no-repeat -mt-14 pt-28 pb-20"
+      style={{ backgroundImage: "url('/hero-background.jpg')" }}
+    >
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/60 z-0" />
+
+      {/* Main content, above the overlay */}
+      <div className="relative z-10">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 gap-12 items-center">
+            <div className="space-y-6 text-center lg:text-left">
+              <h1 className="text-4xl lg:text-6xl font-bold leading-tight [text-shadow:1px_1px_3px_var(--tw-shadow-color)] shadow-black/60">
+                Descubra o mundo através do
+                <span className="text-primary"> áudio</span>
+              </h1>
+              <p className="text-xl text-neutral-200">
+                Milhares de episódios educativos sobre tecnologia, ciência,
+                saúde e muito mais. Aprenda enquanto caminha, trabalha ou
+                relaxa.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <Link href="/login">
+                  <Button size="lg" className="text-lg px-8">
+                    <Play className="mr-2 h-5 w-5" />
+                    Começar a Ouvir
+                  </Button>
+                </Link>
+                <Button variant="outline" size="lg" className="text-lg px-8">
+                  Explorar Categorias
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="relative">
-            <Image
-              src="/placeholder.svg?height=400&width=600"
-              alt="Plataforma de Audiocasts"
-              width={600}
-              height={400}
-              className="rounded-lg shadow-2xl"
-            />
           </div>
         </div>
       </div>
