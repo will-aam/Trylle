@@ -1,13 +1,12 @@
 "use client";
 
 import { createClient } from "@/src/lib/supabase-client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
-import { MailCheck, Chrome } from "lucide-react";
+import { MailCheck } from "lucide-react";
 
 export default function SignupPage() {
   const supabase = createClient();
@@ -30,11 +29,19 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
+      // 1. Gerar a URL do avatar do DiceBear
+      const avatarSeed = encodeURIComponent(name.trim()); // Usa o nome do usuário como semente
+      const avatarUrl = `https://api.dicebear.com/8.x/thumbs/svg?seed=${avatarSeed}`;
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { name: name.trim() },
+          // 2. Salvar o nome e a nova URL do avatar nos metadados do usuário
+          data: {
+            name: name.trim(),
+            avatar_url: avatarUrl,
+          },
           emailRedirectTo: `${window.location.origin}/`,
         },
       });
@@ -56,7 +63,7 @@ export default function SignupPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
@@ -69,6 +76,32 @@ export default function SignupPage() {
       setIsLoading(false);
     }
   };
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // O evento SIGNED_IN ocorre após o callback do Google
+      if (
+        event === "SIGNED_IN" &&
+        session?.user.app_metadata.provider === "google"
+      ) {
+        const user = session.user;
+        // Verifica se o usuário do Google NÃO TEM um avatar_url
+        if (user && !user.user_metadata.avatar_url) {
+          const userName = user.user_metadata.name || user.email; // Usa o nome ou o e-mail como fallback
+          const avatarSeed = encodeURIComponent(userName.trim());
+          const avatarUrl = `https://api.dicebear.com/8.x/thumbs/svg?seed=${avatarSeed}`;
+
+          // Atualiza o perfil do usuário com o novo avatar
+          await supabase.auth.updateUser({
+            data: { avatar_url: avatarUrl },
+          });
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center">
@@ -200,15 +233,6 @@ export default function SignupPage() {
             )}
           </div>
         </div>
-        {/* <div className="hidden bg-muted lg:block">
-        <Image
-          src="/placeholder.jpg"
-          alt="Imagem de fundo da página de cadastro"
-          width="1920"
-          height="1080"
-          className="h-full w-full object-cover dark:brightness-[0.2]"
-        />
-      </div> */}
       </div>
     </div>
   );

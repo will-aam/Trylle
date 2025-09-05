@@ -19,12 +19,30 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Função para garantir que o avatar seja gerado
+  const ensureAvatar = async (accessToken: string) => {
+    await fetch("/api/set-avatar", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  };
+
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        const userRole = session.user?.user_metadata?.role;
+        // Se o usuário acabou de logar, chama a função para verificar o avatar
+        if (event === "SIGNED_IN") {
+          await ensureAvatar(session.access_token);
+        }
+
+        // Após garantir o avatar, redireciona com base na role
+        const { data } = await supabase.auth.refreshSession(); // Pega a sessão atualizada
+        const userRole = data.user?.user_metadata?.role;
+
         if (userRole === "admin") {
           router.push("/admin");
         } else {

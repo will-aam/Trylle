@@ -1,42 +1,51 @@
-import { Suspense } from "react";
-import { FeaturedEpisodes } from "@/src/components/features/featured-episodes";
-import { CategoryGrid } from "@/src/components/features/category-grid";
-import { RecentEpisodes } from "@/src/components/features/recent-episodes";
-import { Hero } from "@/src/components/features/hero";
+"use client";
+import { useState, useEffect } from "react";
+import { createClient } from "@/src/lib/supabase-client";
+import { User } from "@supabase/supabase-js";
+import { HomeLoggedIn } from "@/src/components/features/home-logged-in";
+import { HomeLoggedOut } from "@/src/components/features/home-logged-out";
+import { Skeleton } from "@/src/components/ui/skeleton";
 
 export default function HomePage() {
-  return (
-    <div className="min-h-screen">
-      <Hero />
+  const supabase = createClient();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-      <div className="container mx-auto px-4 py-8 space-y-12">
-        <section>
-          <h2 className="text-2xl font-bold mb-6">Episódios em Destaque</h2>
-          <Suspense
-            fallback={
-              <div className="animate-pulse bg-muted h-48 rounded-lg" />
-            }
-          >
-            <FeaturedEpisodes />
-          </Suspense>
-        </section>
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+      setLoading(false);
+    };
 
-        <section>
-          <h2 className="text-2xl font-bold mb-6">Categorias</h2>
-          <CategoryGrid />
-        </section>
+    fetchUser();
 
-        <section>
-          <h2 className="text-2xl font-bold mb-6">Episódios Recentes</h2>
-          <Suspense
-            fallback={
-              <div className="animate-pulse bg-muted h-64 rounded-lg" />
-            }
-          >
-            <RecentEpisodes />
-          </Suspense>
-        </section>
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
+  // Mostra um esqueleto de carregamento enquanto verifica o estado de login
+  if (loading) {
+    return (
+      <div className="space-y-12">
+        <Skeleton className="h-64 w-full" />
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-1/4" />
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+  return user ? <HomeLoggedIn /> : <HomeLoggedOut />;
 }

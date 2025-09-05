@@ -1,47 +1,43 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "@/src/app/globals.css";
-import { ThemeProvider } from "@/src/components/theme-provider";
+"use client"; // Necessário para detectar se o usuário está logado
+
+import { useState, useEffect } from "react";
 import { Navbar } from "@/src/components/layout/navbar";
-import { Sidebar } from "@/src/components/layout/sidebar";
-import { AudioPlayer } from "@/src/components/features/audio-player";
-import { AuthProvider } from "@/src/Providers/auth-provider";
-import { Toaster } from "@/src/components/ui/toaster";
+import { BottomNavbar } from "@/src/components/layout/bottom-navbar";
+import { createClient } from "@/src/lib/supabase-client";
+import { User } from "@supabase/supabase-js";
 
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "Plataforma de Audiocasts",
-  description: "Streaming de áudios educativos e informativos",
-};
-
-export default function RootLayout({
+export default function MainLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const supabase = createClient();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    });
+
+    const fetchUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
+    fetchUser();
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
   return (
-    <html lang="pt-br" suppressHydrationWarning>
-      <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            <div className="flex h-screen bg-background">
-              <Sidebar />
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <Navbar />
-                <main className="flex-1 overflow-y-auto pb-24">{children}</main>
-              </div>
-            </div>
-            <AudioPlayer />
-            <Toaster />
-          </AuthProvider>
-        </ThemeProvider>
-      </body>
-    </html>
+    <div className="flex min-h-screen w-full flex-col">
+      <Navbar />
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+        {children}
+      </main>
+      {user && <BottomNavbar />}
+    </div>
   );
 }

@@ -1,47 +1,120 @@
 "use client";
 
-import { Search, Bell, User } from "lucide-react";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Button } from "@/src/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/src/components/ui/dropdown-menu";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/src/components/ui/avatar";
+import { Input } from "@/src/components/ui/input";
+import { Search, Bell } from "lucide-react";
+import { createClient } from "@/src/lib/supabase-client";
+import { User } from "@supabase/supabase-js";
 import { ThemeToggle } from "./theme-toggle";
-import { UserMenu } from "./user-menu";
-import { useState } from "react";
+import { Skeleton } from "@/src/components/ui/skeleton";
 
 export function Navbar() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const supabase = createClient();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      // Use window.location para navegação no lado do cliente
-      window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
-    }
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+      setLoading(false);
+    };
+    fetchUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
-  return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center space-x-4 flex-1">
-          <form onSubmit={handleSearch} className="flex-1 max-w-md">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Buscar episódios, categorias..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </form>
-        </div>
+  // URL do avatar padrão para usuários deslogados
+  const defaultAvatarUrl =
+    "https://api.dicebear.com/9.x/thumbs/svg?seed=Destiny";
 
-        <div className="flex items-center space-x-2">
-          <ThemeToggle />
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-          </Button>
-          <UserMenu />
-        </div>
+  return (
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background/95 px-4 backdrop-blur-sm sm:px-6">
+      <div className="relative flex-1 md:grow-0">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Buscar episódios..."
+          className="w-full rounded-lg bg-muted pl-8 md:w-[200px] lg:w-[320px]"
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        <Button variant="ghost" size="icon" className="rounded-full">
+          <Bell className="h-5 w-5" />
+        </Button>
+
+        {loading ? (
+          <Skeleton className="h-8 w-8 rounded-full" />
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage
+                    // Se o usuário estiver logado, usa o avatar dele. Se não, usa o padrão.
+                    src={user?.user_metadata?.avatar_url || defaultAvatarUrl}
+                    alt={user?.user_metadata?.name || "Avatar Padrão"}
+                  />
+                  <AvatarFallback>
+                    {user?.email?.charAt(0).toUpperCase() || "P"}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {user ? (
+                <>
+                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>Perfil</DropdownMenuItem>
+                  <DropdownMenuItem>Biblioteca</DropdownMenuItem>
+                  <DropdownMenuItem>Configurações</DropdownMenuItem>
+                  <DropdownMenuItem>Pagamentos</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    Sair
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/login">Login</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/signup">Cadastro</Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </header>
   );
