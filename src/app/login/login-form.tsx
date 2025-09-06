@@ -98,7 +98,7 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center">
+    <div className="w-full flex items-center justify-center">
       <div className="w-full max-w-md mx-4">
         <div className="w-full space-y-6 sm:space-y-8">
           <div className="text-center space-y-2">
