@@ -7,7 +7,7 @@ const mockEpisodes: Episode[] = Array(3)
   .map((_, i) => ({
     id: `${i + 1}`,
     title: `Episódio em Destaque ${i + 1}`,
-    imageUrl: `/background.png?height=200&width=300&text=Episódio+${i + 1}`,
+    imageUrl: `/background.jpg?height=200&width=300&text=Episódio+${i + 1}`,
     categories: { name: "Tecnologia" },
     // Adicionando o resto dos campos necessários para o tipo Episode
     description: "Descrição do episódio.",

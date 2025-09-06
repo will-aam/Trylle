@@ -1,7 +1,7 @@
 import "./globals.css";
 import { ThemeProvider } from "@/src/components/theme-provider";
 import { Toaster } from "@/src/components/ui/sonner";
-import { ClientLayoutWrapper } from "@/src/components/client-layout-wrapper"; // Importa o novo wrapper
+import { ClientLayoutWrapper } from "@/src/components/client-layout-wrapper";
 
 // A exportação de metadados  só funciona em Componentes de Servidor
 export const metadata = {

@@ -18,28 +18,52 @@ import {
   Newspaper,
   Laugh,
   type LucideIcon,
-  Smartphone,
-  Globe,
-  HardDrive,
-  Guitar,
-  MicVocal,
-  Podcast,
-  FlaskConical,
-  Landmark,
-  Brain,
-  Rocket,
-  Palette,
-  Camera,
 } from "lucide-react";
 
-const categoryStyles: { [key: string]: { icon: LucideIcon; color: string } } = {
-  Tecnologia: { icon: Cpu, color: "bg-blue-500/20 text-blue-500" },
-  Música: { icon: Music, color: "bg-pink-500/20 text-pink-500" },
-  Entrevistas: { icon: Mic, color: "bg-green-500/20 text-green-500" },
-  Educacional: { icon: BookOpen, color: "bg-yellow-500/20 text-yellow-500" },
-  Notícias: { icon: Newspaper, color: "bg-red-500/20 text-red-500" },
-  Comédia: { icon: Laugh, color: "bg-orange-500/20 text-orange-500" },
-  Default: { icon: Mic, color: "bg-gray-500/20 text-gray-500" },
+const categoryStyles: {
+  [key: string]: {
+    icon: LucideIcon;
+    bgColor: string;
+    textColor: string;
+    hoverBg: string;
+  };
+} = {
+  Tecnologia: {
+    icon: Cpu,
+    bgColor: "bg-blue-600",
+    textColor: "text-white",
+    hoverBg: "hover:bg-blue-700",
+  },
+  Entrevistas: {
+    icon: Mic,
+    bgColor: "bg-emerald-600",
+    textColor: "text-white",
+    hoverBg: "hover:bg-emerald-700",
+  },
+  Educacional: {
+    icon: BookOpen,
+    bgColor: "bg-amber-600",
+    textColor: "text-white",
+    hoverBg: "hover:bg-amber-700",
+  },
+  Notícias: {
+    icon: Newspaper,
+    bgColor: "bg-red-600",
+    textColor: "text-white",
+    hoverBg: "hover:bg-red-700",
+  },
+  Comédia: {
+    icon: Laugh,
+    bgColor: "bg-orange-600",
+    textColor: "text-white",
+    hoverBg: "hover:bg-orange-700",
+  },
+  Default: {
+    icon: Mic,
+    bgColor: "bg-slate-600",
+    textColor: "text-white",
+    hoverBg: "hover:bg-slate-700",
+  },
 };
 
 const mockCategories = [
@@ -50,26 +74,21 @@ const mockCategories = [
   },
   {
     id: "2",
-    name: "Música",
-    subcategories: [{ name: "Rock, Pop, Indie" }],
-  },
-  {
-    id: "3",
     name: "Entrevistas",
     subcategories: [{ name: "Artistas, Cientistas, Empreendedores" }],
   },
   {
-    id: "4",
+    id: "3",
     name: "Educacional",
     subcategories: [{ name: "Ciência, História, Filosofia" }],
   },
   {
-    id: "5",
+    id: "4",
     name: "Notícias",
     subcategories: [{ name: "Tech, Cultura, Mundo" }],
   },
   {
-    id: "6",
+    id: "5",
     name: "Comédia",
     subcategories: [{ name: "Stand-up, Entrevistas, Esquetes" }],
   },
@@ -87,25 +106,25 @@ const CategoryCard = ({
 
   return (
     <Card
-      className={`rounded-lg overflow-hidden flex flex-col items-center justify-center text-center p-4 transition-all duration-300 ease-in-out ${
-        isSelected ? "opacity-100 scale-100" : "opacity-50 scale-90"
+      className={`group cursor-pointer rounded-xl overflow-hidden flex flex-col items-center justify-center text-center p-6 transition-all duration-300 ease-in-out border-0 shadow-lg hover:shadow-xl transform hover:-translate-y-1 ${
+        isSelected ? "opacity-100 scale-100" : "opacity-70 scale-95"
       }`}
     >
       <div
-        className={`aspect-square w-16 h-16 rounded-full flex items-center justify-center ${style.color}`}
+        className={`w-20 h-20 rounded-2xl flex items-center justify-center ${style.bgColor} ${style.textColor} ${style.hoverBg} transition-colors duration-300 shadow-md`}
       >
-        <Icon className="h-8 w-8" />
+        <Icon className="h-10 w-10" />
       </div>
-      <h3 className="mt-4 text-sm font-semibold text-card-foreground">
+      <h3 className="mt-4 text-lg font-bold text-foreground group-hover:text-primary transition-colors duration-300">
         {category.name}
       </h3>
-      <div className="mt-4 pt-4 border-t w-full space-y-2">
+      <div className="mt-3 pt-3 border-t border-border/50 w-full">
         {category.subcategories.map((subcategory) => (
           <div
             key={subcategory.name}
-            className="flex items-center gap-2 justify-center"
+            className="flex items-center justify-center"
           >
-            <span className="text-xs text-muted-foreground">
+            <span className="text-sm text-muted-foreground leading-relaxed text-center">
               {subcategory.name}
             </span>
           </div>
@@ -135,7 +154,6 @@ const CarouselCategoryCard = ({
     };
 
     api.on("select", onSelect);
-    // Set initial state
     onSelect();
 
     return () => {
@@ -149,29 +167,30 @@ const CarouselCategoryCard = ({
 export function CategoryCarousel() {
   return (
     <>
-      {/* Versão Carrossel para Telas Pequenas */}
-      <div className="md:hidden">
+      <div className="sm:hidden">
         <Carousel
           opts={{
             align: "center",
             loop: true,
           }}
-          className="w-full"
+          className="w-full px-4"
         >
-          <CarouselContent>
+          <CarouselContent className="-ml-2 md:-ml-4">
             {mockCategories.map((category, index) => (
-              <CarouselItem key={category.id} className="basis-[80%]">
+              <CarouselItem
+                key={category.id}
+                className="pl-2 md:pl-4 basis-[85%]"
+              >
                 <CarouselCategoryCard category={category} index={index} />
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="absolute left-0" />
-          <CarouselNext className="absolute right-0" />
+          <CarouselPrevious className="left-2 bg-background/80 backdrop-blur-sm border-border/50" />
+          <CarouselNext className="right-2 bg-background/80 backdrop-blur-sm border-border/50" />
         </Carousel>
       </div>
 
-      {/* Versão Grade para Telas Maiores */}
-      <div className="hidden md:grid md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-6">
         {mockCategories.map((category) => (
           <CategoryCard key={category.id} category={category} />
         ))}
