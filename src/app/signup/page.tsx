@@ -1,14 +1,14 @@
 "use client";
 
-import type React from "react";
-
 import { createClient } from "@/src/lib/supabase-client";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { MailCheck } from "lucide-react";
+import { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 export default function SignupPage() {
   const supabase = createClient();
@@ -31,15 +31,12 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      // 1. Gerar a URL do avatar do DiceBear
-      const avatarSeed = encodeURIComponent(name.trim()); // Usa o nome do usuário como semente
+      const avatarSeed = encodeURIComponent(name.trim());
       const avatarUrl = `https://api.dicebear.com/8.x/thumbs/svg?seed=${avatarSeed}`;
-
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          // 2. Salvar o nome e a nova URL do avatar nos metadados do usuário
           data: {
             name: name.trim(),
             avatar_url: avatarUrl,
@@ -49,7 +46,6 @@ export default function SignupPage() {
       });
 
       if (error) throw error;
-
       setIsSubmitted(true);
     } catch (error: unknown) {
       setError(
@@ -60,12 +56,11 @@ export default function SignupPage() {
     }
   };
 
-  // NOVA FUNÇÃO: Cadastro com Google
   const handleGoogleSignup = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
@@ -78,71 +73,64 @@ export default function SignupPage() {
       setIsLoading(false);
     }
   };
+
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // O evento SIGNED_IN ocorre após o callback do Google
-      if (
-        event === "SIGNED_IN" &&
-        session?.user.app_metadata.provider === "google"
-      ) {
-        const user = session.user;
-        // Verifica se o usuário do Google NÃO TEM um avatar_url
-        if (user && !user.user_metadata.avatar_url) {
-          const userName = user.user_metadata.name || user.email; // Usa o nome ou o e-mail como fallback
-          const avatarSeed = encodeURIComponent(userName.trim());
-          const avatarUrl = `https://api.dicebear.com/8.x/thumbs/svg?seed=${avatarSeed}`;
+      // 2. Aplica os tipos corretos aos parâmetros do callback
+    } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, session: Session | null) => {
+        if (
+          event === "SIGNED_IN" &&
+          session?.user.app_metadata.provider === "google"
+        ) {
+          const user = session.user;
+          if (user && !user.user_metadata.avatar_url) {
+            const userName = user.user_metadata.name || user.email;
+            if (userName) {
+              const avatarSeed = encodeURIComponent(userName.trim());
+              const avatarUrl = `https://api.dicebear.com/8.x/thumbs/svg?seed=${avatarSeed}`;
 
-          // Atualiza o perfil do usuário com o novo avatar
-          await supabase.auth.updateUser({
-            data: { avatar_url: avatarUrl },
-          });
+              await supabase.auth.updateUser({
+                data: { avatar_url: avatarUrl },
+              });
+            }
+          }
         }
       }
-    });
+    );
 
     return () => subscription.unsubscribe();
   }, [supabase]);
 
   return (
-    <div className="flex flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md">
-        <div className="w-full space-y-6 sm:space-y-8">
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-md space-y-8">
           {isSubmitted ? (
-            <div className="text-center space-y-4 p-6 sm:p-8 bg-muted/50 rounded-lg">
-              <MailCheck className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-green-500" />
-              <h1 className="text-xl sm:text-2xl font-bold">
-                Confirme seu E-mail
-              </h1>
-              <p className="text-sm sm:text-base text-muted-foreground">
+            <div className="text-center space-y-4 p-8 bg-muted/50 rounded-lg">
+              <MailCheck className="mx-auto h-12 w-12 text-green-500" />
+              <h1 className="text-2xl font-bold">Confirme seu E-mail</h1>
+              <p className="text-muted-foreground">
                 Enviamos um link de confirmação para o seu e-mail. Por favor,
                 clique no link para ativar sua conta e fazer o login.
               </p>
-              <Button
-                asChild
-                variant="outline"
-                className="h-10 sm:h-11 bg-transparent"
-              >
+              <Button asChild variant="outline">
                 <Link href="/login">Voltar para o Login</Link>
               </Button>
             </div>
           ) : (
             <>
               <div className="text-center space-y-2">
-                <h1 className="text-2xl sm:text-3xl font-bold">
-                  Crie sua Conta Grátis
-                </h1>
-                <p className="text-sm sm:text-base text-muted-foreground">
+                <h1 className="text-3xl font-bold">Crie sua Conta Grátis</h1>
+                <p className="text-muted-foreground">
                   Comece a sua jornada em nossa plataforma
                 </p>
               </div>
 
-              <form onSubmit={handleSignup} className="space-y-3 sm:space-y-4">
+              <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium">
-                    Seu Nome
-                  </Label>
+                  <Label htmlFor="name">Seu Nome</Label>
                   <Input
                     id="name"
                     type="text"
@@ -150,13 +138,10 @@ export default function SignupPage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="h-10 sm:h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">
-                    Seu Melhor E-mail
-                  </Label>
+                  <Label htmlFor="email">Seu Melhor E-mail</Label>
                   <Input
                     id="email"
                     type="email"
@@ -164,36 +149,26 @@ export default function SignupPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="h-10 sm:h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">
-                    Crie uma Senha
-                  </Label>
+                  <Label htmlFor="password">Crie uma Senha</Label>
                   <Input
                     id="password"
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="h-10 sm:h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="confirmPassword"
-                    className="text-sm font-medium"
-                  >
-                    Confirme sua Senha
-                  </Label>
+                  <Label htmlFor="confirmPassword">Confirme sua Senha</Label>
                   <Input
                     id="confirmPassword"
                     type="password"
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="h-10 sm:h-11"
                   />
                 </div>
                 {error && (
@@ -201,11 +176,7 @@ export default function SignupPage() {
                     {error}
                   </div>
                 )}
-                <Button
-                  type="submit"
-                  className="w-full h-10 sm:h-11 text-sm sm:text-base"
-                  disabled={isLoading}
-                >
+                <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Criando conta..." : "Criar Minha Conta Grátis"}
                 </Button>
               </form>
@@ -220,7 +191,6 @@ export default function SignupPage() {
                   </span>
                 </div>
               </div>
-
               <Button
                 type="button"
                 variant="outline"
@@ -251,16 +221,22 @@ export default function SignupPage() {
 
               <div className="mt-4 text-center text-sm">
                 Já tem uma conta?{" "}
-                <Link
-                  href="/login"
-                  className="underline font-semibold hover:text-primary"
-                >
+                <Link href="/login" className="underline font-semibold">
                   Faça o login
                 </Link>
               </div>
             </>
           )}
         </div>
+      </div>
+      <div className="hidden bg-muted lg:block">
+        <Image
+          src="/placeholder.jpg"
+          alt="Imagem de fundo da página de cadastro"
+          width={1920}
+          height={1080}
+          className="h-full w-full object-cover dark:brightness-[0.2]"
+        />
       </div>
     </div>
   );
