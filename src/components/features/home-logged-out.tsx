@@ -3,6 +3,7 @@ import { FeaturedEpisodes } from "@/src/components/features/featured-episodes";
 import { RecentEpisodes } from "@/src/components/features/recent-episodes";
 import { CategoryCarousel } from "./category-carousel";
 import { PricingSection } from "./pricing-section";
+import { FollowUsSection } from "./follow-us-section";
 
 // Dados estáticos para simulação
 const mockEpisodes = Array(5).fill({
@@ -49,6 +50,7 @@ export function HomeLoggedOut() {
         <RecentEpisodes episodes={mockEpisodes} />
       </section>
       <PricingSection />
+      <FollowUsSection />
     </div>
   );
 }

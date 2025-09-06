@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Navbar } from "@/src/components/layout/navbar";
 import { BottomNavbar } from "@/src/components/layout/bottom-navbar";
+import { Footer } from "@/src/components/layout/footer";
 import { createClient } from "@/src/lib/supabase-client";
 import { User } from "@supabase/supabase-js";
 
@@ -38,6 +39,7 @@ export default function MainLayout({
         {children}
       </main>
       {user && <BottomNavbar />}
+      <Footer />
     </div>
   );
 }
