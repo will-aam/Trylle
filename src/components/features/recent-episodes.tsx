@@ -1,61 +1,74 @@
 import { EpisodeCard } from "./episode-card";
+import { Episode } from "@/src/lib/types";
 
-const recentEpisodes = [
+const mockRecentEpisodes: Episode[] = [
   {
     id: "4",
     title: "Blockchain e Criptomoedas Explicadas",
     description: "Entenda a tecnologia por trás das moedas digitais",
-    thumbnail: "/placeholder.svg?height=200&width=300",
-    duration: 2580,
-    category: "Tecnologia",
-    author: "Prof. Ana Costa",
-    publishedAt: "2024-01-18",
-    plays: 8750,
-    rating: 4.6,
+    imageUrl: "/Whisk_dbc581f98f.jpg?height=200&width=300&text=Episódio+4",
+    categories: { name: "Tecnologia" },
+    audio_url: "",
+    file_name: "",
+    category_id: null,
+    subcategory_id: null,
+    tags: null,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   },
   {
     id: "5",
     title: "Psicologia Positiva no Trabalho",
     description:
       "Como aplicar princípios de bem-estar no ambiente profissional",
-    thumbnail: "/placeholder.svg?height=200&width=300",
-    duration: 1950,
-    category: "Saúde",
-    author: "Dr. Pedro Lima",
-    publishedAt: "2024-01-17",
-    plays: 6420,
-    rating: 4.8,
+    imageUrl: "/Whisk_dbc581f98f.jpg?height=200&width=300&text=Episódio+5",
+    categories: { name: "Saúde" },
+    audio_url: "",
+    file_name: "",
+    category_id: null,
+    subcategory_id: null,
+    tags: null,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   },
   {
     id: "6",
     title: "História da Computação Quântica",
     description: "Dos primeiros conceitos aos computadores quânticos atuais",
-    thumbnail: "/placeholder.svg?height=200&width=300",
-    duration: 3120,
-    category: "Ciência",
-    author: "Dra. Laura Ferreira",
-    publishedAt: "2024-01-16",
-    plays: 5890,
-    rating: 4.9,
+    imageUrl: "/Whisk_dbc581f98f.jpg?height=200&width=300&text=Episódio+6",
+    categories: { name: "Ciência" },
+    audio_url: "",
+    file_name: "",
+    category_id: null,
+    subcategory_id: null,
+    tags: null,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   },
   {
     id: "7",
     title: "Liderança em Tempos de Mudança",
     description: "Estratégias para liderar equipes em ambientes dinâmicos",
-    thumbnail: "/placeholder.svg?height=200&width=300",
-    duration: 2240,
-    category: "Negócios",
-    author: "Roberto Alves",
-    publishedAt: "2024-01-15",
-    plays: 7320,
-    rating: 4.7,
+    imageUrl: "/Whisk_dbc581f98f.jpg?height=200&width=300&text=Episódio+7",
+    categories: { name: "Negócios" },
+    audio_url: "",
+    file_name: "",
+    category_id: null,
+    subcategory_id: null,
+    tags: null,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   },
 ];
 
 export function RecentEpisodes() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {recentEpisodes.map((episode) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {mockRecentEpisodes.map((episode) => (
         <EpisodeCard key={episode.id} episode={episode} />
       ))}
     </div>

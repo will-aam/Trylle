@@ -5,7 +5,7 @@ import { Play } from "lucide-react";
 export function Hero() {
   return (
     <section
-      className="relative bg-cover bg-center bg-no-repeat -mt-14 pt-28 pb-20"
+      className="relative bg-cover bg-center bg-no-repeat -mt-14 pt-28 pb-20 -mx-4 sm:-mx-6 md:-mx-8"
       style={{ backgroundImage: "url('/hero-background.jpg')" }}
     >
       {/* Overlay */}
@@ -16,7 +16,8 @@ export function Hero() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 gap-12 items-center">
             <div className="space-y-6 text-center lg:text-left">
-              <h1 className="text-4xl lg:text-6xl font-bold leading-tight [text-shadow:1px_1px_3px_var(--tw-shadow-color)] shadow-black/60">
+              <h1 className="text-4xl lg:text-6xl font-bold leading-tight [text-shadow:1px_1px_3px_var(--tw-shadow-color)] shadow-black/60 text-white">
+                {" "}
                 Descubra o mundo através do
                 <span className="text-primary"> áudio</span>
               </h1>

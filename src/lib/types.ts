@@ -1,4 +1,5 @@
 export type Episode = {
+  imageUrl: string;
   id: string;
   title: string;
   description: string | null;

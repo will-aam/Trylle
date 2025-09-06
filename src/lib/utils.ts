@@ -4,7 +4,6 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-// Adicione esta função em src/lib/utils.ts
 
 export function formatTime(seconds: number): string {
   if (isNaN(seconds)) return "00:00";

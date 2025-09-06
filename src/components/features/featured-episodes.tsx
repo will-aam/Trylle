@@ -2,21 +2,24 @@ import { EpisodeCard } from "./episode-card";
 import { Episode } from "@/src/lib/types";
 
 // Usando dados estáticos para o front-end
-const mockEpisodes: Episode[] = Array(6).fill({
-  id: "1",
-  title: "Nome do Episódio em Destaque",
-  duration: "32 min",
-  // Adicionando o resto dos campos necessários para o tipo Episode
-  description: "",
-  audio_url: "",
-  file_name: "",
-  category_id: null,
-  subcategory_id: null,
-  tags: null,
-  published_at: new Date().toISOString(),
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-});
+const mockEpisodes: Episode[] = Array(3)
+  .fill(0)
+  .map((_, i) => ({
+    id: `${i + 1}`,
+    title: `Episódio em Destaque ${i + 1}`,
+    imageUrl: `/background.png?height=200&width=300&text=Episódio+${i + 1}`,
+    categories: { name: "Tecnologia" },
+    // Adicionando o resto dos campos necessários para o tipo Episode
+    description: "Descrição do episódio.",
+    audio_url: "",
+    file_name: "",
+    category_id: null,
+    subcategory_id: null,
+    tags: null,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }));
 
 export function FeaturedEpisodes() {
   return (

@@ -15,9 +15,17 @@ export function HomeLoggedOut() {
     <div className="space-y-12">
       <Hero />
       <section>
-        <h2 className="text-2xl font-bold tracking-tight mb-4">
-          Episódios em Destaque
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold tracking-tight">
+            Episódios em Destaque
+          </h2>
+          <a
+            href="/login"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Ver todos
+          </a>
+        </div>
         <FeaturedEpisodes episodes={mockEpisodes} />
       </section>
       <section>
@@ -26,9 +34,17 @@ export function HomeLoggedOut() {
         <CategoryCarousel />
       </section>
       <section>
-        <h2 className="text-2xl font-bold tracking-tight mb-4">
-          Episódios Recentes
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold tracking-tight">
+            Episódios Recentes
+          </h2>
+          <a
+            href="/login"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Ver todos
+          </a>
+        </div>
         <RecentEpisodes episodes={mockEpisodes} />
       </section>
     </div>

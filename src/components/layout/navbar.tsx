@@ -60,7 +60,8 @@ export function Navbar() {
     window.matchMedia("(pointer: coarse)").matches;
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-background px-4 backdrop-blur-sm sm:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-white dark:bg-black/30 dark:backdrop-blur-md px-4 sm:px-6">
+      {" "}
       <div className="relative flex-1 md:grow-0">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
@@ -69,7 +70,6 @@ export function Navbar() {
           className="w-full rounded-lg bg-muted pl-8 md:w-[200px] lg:w-[320px]"
         />
       </div>
-
       <div className="flex items-center gap-2">
         <ThemeToggle />
         <Button variant="ghost" size="icon" className="rounded-full">

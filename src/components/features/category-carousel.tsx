@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { Card } from "@/src/components/ui/card";
 import {
   Carousel,
@@ -7,6 +8,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  useCarousel,
 } from "@/src/components/ui/carousel";
 import {
   Mic,
@@ -16,6 +18,18 @@ import {
   Newspaper,
   Laugh,
   type LucideIcon,
+  Smartphone,
+  Globe,
+  HardDrive,
+  Guitar,
+  MicVocal,
+  Podcast,
+  FlaskConical,
+  Landmark,
+  Brain,
+  Rocket,
+  Palette,
+  Camera,
 } from "lucide-react";
 
 const categoryStyles: { [key: string]: { icon: LucideIcon; color: string } } = {
@@ -29,33 +43,107 @@ const categoryStyles: { [key: string]: { icon: LucideIcon; color: string } } = {
 };
 
 const mockCategories = [
-  { id: "1", name: "Tecnologia" },
-  { id: "2", name: "Música" },
-  { id: "3", name: "Entrevistas" },
-  { id: "4", name: "Educacional" },
-  { id: "5", name: "Notícias" },
-  { id: "6", name: "Comédia" },
+  {
+    id: "1",
+    name: "Tecnologia",
+    subcategories: [{ name: "Mobile, Web Dev, Hardware" }],
+  },
+  {
+    id: "2",
+    name: "Música",
+    subcategories: [{ name: "Rock, Pop, Indie" }],
+  },
+  {
+    id: "3",
+    name: "Entrevistas",
+    subcategories: [{ name: "Artistas, Cientistas, Empreendedores" }],
+  },
+  {
+    id: "4",
+    name: "Educacional",
+    subcategories: [{ name: "Ciência, História, Filosofia" }],
+  },
+  {
+    id: "5",
+    name: "Notícias",
+    subcategories: [{ name: "Tech, Cultura, Mundo" }],
+  },
+  {
+    id: "6",
+    name: "Comédia",
+    subcategories: [{ name: "Stand-up, Entrevistas, Esquetes" }],
+  },
 ];
 
 const CategoryCard = ({
   category,
+  isSelected = true,
 }: {
-  category: { id: string; name: string };
+  category: (typeof mockCategories)[0];
+  isSelected?: boolean;
 }) => {
   const style = categoryStyles[category.name] || categoryStyles.Default;
   const Icon = style.icon;
+
   return (
-    <Card className="rounded-lg overflow-hidden aspect-square flex flex-col items-center justify-center text-center p-4 transition-colors hover:bg-muted/50">
+    <Card
+      className={`rounded-lg overflow-hidden flex flex-col items-center justify-center text-center p-4 transition-all duration-300 ease-in-out ${
+        isSelected ? "opacity-100 scale-100" : "opacity-50 scale-90"
+      }`}
+    >
       <div
-        className={`w-16 h-16 rounded-full flex items-center justify-center ${style.color}`}
+        className={`aspect-square w-16 h-16 rounded-full flex items-center justify-center ${style.color}`}
       >
         <Icon className="h-8 w-8" />
       </div>
       <h3 className="mt-4 text-sm font-semibold text-card-foreground">
         {category.name}
       </h3>
+      <div className="mt-4 pt-4 border-t w-full space-y-2">
+        {category.subcategories.map((subcategory) => (
+          <div
+            key={subcategory.name}
+            className="flex items-center gap-2 justify-center"
+          >
+            <span className="text-xs text-muted-foreground">
+              {subcategory.name}
+            </span>
+          </div>
+        ))}
+      </div>
     </Card>
   );
+};
+
+const CarouselCategoryCard = ({
+  category,
+  index,
+}: {
+  category: (typeof mockCategories)[0];
+  index: number;
+}) => {
+  const { api } = useCarousel();
+  const [isSelected, setIsSelected] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!api) {
+      return;
+    }
+
+    const onSelect = () => {
+      setIsSelected(api.selectedScrollSnap() === index);
+    };
+
+    api.on("select", onSelect);
+    // Set initial state
+    onSelect();
+
+    return () => {
+      api.off("select", onSelect);
+    };
+  }, [api, index]);
+
+  return <CategoryCard category={category} isSelected={isSelected} />;
 };
 
 export function CategoryCarousel() {
@@ -63,14 +151,22 @@ export function CategoryCarousel() {
     <>
       {/* Versão Carrossel para Telas Pequenas */}
       <div className="md:hidden">
-        <Carousel opts={{ align: "start", dragFree: true }} className="w-full">
-          <CarouselContent className="-ml-2">
-            {mockCategories.map((category) => (
-              <CarouselItem key={category.id} className="basis-1/3 pl-2">
-                <CategoryCard category={category} />
+        <Carousel
+          opts={{
+            align: "center",
+            loop: true,
+          }}
+          className="w-full"
+        >
+          <CarouselContent>
+            {mockCategories.map((category, index) => (
+              <CarouselItem key={category.id} className="basis-[80%]">
+                <CarouselCategoryCard category={category} index={index} />
               </CarouselItem>
             ))}
           </CarouselContent>
+          <CarouselPrevious className="absolute left-0" />
+          <CarouselNext className="absolute right-0" />
         </Carousel>
       </div>
 
