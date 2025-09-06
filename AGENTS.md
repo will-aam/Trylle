@@ -4,8 +4,6 @@ Este documento registra todos os comandos `pnpm` utilizados para construir e man
 
 ## Comandos Principais do Projeto
 
-Estes são os comandos que você mais usará no dia a dia.
-
 1. **`pnpm install`**  
    _O que faz:_ Lê o arquivo `package.json` e instala todas as dependências necessárias para o projeto funcionar. Este é o primeiro comando que você roda em um projeto novo.
 
