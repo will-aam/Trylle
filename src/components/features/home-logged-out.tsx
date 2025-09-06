@@ -7,49 +7,6 @@ import { TestimonialsSection } from "./testimonials-section";
 import { Button } from "../ui/button";
 import { Play, Headphones, TrendingUp } from "lucide-react";
 
-const mockEpisodes = [
-  {
-    id: "1",
-    title: "O Futuro da Inteligência Artificial",
-    categories: { name: "Tecnologia" },
-    duration: "45 min",
-    description: "Explorando como a IA está transformando nosso mundo",
-    plays: "12.5K",
-  },
-  {
-    id: "2",
-    title: "Mindfulness e Produtividade",
-    categories: { name: "Bem-estar" },
-    duration: "32 min",
-    description: "Técnicas para manter o foco no mundo moderno",
-    plays: "8.2K",
-  },
-  {
-    id: "3",
-    title: "Startups que Mudaram o Mundo",
-    categories: { name: "Negócios" },
-    duration: "38 min",
-    description: "Histórias inspiradoras de empreendedorismo",
-    plays: "15.1K",
-  },
-  {
-    id: "4",
-    title: "Ciência do Sono e Performance",
-    categories: { name: "Saúde" },
-    duration: "41 min",
-    description: "Como otimizar seu descanso para melhor performance",
-    plays: "9.7K",
-  },
-  {
-    id: "5",
-    title: "Criptomoedas Explicadas",
-    categories: { name: "Finanças" },
-    duration: "29 min",
-    description: "Entenda o mundo das moedas digitais",
-    plays: "11.3K",
-  },
-];
-
 export function HomeLoggedOut() {
   return (
     <div className="space-y-16">
@@ -72,7 +29,7 @@ export function HomeLoggedOut() {
             </Button>
           </a>
         </div>
-        <FeaturedEpisodes episodes={mockEpisodes} />
+        <FeaturedEpisodes />
       </section>
 
       <section className="container mx-auto px-4">
@@ -104,7 +61,7 @@ export function HomeLoggedOut() {
             </a>
           </div>
         </div>
-        <RecentEpisodes episodes={mockEpisodes} />
+        <RecentEpisodes />
       </section>
 
       <TestimonialsSection />
