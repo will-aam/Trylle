@@ -41,9 +41,9 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
       </div>
       <div className="flex flex-col gap-3 items-center">
         <h3 className="font-semibold truncate">{episode.title}</h3>
-        <Button onClick={handlePlay} className="w-32">
-          Ouvir Agora
-        </Button>
+        <a href="/login">
+          <Button className="w-32">Ouvir Agora</Button>
+        </a>
       </div>
     </div>
   );

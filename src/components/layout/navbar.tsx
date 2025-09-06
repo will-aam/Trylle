@@ -16,7 +16,7 @@ import {
   AvatarImage,
 } from "@/src/components/ui/avatar";
 import { Input } from "@/src/components/ui/input";
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, AudioLines } from "lucide-react";
 import { createClient } from "@/src/lib/supabase-client";
 import { User } from "@supabase/supabase-js";
 import { ThemeToggle } from "./theme-toggle";
@@ -62,6 +62,11 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-white dark:bg-black/30 dark:backdrop-blur-md px-4 sm:px-6">
       {" "}
+      <Link href="/">
+        <div className="flex items-center gap-4">
+          <AudioLines className="h-6 w-6" />
+        </div>
+      </Link>
       <div className="relative flex-1 md:grow-0">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input

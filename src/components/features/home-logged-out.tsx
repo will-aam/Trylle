@@ -1,7 +1,8 @@
 import { Hero } from "@/src/components/features/hero";
 import { FeaturedEpisodes } from "@/src/components/features/featured-episodes";
 import { RecentEpisodes } from "@/src/components/features/recent-episodes";
-import { CategoryCarousel } from "./category-carousel"; // Importa o novo componente
+import { CategoryCarousel } from "./category-carousel";
+import { PricingSection } from "./pricing-section";
 
 // Dados estáticos para simulação
 const mockEpisodes = Array(5).fill({
@@ -47,6 +48,7 @@ export function HomeLoggedOut() {
         </div>
         <RecentEpisodes episodes={mockEpisodes} />
       </section>
+      <PricingSection />
     </div>
   );
 }
