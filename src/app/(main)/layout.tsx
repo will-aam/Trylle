@@ -1,4 +1,4 @@
-"use client"; // Necessário para detectar se o usuário está logado
+"use client";
 
 import { useState, useEffect } from "react";
 import { Navbar } from "@/src/components/layout/navbar";
@@ -18,16 +18,35 @@ export default function MainLayout({
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+
+      // CORREÇÃO APLICADA AQUI:
+      // Verificamos se 'session' não é nulo antes de usá-lo.
+      if (
+        event === "SIGNED_IN" &&
+        session && // Garante que a sessão existe
+        session.user &&
+        !session.user.user_metadata.avatar_url
+      ) {
+        // Agora é seguro acessar o token
+        const token = session.access_token;
+
+        fetch("/api/set-avatar", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }).catch((error) => console.error("Falha ao definir avatar:", error));
+      }
     });
 
-    const fetchUser = async () => {
+    const fetchInitialUser = async () => {
       const { data } = await supabase.auth.getUser();
       setUser(data.user);
     };
-    fetchUser();
+    fetchInitialUser();
 
     return () => subscription.unsubscribe();
   }, [supabase]);
