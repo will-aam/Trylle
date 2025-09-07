@@ -1,16 +1,31 @@
 import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
-const s3Client = new S3Client({
-  region: "auto",
-  endpoint: `https://cfd93b192a5f95b371cd3c99010c6ce4.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
+async function getS3Client() {
+  try {
+    const s3Client = new S3Client({
+      region: "auto",
+      endpoint: `https://cfd93b192a5f95b371cd3c99010c6ce4.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+      },
+    });
+    return s3Client;
+  } catch (error) {
+    console.error("Falha ao inicializar o S3 Client:", error);
+    throw new Error("Erro na configuração do serviço de armazenamento.");
+  }
+}
 
 export async function POST(request: Request) {
+  let s3Client;
+  try {
+    s3Client = await getS3Client();
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -23,7 +38,6 @@ export async function POST(request: Request) {
     }
 
     const fileBuffer = await file.arrayBuffer();
-
     const fileExt = file.name.split(".").pop();
     const fileName = `${Date.now()}-${Math.random()
       .toString(36)
@@ -42,12 +56,10 @@ export async function POST(request: Request) {
     const publicUrl = `${process.env.NEXT_PUBLIC_R2_PUBLIC_DOMAIN}/${filePath}`;
 
     return NextResponse.json({ publicUrl, filePath });
-  } catch (error) {
-    // Log de erro aprimorado
-    console.error("ERRO DETALHADO NO UPLOAD PARA O R2:", error);
-    return NextResponse.json(
-      { error: "Erro no servidor ao tentar fazer upload do arquivo." },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    console.error("Erro ao enviar o arquivo para o S3:", error);
+    const errorMessage =
+      error.message || "Erro no servidor ao tentar fazer upload do arquivo.";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

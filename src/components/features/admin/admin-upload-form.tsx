@@ -176,10 +176,16 @@ export function UploadForm() {
       const body = new FormData();
       body.append("file", audioFile);
       const response = await fetch("/api/upload", { method: "POST", body });
-      const { publicUrl, error: uploadError } = await response.json();
-      if (!response.ok || uploadError)
-        throw new Error(uploadError || "Falha no upload do arquivo.");
 
+      // O novo backend retorna um objeto de erro com uma chave `error`
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Acessa a mensagem de erro específica do backend
+        throw new Error(result.error || "Falha no upload do arquivo.");
+      }
+
+      const { publicUrl } = result;
       const { data: episodeData, error: insertError } = await supabase
         .from("episodes")
         .insert([
