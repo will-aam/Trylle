@@ -113,8 +113,9 @@ export function UserManagement() {
     setStatusFilter("all");
   };
 
+  // CORREÇÃO APLICADA AQUI
   const hasActiveFilters =
-    searchTerm ||
+    Boolean(searchTerm) ||
     roleFilter !== "all" ||
     methodFilter !== "all" ||
     statusFilter !== "all";
