@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LogOut,
   ChevronLeft,
@@ -31,6 +31,7 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
 
   const handleLogout = async () => {
@@ -76,36 +77,42 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 icon={<Home className="h-4 w-4" />}
                 label="Início"
                 isCollapsed={isCollapsed}
+                isActive={pathname === "/"}
               />
               <SidebarLink
                 href="/admin"
                 icon={<MonitorCog className="h-4 w-4" />}
                 label={"Painel"}
                 isCollapsed={isCollapsed}
+                isActive={pathname === "/admin"}
               />
               <SidebarLink
                 href="/admin/episodes"
                 icon={<LibraryBig className="h-4 w-4" />}
                 label="Gerenciar Episódios"
                 isCollapsed={isCollapsed}
+                isActive={pathname === "/admin/episodes"}
               />
               <SidebarLink
                 href="/admin/users"
                 icon={<Users className="h-4 w-4" />}
                 label="Gerenciador de usuários"
                 isCollapsed={isCollapsed}
+                isActive={pathname === "/admin/users"}
               />
               <SidebarLink
-                href="/admin/config"
+                href="/admin/financial"
                 icon={<Wallet className="h-4 w-4" />}
                 label="Financeiro"
                 isCollapsed={isCollapsed}
+                isActive={pathname === "/admin/config"}
               />
               <SidebarLink
                 href="/admin/config"
                 icon={<Settings className="h-4 w-4" />}
                 label="Configurações"
                 isCollapsed={isCollapsed}
+                isActive={pathname === "/admin/config"}
               />
             </nav>
           </div>
