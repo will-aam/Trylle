@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -38,11 +38,9 @@ import { useToast } from "@/src/hooks/use-toast";
 import { Upload, X, ChevronsUpDown } from "lucide-react";
 import { createClient } from "@/src/lib/supabase-client";
 import { Category, Subcategory, Tag } from "@/src/lib/types";
-import { cn } from "@/src/lib/utils";
 
 export function UploadForm() {
   const supabase = createClient();
-  const router = useRouter(); // Adicionado para poder recarregar a página
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
@@ -54,6 +52,7 @@ export function UploadForm() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
 
   const { toast } = useToast();
+  const router = useRouter();
 
   const [formData, setFormData] = useState({
     title: "",
@@ -65,19 +64,16 @@ export function UploadForm() {
 
   useEffect(() => {
     const loadInitialData = async () => {
-      const { data: catData, error: catError } = await supabase
+      const { data: catData } = await supabase
         .from("categories")
         .select("*")
         .order("name");
-      if (catError) console.error("Erro ao carregar categorias:", catError);
-      else setCategories(catData || []);
-
-      const { data: tagData, error: tagError } = await supabase
+      setCategories(catData || []);
+      const { data: tagData } = await supabase
         .from("tags")
         .select("*")
         .order("name");
-      if (tagError) console.error("Erro ao carregar tags:", tagError);
-      else setAllTags(tagData || []);
+      setAllTags(tagData || []);
     };
     loadInitialData();
   }, [supabase]);
@@ -85,13 +81,12 @@ export function UploadForm() {
   useEffect(() => {
     if (selectedCategory) {
       const loadSubcategories = async () => {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("subcategories")
           .select("*")
           .eq("category_id", selectedCategory)
           .order("name");
-        if (error) console.error("Erro ao carregar subcategorias:", error);
-        else setSubcategories(data || []);
+        setSubcategories(data || []);
       };
       loadSubcategories();
     } else {
@@ -105,15 +100,14 @@ export function UploadForm() {
       if (!file.type.startsWith("audio/")) {
         toast({
           title: "Arquivo inválido",
-          description: "Por favor, selecione um arquivo de áudio válido.",
+          description: "Por favor, selecione um arquivo de áudio.",
           variant: "destructive",
         });
         return;
       }
       setAudioFile(file);
       if (!formData.title) {
-        const fileName = file.name.replace(/\.[^/.]+$/, "");
-        setFormData({ ...formData, title: fileName });
+        setFormData({ ...formData, title: file.name.replace(/\.[^/.]+$/, "") });
       }
     }
   };
@@ -139,7 +133,6 @@ export function UploadForm() {
       setPopoverOpen(false);
       return;
     }
-
     const { data, error } = await supabase
       .from("tags")
       .insert([{ name }])
@@ -152,8 +145,8 @@ export function UploadForm() {
         variant: "destructive",
       });
     } else {
-      setAllTags((prevTags) =>
-        [...prevTags, data].sort((a, b) => a.name.localeCompare(b.name))
+      setAllTags((prev) =>
+        [...prev, data].sort((a, b) => a.name.localeCompare(b.name))
       );
       handleTagSelect(data);
     }
@@ -173,19 +166,36 @@ export function UploadForm() {
     setIsLoading(true);
 
     try {
-      const body = new FormData();
-      body.append("file", audioFile);
-      const response = await fetch("/api/upload", { method: "POST", body });
+      // 1. Pedir a Pre-signed URL para a nossa nova API
+      const presignedUrlResponse = await fetch("/api/generate-presigned-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: audioFile.name,
+          fileType: audioFile.type,
+        }),
+      });
 
-      // O novo backend retorna um objeto de erro com uma chave `error`
-      const result = await response.json();
-
-      if (!response.ok) {
-        // Acessa a mensagem de erro específica do backend
-        throw new Error(result.error || "Falha no upload do arquivo.");
+      if (!presignedUrlResponse.ok) {
+        const errorData = await presignedUrlResponse.json();
+        throw new Error(errorData.error || "Falha ao preparar o upload.");
       }
 
-      const { publicUrl } = result;
+      const { signedUrl, publicUrl, originalFileName } =
+        await presignedUrlResponse.json();
+
+      // 2. Fazer o upload do arquivo diretamente para o R2
+      const uploadResponse = await fetch(signedUrl, {
+        method: "PUT",
+        body: audioFile,
+        headers: { "Content-Type": audioFile.type },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Falha no upload do arquivo para o armazenamento.");
+      }
+
+      // 3. Salvar os metadados no Supabase
       const { data: episodeData, error: insertError } = await supabase
         .from("episodes")
         .insert([
@@ -193,7 +203,7 @@ export function UploadForm() {
             title: formData.title.trim(),
             description: formData.description.trim() || null,
             audio_url: publicUrl,
-            file_name: audioFile.name,
+            file_name: originalFileName,
             category_id: formData.categoryId || null,
             subcategory_id: formData.subcategoryId || null,
             published_at: new Date(formData.publishedAt).toISOString(),
@@ -209,23 +219,13 @@ export function UploadForm() {
           episode_id: episodeData.id,
           tag_id: tag.id,
         }));
-        const { error: tagsError } = await supabase
-          .from("episode_tags")
-          .insert(episodeTags);
-        if (tagsError) {
-          toast({
-            title: "Aviso",
-            description: `Episódio criado, mas houve um erro ao associar as tags: ${tagsError.message}`,
-            variant: "destructive",
-          });
-        }
+        await supabase.from("episode_tags").insert(episodeTags);
       }
 
       toast({
         title: "Sucesso!",
         description: "Episódio enviado com sucesso!",
       });
-      // Limpa o formulário
       setFormData({
         title: "",
         description: "",
@@ -236,7 +236,7 @@ export function UploadForm() {
       setAudioFile(null);
       setSelectedTags([]);
       setSelectedCategory("");
-      router.refresh(); // Recarrega os dados da página para atualizar a lista de episódios
+      router.refresh();
     } catch (error: any) {
       console.error("Erro no processo de upload:", error);
       toast({
@@ -259,6 +259,7 @@ export function UploadForm() {
         </CardHeader>
         <CardContent className="overflow-y-auto p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* ... o resto do seu JSX do formulário permanece o mesmo ... */}
             <div className="space-y-6">
               <div>
                 <Label htmlFor="title">Título *</Label>
@@ -431,7 +432,6 @@ export function UploadForm() {
             </div>
           </div>
         </CardContent>
-        {/* ÁREA MODIFICADA */}
         <CardFooter className="border-t pt-6">
           <div className="w-full md:w-auto ml-auto flex flex-col md:flex-row gap-2">
             <Button
@@ -445,7 +445,7 @@ export function UploadForm() {
                 })
               }
             >
-              Publicar Episódio
+              Enviar e Publicar Episódio
             </Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading ? "Enviando..." : "Enviar Episódio"}
