@@ -107,7 +107,7 @@ export function Navbar() {
             </PopoverTrigger>
             <PopoverContent
               align="end"
-              className="w-48 p-2 z-50 bg-background shadow-lg border rounded-md"
+              className="w-48 p-2 bg-background shadow-lg border rounded-md"
               onMouseEnter={() => setPopoverOpen(true)}
               onMouseLeave={() => setPopoverOpen(false)}
             >

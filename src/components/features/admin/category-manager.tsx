@@ -225,9 +225,10 @@ export function CategoryManager() {
           <CardHeader>
             <CardTitle>Categorias e Subcategorias</CardTitle>
             <CardDescription>
-              Displaying {categories.length} categories and{" "}
-              {subcategories.length} subcategories.
+              Exibindo {categories.length} categorias e {subcategories.length}{" "}
+              subcategorias.
             </CardDescription>
+
             <div className="flex flex-col sm:flex-row gap-2 mt-4">
               <div className="relative flex-1">
                 <Popover open={open} onOpenChange={setOpen}>
@@ -337,10 +338,8 @@ export function CategoryManager() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Subcategory Name</TableHead>
-                            <TableHead className="text-right">
-                              Actions
-                            </TableHead>
+                            <TableHead>Nome da Subcategoria</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>

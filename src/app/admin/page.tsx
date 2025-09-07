@@ -25,7 +25,7 @@ export default function AdminPage() {
       <Tabs defaultValue="upload" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="upload">Upload</TabsTrigger>
-          <TabsTrigger value="categories">Categories and Subs</TabsTrigger>
+          <TabsTrigger value="categories">Categorias e Subs</TabsTrigger>
           <TabsTrigger value="tags">Tags</TabsTrigger>
           <TabsTrigger value="episodes">Episódios</TabsTrigger>
         </TabsList>

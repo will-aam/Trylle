@@ -28,6 +28,8 @@ export async function POST(request: Request) {
     const fileName = `${Date.now()}-${Math.random()
       .toString(36)
       .substring(2)}.${fileExt}`;
+
+    // CORREÇÃO APLICADA AQUI: Uso de crases (template literals)
     const filePath = `audios/${fileName}`;
 
     const command = new PutObjectCommand({
