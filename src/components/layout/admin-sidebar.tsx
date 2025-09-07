@@ -84,7 +84,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 isCollapsed={isCollapsed}
               />
               <SidebarLink
-                href="/admin/config"
+                href="/admin/episodes"
                 icon={<LibraryBig className="h-4 w-4" />}
                 label="Gerenciar Episódios"
                 isCollapsed={isCollapsed}
