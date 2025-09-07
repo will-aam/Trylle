@@ -3,9 +3,17 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 async function getS3Client() {
   try {
+    const accountId = process.env.R2_ACCOUNT_ID;
+    if (!accountId) {
+      throw new Error(
+        "A variável de ambiente R2_ACCOUNT_ID não está definida."
+      );
+    }
+
     const s3Client = new S3Client({
       region: "auto",
-      endpoint: `https://cfd93b192a5f95b371cd3c99010c6ce4.r2.cloudflarestorage.com`,
+      // CORREÇÃO APLICADA AQUI
+      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
       credentials: {
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
@@ -57,7 +65,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ publicUrl, filePath });
   } catch (error: any) {
-    console.error("Erro ao enviar o arquivo para o S3:", error);
+    console.error("Erro ao enviar o arquivo para o R2:", error);
     const errorMessage =
       error.message || "Erro no servidor ao tentar fazer upload do arquivo.";
     return NextResponse.json({ error: errorMessage }, { status: 500 });
