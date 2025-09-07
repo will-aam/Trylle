@@ -42,18 +42,18 @@ import { cn } from "@/src/lib/utils";
 
 export function UploadForm() {
   const supabase = createClient();
+  const router = useRouter(); // Adicionado para poder recarregar a página
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [tagInputValue, setTagInputValue] = useState("");
-  const [popoverOpen, setPopoverOpen] = useState(false); // Estado para controlar o Popover
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
 
   const { toast } = useToast();
-  const router = useRouter();
 
   const [formData, setFormData] = useState({
     title: "",
@@ -63,7 +63,6 @@ export function UploadForm() {
     publishedAt: new Date().toISOString().split("T")[0],
   });
 
-  // Busca inicial de categorias e tags
   useEffect(() => {
     const loadInitialData = async () => {
       const { data: catData, error: catError } = await supabase
@@ -83,7 +82,6 @@ export function UploadForm() {
     loadInitialData();
   }, [supabase]);
 
-  // Busca subcategorias quando uma categoria é selecionada
   useEffect(() => {
     if (selectedCategory) {
       const loadSubcategories = async () => {
@@ -221,6 +219,7 @@ export function UploadForm() {
         title: "Sucesso!",
         description: "Episódio enviado com sucesso!",
       });
+      // Limpa o formulário
       setFormData({
         title: "",
         description: "",
@@ -231,6 +230,7 @@ export function UploadForm() {
       setAudioFile(null);
       setSelectedTags([]);
       setSelectedCategory("");
+      router.refresh(); // Recarrega os dados da página para atualizar a lista de episódios
     } catch (error: any) {
       console.error("Erro no processo de upload:", error);
       toast({
@@ -425,14 +425,26 @@ export function UploadForm() {
             </div>
           </div>
         </CardContent>
+        {/* ÁREA MODIFICADA */}
         <CardFooter className="border-t pt-6">
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full md:w-auto ml-auto"
-          >
-            {isLoading ? "Enviando..." : "Enviar Episódio"}
-          </Button>
+          <div className="w-full md:w-auto ml-auto flex flex-col md:flex-row gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isLoading}
+              onClick={() =>
+                toast({
+                  title: "Em breve!",
+                  description: "A publicação direta será implementada.",
+                })
+              }
+            >
+              Publicar Episódio
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Enviando..." : "Enviar Episódio"}
+            </Button>
+          </div>
         </CardFooter>
       </Card>
     </form>

@@ -35,11 +35,20 @@ import {
 } from "@/src/components/ui/alert-dialog";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
-import { MoreHorizontal, Play, Edit, Trash2 } from "lucide-react";
+import { Input } from "@/src/components/ui/input";
+import {
+  MoreHorizontal,
+  Play,
+  Edit,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Filter,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { createClient } from "@/src/lib/supabase-client";
-import { Episode } from "@/src/lib/types";
+import { Episode, Category } from "@/src/lib/types";
 import { usePlayer } from "@/src/hooks/use-player";
 import { useToast } from "@/src/hooks/use-toast";
 import { EditEpisodeDialog } from "./edit-episode-dialog";
@@ -55,12 +64,32 @@ export function EpisodeManager() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
 
+  // Filter and sort states
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isTitleSearchActive, setIsTitleSearchActive] = useState(false);
+  const [titleSearchTerm, setTitleSearchTerm] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null
+  );
+  const [sortOrder, setSortOrder] = useState({ ascending: false });
+
   const fetchEpisodes = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("episodes")
-      .select(`*, categories ( name )`)
-      .order("published_at", { ascending: false });
+    let query = supabase.from("episodes").select(`*, categories ( name )`);
+
+    if (titleSearchTerm) {
+      query = query.ilike("title", `%${titleSearchTerm}%`);
+    }
+
+    if (selectedCategoryId) {
+      query = query.eq("category_id", selectedCategoryId);
+    }
+
+    query = query.order("published_at", {
+      ascending: sortOrder.ascending,
+    });
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Erro ao buscar episódios:", error);
@@ -73,11 +102,33 @@ export function EpisodeManager() {
       setEpisodes(data || []);
     }
     setLoading(false);
-  }, [supabase, toast]);
+  }, [supabase, toast, titleSearchTerm, selectedCategoryId, sortOrder]);
 
   useEffect(() => {
     fetchEpisodes();
   }, [fetchEpisodes]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name");
+
+      if (error) {
+        toast({
+          title: "Erro ao buscar categorias",
+          description:
+            "Não foi possível carregar a lista de categorias para o filtro.",
+          variant: "destructive",
+        });
+      } else {
+        setCategories(data || []);
+      }
+    };
+
+    fetchCategories();
+  }, [supabase, toast]);
 
   const handleEdit = (episode: Episode) => {
     setSelectedEpisode(episode);
@@ -150,9 +201,84 @@ export function EpisodeManager() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Título</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Publicado em</TableHead>
+                <TableHead
+                  className="cursor-pointer"
+                  onDoubleClick={() => setIsTitleSearchActive(true)}
+                >
+                  {isTitleSearchActive ? (
+                    <Input
+                      placeholder="Buscar pelo título..."
+                      value={titleSearchTerm}
+                      onChange={(e) => setTitleSearchTerm(e.target.value)}
+                      onBlur={() => setIsTitleSearchActive(false)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === "Escape") {
+                          setIsTitleSearchActive(false);
+                        }
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      Título
+                      {titleSearchTerm && (
+                        <Badge variant="secondary">Filtro Ativo</Badge>
+                      )}
+                    </div>
+                  )}
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    Categoria
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                          <Filter className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem
+                          onSelect={() => setSelectedCategoryId(null)}
+                        >
+                          Todas as Categorias
+                        </DropdownMenuItem>
+                        {categories.map((category) => (
+                          <DropdownMenuItem
+                            key={category.id}
+                            onSelect={() => setSelectedCategoryId(category.id)}
+                          >
+                            {category.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    {selectedCategoryId && (
+                      <Badge variant="secondary">
+                        {categories.find((c) => c.id === selectedCategoryId)
+                          ?.name || "..."}
+                      </Badge>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    Publicado em
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        setSortOrder({ ascending: !sortOrder.ascending })
+                      }
+                      className="h-6 w-6"
+                    >
+                      {sortOrder.ascending ? (
+                        <ArrowUp className="h-4 w-4" />
+                      ) : (
+                        <ArrowDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </TableHead>
                 <TableHead>
                   <span className="sr-only">Ações</span>
                 </TableHead>

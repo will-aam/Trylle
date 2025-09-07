@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -19,7 +19,7 @@ import {
 import { createClient } from "@/src/lib/supabase-client";
 import { Tag } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,20 +32,38 @@ import {
   AlertDialogTrigger,
 } from "@/src/components/ui/alert-dialog";
 import { Badge } from "@/src/components/ui/badge";
+import { cn } from "@/src/lib/utils";
 
+// Define a more specific type for tags that include the episode count
+type TagWithCount = Tag & {
+  episode_tags: { count: number }[];
+};
+
+// Renamed component to reflect its single responsibility
 export function TagManager() {
   const supabase = createClient();
   const { toast } = useToast();
 
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [tags, setTags] = useState<TagWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTagName, setNewTagName] = useState("");
+  const [tagSearchTerm, setTagSearchTerm] = useState("");
+
+  const filteredTags = useMemo(() => {
+    if (!tagSearchTerm.trim()) {
+      return tags;
+    }
+    return tags.filter((tag) =>
+      tag.name.toLowerCase().includes(tagSearchTerm.toLowerCase())
+    );
+  }, [tags, tagSearchTerm]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    // Fetch tags and the count of related episodes
     const { data, error } = await supabase
       .from("tags")
-      .select("*")
+      .select("*, episode_tags(count)")
       .order("name");
 
     if (error) {
@@ -56,7 +74,7 @@ export function TagManager() {
         variant: "destructive",
       });
     } else {
-      setTags(data || []);
+      setTags((data as TagWithCount[]) || []);
     }
     setLoading(false);
   }, [supabase, toast]);
@@ -80,7 +98,9 @@ export function TagManager() {
         variant: "destructive",
       });
     } else {
-      setTags([...tags, data].sort((a, b) => a.name.localeCompare(b.name)));
+      // Create a new TagWithCount object to add to the state
+      const newTag: TagWithCount = { ...data, episode_tags: [{ count: 0 }] };
+      setTags([...tags, newTag].sort((a, b) => a.name.localeCompare(b.name)));
       setNewTagName("");
       toast({ title: "Sucesso!", description: "Tag criada." });
     }
@@ -109,68 +129,95 @@ export function TagManager() {
       <CardHeader>
         <CardTitle>Tags</CardTitle>
         <CardDescription>
-          Currently, there are <strong>{tags.length}</strong> registered tags.
+          Atualmente, existem <strong>{tags.length}</strong> tags cadastradas.
         </CardDescription>
-        <div className="flex space-x-2 mt-4">
-          <Input
-            placeholder="Nome da nova tag"
-            value={newTagName}
-            onChange={(e) => setNewTagName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
-          />
-          <Button onClick={handleAddTag}>
-            <Plus className="mr-2 h-4 w-4" /> Adicionar
-          </Button>
+        <div className="flex flex-col gap-2 mt-4">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar tags..."
+              value={tagSearchTerm}
+              onChange={(e) => setTagSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+          <div className="flex space-x-2">
+            <Input
+              placeholder="Nome da nova tag"
+              value={newTagName}
+              onChange={(e) => setNewTagName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+            />
+            <Button onClick={handleAddTag}>
+              <Plus className="mr-2 h-4 w-4" /> Adicionar
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
         <div className="border rounded-md p-4 space-y-2 max-h-[60vh] overflow-y-auto">
-          {tags.length > 0 ? (
+          {filteredTags.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => (
-                <AlertDialog key={tag.id}>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <AlertDialogTrigger asChild>
-                          <Badge
-                            variant="secondary"
-                            className="cursor-pointer hover:bg-destructive/80"
-                          >
-                            {tag.name}
-                          </Badge>
-                        </AlertDialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Clique para excluir a tag</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Excluir a tag "{tag.name}"?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Esta ação não pode ser desfeita. A tag será removida de
-                        todos os episódios que a utilizam.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleDeleteTag(tag.id)}
-                      >
-                        Excluir
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              ))}
+              {filteredTags.map((tag) => {
+                const count = tag.episode_tags[0]?.count || 0;
+                return (
+                  <AlertDialog key={tag.id}>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <AlertDialogTrigger asChild>
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                "cursor-pointer hover:bg-destructive/80",
+                                {
+                                  "border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200/80":
+                                    count === 0,
+                                }
+                              )}
+                            >
+                              {tag.name}
+                              {` (${count})`}
+                            </Badge>
+                          </AlertDialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            {count === 0
+                              ? "Tag não utilizada. Clique para excluir."
+                              : "Clique para excluir a tag."}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Excluir a tag "{tag.name}"?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta ação não pode ser desfeita. A tag será removida
+                          de todos os episódios que a utilizam.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteTag(tag.id)} // O erro foi corrigido aqui
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhuma tag criada.
+              {tagSearchTerm
+                ? "Nenhuma tag encontrada."
+                : "Nenhuma tag criada."}
             </p>
           )}
         </div>

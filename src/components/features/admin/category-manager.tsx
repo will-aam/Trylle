@@ -19,6 +19,7 @@ import {
   Search,
   ChevronsUpDown,
   ArrowDownUp,
+  Pencil,
 } from "lucide-react";
 import {
   Popover,
@@ -63,6 +64,10 @@ export function CategoryManager() {
   const [newSubcategoryNames, setNewSubcategoryNames] = useState<{
     [key: string]: string;
   }>({});
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
+    null
+  );
+  const [editingCategoryName, setEditingCategoryName] = useState("");
 
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const [open, setOpen] = useState(false);
@@ -214,6 +219,57 @@ export function CategoryManager() {
     }
   };
 
+  const handleUpdateCategory = async () => {
+    if (!editingCategoryId) return;
+
+    const trimmedName = editingCategoryName.trim();
+    if (!trimmedName) {
+      toast({
+        title: "Erro de validação",
+        description: "O nome da categoria não pode estar vazio.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const originalCategory = categories.find((c) => c.id === editingCategoryId);
+    if (originalCategory && originalCategory.name === trimmedName) {
+      cancelEditing();
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("categories")
+      .update({ name: trimmedName })
+      .eq("id", editingCategoryId)
+      .select()
+      .single();
+
+    if (error) {
+      toast({
+        title: "Erro ao atualizar categoria",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setCategories(
+        categories.map((c) => (c.id === editingCategoryId ? data : c))
+      );
+      toast({ title: "Sucesso!", description: "Categoria atualizada." });
+      cancelEditing();
+    }
+  };
+
+  const startEditing = (category: Category) => {
+    setEditingCategoryId(category.id);
+    setEditingCategoryName(category.name);
+  };
+
+  const cancelEditing = () => {
+    setEditingCategoryId(null);
+    setEditingCategoryName("");
+  };
+
   if (loading) {
     return <p>Carregando taxonomia...</p>;
   }
@@ -301,9 +357,43 @@ export function CategoryManager() {
                     className="p-3 border rounded-md bg-muted/50"
                   >
                     <div className="flex justify-between items-center">
-                      <h3 className="font-semibold text-md">{category.name}</h3>
+                      {editingCategoryId === category.id ? (
+                        <Input
+                          value={editingCategoryName}
+                          onChange={(e) =>
+                            setEditingCategoryName(e.target.value)
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleUpdateCategory();
+                            if (e.key === "Escape") cancelEditing();
+                          }}
+                          onBlur={handleUpdateCategory}
+                          autoFocus
+                          className="h-9"
+                        />
+                      ) : (
+                        <div
+                          className="flex items-center group gap-2"
+                          onDoubleClick={() => startEditing(category)}
+                        >
+                          <h3 className="font-semibold text-md">
+                            {category.name}
+                          </h3>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => startEditing(category)}
+                            className="opacity-0 group-hover:opacity-100 h-7 w-7"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                       <AlertDialog>
-                        <AlertDialogTrigger asChild>
+                        <AlertDialogTrigger
+                          asChild
+                          disabled={editingCategoryId !== null}
+                        >
                           <Button
                             variant="ghost"
                             size="icon"
