@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -44,6 +44,7 @@ import {
   ArrowUp,
   ArrowDown,
   Filter,
+  RefreshCw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -58,7 +59,7 @@ export function EpisodeManager() {
   const player = usePlayer();
   const { toast } = useToast();
 
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [allEpisodes, setAllEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -68,6 +69,7 @@ export function EpisodeManager() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isTitleSearchActive, setIsTitleSearchActive] = useState(false);
   const [titleSearchTerm, setTitleSearchTerm] = useState("");
+  const [debouncedTitleSearchTerm, setDebouncedTitleSearchTerm] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null
   );
@@ -75,21 +77,10 @@ export function EpisodeManager() {
 
   const fetchEpisodes = useCallback(async () => {
     setLoading(true);
-    let query = supabase.from("episodes").select(`*, categories ( name )`);
-
-    if (titleSearchTerm) {
-      query = query.ilike("title", `%${titleSearchTerm}%`);
-    }
-
-    if (selectedCategoryId) {
-      query = query.eq("category_id", selectedCategoryId);
-    }
-
-    query = query.order("published_at", {
-      ascending: sortOrder.ascending,
-    });
-
-    const { data, error } = await query;
+    const { data, error } = await supabase
+      .from("episodes")
+      .select(`*, categories ( name )`)
+      .order("published_at", { ascending: false }); // Default sort
 
     if (error) {
       console.error("Erro ao buscar episódios:", error);
@@ -99,14 +90,52 @@ export function EpisodeManager() {
         variant: "destructive",
       });
     } else {
-      setEpisodes(data || []);
+      setAllEpisodes(data || []);
     }
     setLoading(false);
-  }, [supabase, toast, titleSearchTerm, selectedCategoryId, sortOrder]);
+  }, [supabase, toast]);
 
   useEffect(() => {
     fetchEpisodes();
-  }, [fetchEpisodes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Fetch episodes only on mount
+
+  const filteredEpisodes = useMemo(() => {
+    let episodes = [...allEpisodes];
+
+    if (debouncedTitleSearchTerm) {
+      episodes = episodes.filter((episode) =>
+        episode.title
+          .toLowerCase()
+          .includes(debouncedTitleSearchTerm.toLowerCase())
+      );
+    }
+
+    if (selectedCategoryId) {
+      episodes = episodes.filter(
+        (episode) => episode.category_id === selectedCategoryId
+      );
+    }
+
+    episodes.sort((a, b) => {
+      const dateA = new Date(a.published_at).getTime();
+      const dateB = new Date(b.published_at).getTime();
+      return sortOrder.ascending ? dateA - dateB : dateB - dateA;
+    });
+
+    return episodes;
+  }, [allEpisodes, debouncedTitleSearchTerm, selectedCategoryId, sortOrder]);
+
+  // Debounce title search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedTitleSearchTerm(titleSearchTerm);
+    }, 300); // 300ms delay
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [titleSearchTerm]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -192,10 +221,18 @@ export function EpisodeManager() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Gerenciar Episódios</CardTitle>
-          <CardDescription>
-            Visualize, edite e gerencie todos os seus episódios.
-          </CardDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle>Gerenciar Episódios</CardTitle>
+              <CardDescription>
+                Visualize, edite e gerencie todos os seus episódios.
+              </CardDescription>
+            </div>
+            <Button onClick={fetchEpisodes} variant="outline">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Atualizar Lista
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -285,8 +322,8 @@ export function EpisodeManager() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {episodes.length > 0 ? (
-                episodes.map((episode) => (
+              {filteredEpisodes.length > 0 ? (
+                filteredEpisodes.map((episode) => (
                   <TableRow key={episode.id}>
                     <TableCell className="font-medium">
                       {episode.title}

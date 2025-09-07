@@ -11,6 +11,7 @@ import {
   MonitorCog,
   Wallet,
   Home,
+  LibraryBig,
 } from "lucide-react";
 import {
   Tooltip,
@@ -84,20 +85,26 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
               />
               <SidebarLink
                 href="/admin/config"
+                icon={<LibraryBig className="h-4 w-4" />}
+                label="Gerenciar Episódios"
+                isCollapsed={isCollapsed}
+              />
+              <SidebarLink
+                href="/admin/users"
                 icon={<Users className="h-4 w-4" />}
                 label="Gerenciador de usuários"
                 isCollapsed={isCollapsed}
               />
               <SidebarLink
                 href="/admin/config"
-                icon={<Settings className="h-4 w-4" />}
-                label="Configurações"
+                icon={<Wallet className="h-4 w-4" />}
+                label="Financeiro"
                 isCollapsed={isCollapsed}
               />
               <SidebarLink
                 href="/admin/config"
-                icon={<Wallet className="h-4 w-4" />}
-                label="Financeiro"
+                icon={<Settings className="h-4 w-4" />}
+                label="Configurações"
                 isCollapsed={isCollapsed}
               />
             </nav>
