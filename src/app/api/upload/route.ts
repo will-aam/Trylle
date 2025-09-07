@@ -28,8 +28,6 @@ export async function POST(request: Request) {
     const fileName = `${Date.now()}-${Math.random()
       .toString(36)
       .substring(2)}.${fileExt}`;
-
-    // CORREÇÃO APLICADA AQUI: Uso de crases (template literals)
     const filePath = `audios/${fileName}`;
 
     const command = new PutObjectCommand({
@@ -45,9 +43,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ publicUrl, filePath });
   } catch (error) {
-    console.error("Erro no upload para o R2:", error);
+    // Log de erro aprimorado
+    console.error("ERRO DETALHADO NO UPLOAD PARA O R2:", error);
     return NextResponse.json(
-      { error: "Erro ao fazer upload do arquivo." },
+      { error: "Erro no servidor ao tentar fazer upload do arquivo." },
       { status: 500 }
     );
   }
