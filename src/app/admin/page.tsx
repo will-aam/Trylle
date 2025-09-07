@@ -3,6 +3,7 @@ import { AdminStats } from "@/src/components/features/admin/admin-stats";
 import { UploadForm } from "@/src/components/features/admin/admin-upload-form";
 import { EpisodeManager } from "@/src/components/features/admin/episode-manager";
 import { CategoryManager } from "@/src/components/features/admin/category-manager";
+import { TagManager } from "@/src/components/features/admin/tag-manager";
 import {
   Tabs,
   TabsContent,
@@ -24,29 +25,25 @@ export default function AdminPage() {
       <Tabs defaultValue="upload" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="upload">Upload</TabsTrigger>
-          <TabsTrigger value="categories">Taxonomia</TabsTrigger>
+          <TabsTrigger value="categories">Categories and Subs</TabsTrigger>
+          <TabsTrigger value="tags">Tags</TabsTrigger>
           <TabsTrigger value="episodes">Episódios</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="upload">
           <UploadForm />
         </TabsContent>
 
-        <TabsContent value="episodes">
-          <EpisodeManager />
-        </TabsContent>
-
         <TabsContent value="categories">
           <CategoryManager />
         </TabsContent>
 
-        <TabsContent value="analytics">
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              Analytics em desenvolvimento...
-            </p>
-          </div>
+        <TabsContent value="tags">
+          <TagManager />
+        </TabsContent>
+
+        <TabsContent value="episodes">
+          <EpisodeManager />
         </TabsContent>
       </Tabs>
     </div>
