@@ -6,7 +6,6 @@ import { EpisodeTable } from "./episode-management/episode-table";
 import { EpisodeFilters } from "./episode-management/episode-filters";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { ListMusic } from "lucide-react";
-import { Button } from "@/src/components/ui/button";
 import { createClient } from "@/src/lib/supabase-client";
 import { Episode, Category } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";

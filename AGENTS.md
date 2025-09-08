@@ -40,4 +40,10 @@ Estes comandos adicionam funcionalidades específicas ao projeto.
 7. **`pnpm install zustand`**  
    _O que faz:_ Instala a biblioteca Zustand para gerenciamento de estado.
 
+8. `pnpm install @tiptap/react @tiptap/starter-kit`'
+   _O que faz:_ Instala a biblioteca Tip Tap para edição de texto em Markdown
+
+9. `pnpm install react-markdown`
+   _O que faz:_ Instala o renderizador de Markdown
+
 ---
