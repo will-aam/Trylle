@@ -50,6 +50,7 @@ export function UploadForm() {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [documentFiles, setDocumentFiles] = useState<File[]>([]);
 
   const { toast } = useToast();
   const router = useRouter();
@@ -222,10 +223,69 @@ export function UploadForm() {
         await supabase.from("episode_tags").insert(episodeTags);
       }
 
+      // Upload de documentos de apoio
+      if (documentFiles.length > 0) {
+        toast({
+          title: "Enviando anexos...",
+          description: `Iniciando o upload de ${documentFiles.length} documento(s).`,
+        });
+        for (const file of documentFiles) {
+          try {
+            const presignedUrlResponse = await fetch(
+              "/api/generate-presigned-url-document",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  fileName: file.name,
+                  fileType: file.type,
+                }),
+              }
+            );
+
+            if (!presignedUrlResponse.ok) {
+              throw new Error(
+                `Falha ao obter URL para o documento ${file.name}`
+              );
+            }
+
+            const { signedUrl, publicUrl, storagePath } =
+              await presignedUrlResponse.json();
+
+            const uploadResponse = await fetch(signedUrl, {
+              method: "PUT",
+              body: file,
+              headers: { "Content-Type": file.type },
+            });
+
+            if (!uploadResponse.ok) {
+              throw new Error(`Falha no upload do documento ${file.name}`);
+            }
+
+            await supabase.from("episode_attachments").insert([
+              {
+                episode_id: episodeData.id,
+                file_name: file.name,
+                storage_path: storagePath,
+                public_url: publicUrl,
+              },
+            ]);
+          } catch (uploadError: any) {
+            toast({
+              title: "Erro no Anexo",
+              description: `Falha ao enviar ${file.name}: ${uploadError.message}`,
+              variant: "destructive",
+            });
+            // Continua para o próximo arquivo em caso de erro
+          }
+        }
+      }
+
       toast({
         title: "Sucesso!",
-        description: "Episódio enviado com sucesso!",
+        description: "Episódio e anexos enviados com sucesso!",
       });
+
       setFormData({
         title: "",
         description: "",
@@ -234,6 +294,7 @@ export function UploadForm() {
         publishedAt: new Date().toISOString().split("T")[0],
       });
       setAudioFile(null);
+      setDocumentFiles([]);
       setSelectedTags([]);
       setSelectedCategory("");
       router.refresh();
@@ -416,6 +477,30 @@ export function UploadForm() {
                     </Badge>
                   ))}
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="document-files">Documentos de Apoio</Label>
+                <Input
+                  id="document-files"
+                  type="file"
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      setDocumentFiles(Array.from(e.target.files));
+                    }
+                  }}
+                  className="mt-1"
+                />
+                {documentFiles.length > 0 && (
+                  <div className="mt-2 text-sm text-gray-500">
+                    <p>{documentFiles.length} arquivo(s) selecionado(s):</p>
+                    <ul className="list-disc pl-5">
+                      {documentFiles.map((file, index) => (
+                        <li key={index}>{file.name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
               <div>
                 <Label htmlFor="published-at">Data de Publicação</Label>

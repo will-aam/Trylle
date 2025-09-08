@@ -15,17 +15,11 @@ export async function POST(request: Request) {
   try {
     const { fileName, fileType } = await request.json();
 
-    if (!fileName || !fileType) {
-      return NextResponse.json(
-        { error: "Nome e tipo do arquivo são obrigatórios." },
-        { status: 400 }
-      );
-    }
-
     const fileExt = fileName.split(".").pop();
     const uniqueFileName = `${Date.now()}-${Math.random()
       .toString(36)
       .substring(2)}.${fileExt}`;
+    // Salva em uma pasta diferente para organização
     const filePath = `documents/${uniqueFileName}`;
 
     const command = new PutObjectCommand({
@@ -35,14 +29,12 @@ export async function POST(request: Request) {
     });
 
     const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 60 });
-
     const publicUrl = `${process.env.NEXT_PUBLIC_R2_PUBLIC_DOMAIN}/${filePath}`;
 
     return NextResponse.json({
       signedUrl,
       publicUrl,
-      storagePath: filePath,
-      originalFileName: fileName,
+      storagePath: filePath, // Retorna o caminho para salvar no DB
     });
   } catch (error) {
     console.error("Erro ao gerar Pre-signed URL para documento:", error);
