@@ -18,3 +18,16 @@ CREATE TABLE IF NOT EXISTS episode_attachments (
 
 -- Índice para acelerar a busca de anexos por episódio
 CREATE INDEX IF NOT EXISTS idx_episode_attachments_episode_id ON episode_attachments(episode_id);
+
+-- Tabela para armazenar documentos dos episódios
+CREATE TABLE IF NOT EXISTS episode_documents (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  episode_id UUID REFERENCES episodes(id) ON DELETE CASCADE,
+  file_name TEXT NOT NULL,
+  file_url TEXT NOT NULL UNIQUE,
+  file_key TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Índice para acelerar a busca de documentos por episódio
+CREATE INDEX IF NOT EXISTS idx_episode_documents_episode_id ON episode_documents(episode_id);
