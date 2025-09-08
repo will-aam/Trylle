@@ -46,4 +46,18 @@ Estes comandos adicionam funcionalidades específicas ao projeto.
 9. `pnpm install react-markdown`
    _O que faz:_ Instala o renderizador de Markdown
 
----
+10. `pnpm install @tiptap/extension-link`
+    _O que faz:_ Esse comando instala a extensão de links do Tiptap usando o pnpm.
+11. `pnpm install @tiptap/extension-markdown`
+    _O que faz:_ Instala a extensão de Markdown
+
+12. pnpm install -D @tailwindcss/typography
+    usei esses comandos:
+
+pnpm adicionar @tiptap/cabeçalho da extensão
+
+pnpm adicionar @tiptap/starter-kit
+
+pnpm adicionar @tiptap/cabeçalho da extensão
+
+pnpm adicionar @tiptap/core @tiptap/react

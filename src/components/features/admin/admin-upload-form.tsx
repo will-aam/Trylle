@@ -12,7 +12,7 @@ import {
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
-import { Textarea } from "../../ui/textarea";
+import RichTextEditor from "../../ui/RichTextEditor";
 import {
   Select,
   SelectContent,
@@ -336,13 +336,11 @@ export function UploadForm() {
               </div>
               <div>
                 <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
+                <RichTextEditor
+                  content={formData.description}
+                  onChange={(newContent) =>
+                    setFormData({ ...formData, description: newContent })
                   }
-                  className="mt-1 min-h-[232px] resize-none"
                 />
               </div>
             </div>
