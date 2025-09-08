@@ -5,7 +5,8 @@ import {
   CardTitle,
 } from "@/src/components/ui/card";
 import { ListMusic, CheckCircle, Clock, Archive } from "lucide-react";
-import type { Episode } from "./episode-management";
+// CORREÇÃO: Importa o tipo Episode do local centralizado
+import { Episode } from "@/src/lib/types";
 
 interface EpisodeStatsProps {
   episodes: Episode[];
@@ -13,10 +14,14 @@ interface EpisodeStatsProps {
 
 export function EpisodeStats({ episodes }: EpisodeStatsProps) {
   const totalEpisodes = episodes.length;
+
+  // Lógica de contagem ajustada para aceitar 'publicado' ou 'published'
   const publishedCount = episodes.filter(
-    (ep) => ep.status === "published"
+    (ep) => ep.status === "published" || ep.status === "publicado"
   ).length;
+
   const draftCount = episodes.filter((ep) => ep.status === "draft").length;
+
   const scheduledCount = episodes.filter(
     (ep) => ep.status === "scheduled"
   ).length;

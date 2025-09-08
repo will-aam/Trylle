@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-// O import do EpisodeStats e EpisodeTable agora deve apontar para o caminho correto
 import { EpisodeStats } from "./episode-management/episode-stats";
 import { EpisodeTable } from "./episode-management/episode-table";
 import { EpisodeFilters } from "./episode-management/episode-filters";
@@ -9,7 +8,7 @@ import { Card, CardContent } from "@/src/components/ui/card";
 import { ListMusic } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { createClient } from "@/src/lib/supabase-client";
-import { Episode, Category } from "@/src/lib/types"; // Importa os tipos corretos
+import { Episode, Category } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";
 
 export function EpisodeManager() {
@@ -28,7 +27,7 @@ export function EpisodeManager() {
     try {
       const episodesPromise = supabase
         .from("episodes")
-        .select(`*, categories (name), tags:episode_tags (tags (id, name))`); // Query ajustada para tags
+        .select(`*, categories (name), tags:episode_tags (tags (id, name))`);
 
       const categoriesPromise = supabase.from("categories").select("*");
 
@@ -40,7 +39,7 @@ export function EpisodeManager() {
       if (episodesResult.error) throw episodesResult.error;
       if (categoriesResult.error) throw categoriesResult.error;
 
-      setEpisodes(episodesResult.data as any[]); // O 'any' é temporário, o Supabase infere o tipo
+      setEpisodes(episodesResult.data as any[]);
       setCategories(categoriesResult.data as Category[]);
     } catch (error: any) {
       toast({
@@ -61,7 +60,6 @@ export function EpisodeManager() {
 
   const filteredEpisodes = useMemo(() => {
     return episodes.filter((episode: any) => {
-      // Usamos 'any' aqui para facilitar a filtragem
       const matchesSearch =
         episode.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (episode.tags &&
@@ -99,7 +97,6 @@ export function EpisodeManager() {
             </h2>
             <p className="text-muted-foreground mt-2">Carregando dados...</p>
           </div>
-          <Button disabled>Fazer Novo Upload</Button>
         </div>
       </div>
     );
@@ -116,11 +113,9 @@ export function EpisodeManager() {
             Um centro de comando para todo o seu conteúdo de áudio.
           </p>
         </div>
-        <Button>Fazer Novo Upload</Button>
       </div>
 
-      {/* O componente EpisodeStats também precisa ser ajustado para receber o tipo correto */}
-      {/* <EpisodeStats episodes={episodes} /> */}
+      <EpisodeStats episodes={episodes} />
 
       <EpisodeFilters
         categories={categories}
@@ -141,13 +136,7 @@ export function EpisodeManager() {
       )}
 
       {filteredEpisodes.length > 0 ? (
-        // Passamos a lista filtrada para a tabela
-        <EpisodeTable
-          episodes={filteredEpisodes}
-          setEpisodes={function (episodes: Episode[]): void {
-            throw new Error("Function not implemented.");
-          }}
-        />
+        <EpisodeTable episodes={filteredEpisodes} setEpisodes={setEpisodes} />
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
