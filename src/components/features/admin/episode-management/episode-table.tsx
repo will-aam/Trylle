@@ -9,9 +9,14 @@ import { Episode } from "@/src/lib/types"; // Importação correta
 interface EpisodeTableProps {
   episodes: Episode[];
   setEpisodes: (episodes: Episode[]) => void;
+  onEpisodeUpdate: () => void;
 }
 
-export function EpisodeTable({ episodes, setEpisodes }: EpisodeTableProps) {
+export function EpisodeTable({
+  episodes,
+  setEpisodes,
+  onEpisodeUpdate,
+}: EpisodeTableProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("pt-BR", {
       day: "2-digit",
@@ -120,7 +125,10 @@ export function EpisodeTable({ episodes, setEpisodes }: EpisodeTableProps) {
                     {formatDate(episode.published_at)}
                   </td>
                   <td className="p-4">
-                    <EpisodeActions episode={episode} />
+                    <EpisodeActions
+                      episode={episode}
+                      onEpisodeUpdate={onEpisodeUpdate}
+                    />
                   </td>
                 </tr>
               ))}

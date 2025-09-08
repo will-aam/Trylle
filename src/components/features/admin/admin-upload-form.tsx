@@ -20,34 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/src/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/src/components/ui/popover";
-import { Badge } from "@/src/components/ui/badge";
 import { useToast } from "@/src/hooks/use-toast";
-import { Upload, X, ChevronsUpDown } from "lucide-react";
+import { Upload } from "lucide-react";
 import { createClient } from "@/src/lib/supabase-client";
 import { Category, Subcategory, Tag } from "@/src/lib/types";
+import { TagSelector } from "./TagSelector";
 
 export function UploadForm() {
   const supabase = createClient();
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [allTags, setAllTags] = useState<Tag[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
-  const [tagInputValue, setTagInputValue] = useState("");
-  const [popoverOpen, setPopoverOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
@@ -70,11 +54,6 @@ export function UploadForm() {
         .select("*")
         .order("name");
       setCategories(catData || []);
-      const { data: tagData } = await supabase
-        .from("tags")
-        .select("*")
-        .order("name");
-      setAllTags(tagData || []);
     };
     loadInitialData();
   }, [supabase]);
@@ -111,47 +90,6 @@ export function UploadForm() {
         setFormData({ ...formData, title: file.name.replace(/\.[^/.]+$/, "") });
       }
     }
-  };
-
-  const handleTagSelect = (tag: Tag) => {
-    if (!selectedTags.some((t) => t.id === tag.id)) {
-      setSelectedTags([...selectedTags, tag]);
-    }
-    setPopoverOpen(false);
-  };
-
-  const handleTagRemove = (tagId: string) => {
-    setSelectedTags(selectedTags.filter((t) => t.id !== tagId));
-  };
-
-  const handleCreateTag = async (tagName: string) => {
-    const name = tagName.trim().toLowerCase();
-    if (
-      !name ||
-      selectedTags.some((t) => t.name === name) ||
-      allTags.some((t) => t.name === name)
-    ) {
-      setPopoverOpen(false);
-      return;
-    }
-    const { data, error } = await supabase
-      .from("tags")
-      .insert([{ name }])
-      .select()
-      .single();
-    if (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar a tag.",
-        variant: "destructive",
-      });
-    } else {
-      setAllTags((prev) =>
-        [...prev, data].sort((a, b) => a.name.localeCompare(b.name))
-      );
-      handleTagSelect(data);
-    }
-    setPopoverOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -414,67 +352,10 @@ export function UploadForm() {
               </div>
               <div>
                 <Label>Tags</Label>
-                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={popoverOpen}
-                      className="w-full justify-between mt-1 font-normal"
-                    >
-                      <span className="truncate">
-                        {selectedTags.length > 0
-                          ? selectedTags.map((t) => t.name).join(", ")
-                          : "Selecione ou crie tags..."}
-                      </span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                    <Command>
-                      <CommandInput
-                        placeholder="Buscar ou criar tag..."
-                        onValueChange={setTagInputValue}
-                      />
-                      <CommandList>
-                        <CommandEmpty
-                          onSelect={() => handleCreateTag(tagInputValue)}
-                        >
-                          Criar nova tag: "{tagInputValue}"
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {allTags
-                            .filter(
-                              (tag) =>
-                                !selectedTags.some((s) => s.id === tag.id)
-                            )
-                            .map((tag) => (
-                              <CommandItem
-                                key={tag.id}
-                                onSelect={() => handleTagSelect(tag)}
-                              >
-                                {tag.name}
-                              </CommandItem>
-                            ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedTags.map((tag) => (
-                    <Badge key={tag.id} variant="secondary">
-                      {tag.name}
-                      <button
-                        type="button"
-                        onClick={() => handleTagRemove(tag.id)}
-                        className="ml-2 rounded-full outline-none hover:bg-destructive/80 p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
+                <TagSelector
+                  selectedTags={selectedTags}
+                  onSelectedTagsChange={setSelectedTags}
+                />
               </div>
               <div>
                 <Label htmlFor="document-files">Documentos de Apoio</Label>
