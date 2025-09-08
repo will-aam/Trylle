@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
 import { Search, X, Filter } from "lucide-react";
+import { Category } from "@/src/lib/types";
 
 interface EpisodeFiltersProps {
   searchTerm: string;
@@ -21,6 +22,7 @@ interface EpisodeFiltersProps {
   setCategoryFilter: (categories: string[]) => void;
   onClearFilters: () => void;
   hasActiveFilters: boolean;
+  categories: Category[];
 }
 
 const statusOptions = [
@@ -28,12 +30,6 @@ const statusOptions = [
   { value: "draft", label: "Rascunho" },
   { value: "scheduled", label: "Agendado" },
   { value: "archived", label: "Arquivado" },
-];
-
-const categoryOptions = [
-  { value: "Tecnologia", label: "Tecnologia" },
-  { value: "Design", label: "Design" },
-  { value: "Marketing", label: "Marketing" },
 ];
 
 export function EpisodeFilters({
@@ -45,6 +41,7 @@ export function EpisodeFilters({
   setCategoryFilter,
   onClearFilters,
   hasActiveFilters,
+  categories,
 }: EpisodeFiltersProps) {
   const handleStatusChange = (value: string) => {
     const newStatusFilter = statusFilter.includes(value)
@@ -110,16 +107,16 @@ export function EpisodeFilters({
               <DropdownMenuSeparator />
               <DropdownMenuLabel>Filtrar por Categoria</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {categoryOptions.map((option) => (
+              {categories.map((category) => (
                 <DropdownMenuCheckboxItem
-                  key={option.value}
-                  checked={categoryFilter.includes(option.value)}
+                  key={category.id}
+                  checked={categoryFilter.includes(category.id)}
                   onSelect={(e) => {
                     e.preventDefault();
-                    handleCategoryChange(option.value);
+                    handleCategoryChange(category.id);
                   }}
                 >
-                  {option.label}
+                  {category.name}
                 </DropdownMenuCheckboxItem>
               ))}
             </DropdownMenuContent>

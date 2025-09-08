@@ -4,14 +4,14 @@ import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import { EpisodeActions } from "./episode-actions";
-import type { Episode } from "./episode-management";
+import { Episode } from "@/src/lib/types"; // Importação correta
 
 interface EpisodeTableProps {
   episodes: Episode[];
   setEpisodes: (episodes: Episode[]) => void;
 }
 
-export function EpisodeTable({ episodes }: EpisodeTableProps) {
+export function EpisodeTable({ episodes, setEpisodes }: EpisodeTableProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("pt-BR", {
       day: "2-digit",
@@ -23,6 +23,7 @@ export function EpisodeTable({ episodes }: EpisodeTableProps) {
   const getStatusBadge = (status: Episode["status"]) => {
     switch (status) {
       case "published":
+      case "publicado": // Agora ambos os casos funcionam sem erro
         return (
           <Badge variant="default" className="bg-green-600 hover:bg-green-700">
             Publicado
@@ -46,7 +47,7 @@ export function EpisodeTable({ episodes }: EpisodeTableProps) {
           </Badge>
         );
       default:
-        return <Badge variant="secondary">Desconhecido</Badge>;
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
@@ -94,21 +95,21 @@ export function EpisodeTable({ episodes }: EpisodeTableProps) {
                     <div className="font-medium truncate max-w-xs">
                       {episode.title}
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    {/* <div className="text-sm text-muted-foreground">
                       {episode.duration}
-                    </div>
+                    </div> */}
                   </td>
                   <td className="p-4 hidden md:table-cell">
-                    {episode.category}
+                    {episode.categories?.name || "N/A"}
                   </td>
                   <td className="p-4 hidden lg:table-cell">
                     <div className="flex flex-wrap gap-1">
-                      {episode.tags.slice(0, 2).map((tag) => (
-                        <Badge key={tag} variant="outline">
-                          {tag}
+                      {episode.tags?.slice(0, 2).map((tag: any) => (
+                        <Badge key={tag.tags.id} variant="outline">
+                          {tag.tags.name}
                         </Badge>
                       ))}
-                      {episode.tags.length > 2 && (
+                      {episode.tags && episode.tags.length > 2 && (
                         <Badge variant="outline">
                           +{episode.tags.length - 2}
                         </Badge>
@@ -116,7 +117,7 @@ export function EpisodeTable({ episodes }: EpisodeTableProps) {
                     </div>
                   </td>
                   <td className="p-4 text-sm hidden xl:table-cell">
-                    {formatDate(episode.publicationDate)}
+                    {formatDate(episode.published_at)}
                   </td>
                   <td className="p-4">
                     <EpisodeActions episode={episode} />

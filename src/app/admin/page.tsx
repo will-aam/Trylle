@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { AdminStats } from "@/src/components/features/admin/admin-stats";
 import { UploadForm } from "@/src/components/features/admin/admin-upload-form";
-import { EpisodeManager } from "@/src/components/features/admin/episode-manager";
+// O EpisodeManager não é mais necessário aqui
 import { CategoryManager } from "@/src/components/features/admin/category-manager";
 import { TagManager } from "@/src/components/features/admin/tag-manager";
 import {
@@ -23,11 +23,12 @@ export default function AdminPage() {
       </Suspense>
 
       <Tabs defaultValue="upload" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        {/* --- GRADE AJUSTADA PARA 3 COLUNAS --- */}
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="upload">Upload</TabsTrigger>
           <TabsTrigger value="categories">Categorias e Subs</TabsTrigger>
           <TabsTrigger value="tags">Tags</TabsTrigger>
-          <TabsTrigger value="episodes">Episódios</TabsTrigger>
+          {/* --- ABA DE EPISÓDIOS REMOVIDA --- */}
         </TabsList>
 
         <TabsContent value="upload">
@@ -42,9 +43,7 @@ export default function AdminPage() {
           <TagManager />
         </TabsContent>
 
-        <TabsContent value="episodes">
-          <EpisodeManager />
-        </TabsContent>
+        {/* --- CONTEÚDO DA ABA DE EPISÓDIOS REMOVIDO --- */}
       </Tabs>
     </div>
   );

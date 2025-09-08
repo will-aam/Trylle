@@ -1,3 +1,9 @@
+-- Adiciona a coluna 'status' à tabela 'episodes'
+ALTER TABLE episodes ADD COLUMN status TEXT DEFAULT 'published' NOT NULL;
+
+-- Atualiza todos os registros existentes para terem status = 'published'
+UPDATE episodes SET status = 'published';
+
 -- Adicione ao final do seu arquivo create-tables.sql
 
 -- Tabela para armazenar anexos dos episódios (documentos)
