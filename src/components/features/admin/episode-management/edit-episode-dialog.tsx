@@ -48,7 +48,6 @@ export function EditEpisodeDialog({
   const supabase = createClient();
   const { toast } = useToast();
 
-  // Seus estados existentes (nenhuma mudança aqui)
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Episode>>({});
   const [categories, setCategories] = useState<Category[]>([]);
@@ -61,7 +60,6 @@ export function EditEpisodeDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Suas funções de lógica (useEffect, handlers) permanecem as mesmas...
   useEffect(() => {
     if (episode && isOpen) {
       setFormData({
@@ -281,18 +279,18 @@ export function EditEpisodeDialog({
   };
 
   function handleDescriptionChange(markdown: string): void {
-    throw new Error("Function not implemented.");
+    setFormData((prev) => ({ ...prev, description: markdown }));
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl p-0">
+      <DialogContent className="sm:max-w-3xl p-0 flex flex-col h-full max-h-[95vh]">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle>Editar Episódio</DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="flex-1 min-h-0">
-          <div className="flex flex-col gap-6 p-6">
+          <div className="flex flex-col gap-6 p-6 pt-0">
             {/* Título */}
             <div className="space-y-2">
               <Label htmlFor="title">Título</Label>
