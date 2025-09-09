@@ -6,13 +6,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
-import { Textarea } from "@/src/components/ui/textarea";
+import { ScrollArea } from "@/src/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -22,26 +21,22 @@ import {
 } from "@/src/components/ui/select";
 import { useToast } from "@/src/hooks/use-toast";
 import { createClient } from "@/src/lib/supabase-client";
-import { Episode, Category, Subcategory, Tag } from "@/src/lib/types";
+import {
+  Episode,
+  Category,
+  Subcategory,
+  Tag,
+  EpisodeDocument,
+} from "@/src/lib/types";
 import { File, Trash2, Upload } from "lucide-react";
 import { TagSelector } from "../TagSelector";
+import RichTextEditor from "../../../ui/RichTextEditor";
 
-// + Definir o tipo para os documentos do episódio
-type EpisodeDocument = {
-  id: string;
-  episode_id: string;
-  file_name: string;
-  file_url: string;
-  file_key: string;
-  created_at: string;
-};
-
-// Tipos para as propriedades que o componente receberá
 interface EditEpisodeDialogProps {
   episode: Episode | null;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onEpisodeUpdate: () => void; // Função para recarregar a lista de episódios
+  onEpisodeUpdate: () => void;
 }
 
 export function EditEpisodeDialog({
@@ -53,12 +48,12 @@ export function EditEpisodeDialog({
   const supabase = createClient();
   const { toast } = useToast();
 
+  // Seus estados existentes (nenhuma mudança aqui)
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Episode>>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
-  // + Estados para gerenciar documentos
   const [documents, setDocuments] = useState<EpisodeDocument[]>([]);
   const [selectedFile, setSelectedFile] = useState<globalThis.File | null>(
     null
@@ -66,7 +61,7 @@ export function EditEpisodeDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Carrega os dados do episódio e seus documentos
+  // Suas funções de lógica (useEffect, handlers) permanecem as mesmas...
   useEffect(() => {
     if (episode && isOpen) {
       setFormData({
@@ -75,18 +70,14 @@ export function EditEpisodeDialog({
         category_id: episode.category_id,
         subcategory_id: episode.subcategory_id,
       });
-
-      // + Extrai e define as tags do episódio
       const currentTags = episode.tags?.map((t: any) => t.tags) || [];
       setSelectedTags(currentTags);
-
       const fetchDocuments = async () => {
         const { data, error } = await supabase
           .from("episode_documents")
           .select("*")
           .eq("episode_id", episode.id)
           .order("created_at", { ascending: true });
-
         if (error) {
           toast({
             title: "Erro ao buscar documentos",
@@ -99,13 +90,11 @@ export function EditEpisodeDialog({
       };
       fetchDocuments();
     } else {
-      // Limpa os estados ao fechar o modal
       setDocuments([]);
       setSelectedFile(null);
     }
   }, [episode, isOpen, supabase, toast]);
 
-  // Carrega as categorias e subcategorias para os menus de seleção
   useEffect(() => {
     const loadCategories = async () => {
       const { data } = await supabase
@@ -155,7 +144,6 @@ export function EditEpisodeDialog({
     setIsLoading(true);
 
     try {
-      // 1. Atualizar os dados principais do episódio
       const { error: episodeError } = await supabase
         .from("episodes")
         .update({
@@ -168,8 +156,6 @@ export function EditEpisodeDialog({
 
       if (episodeError) throw episodeError;
 
-      // 2. Sincronizar as tags
-      // 2.1. Deletar todas as associações de tags existentes para este episódio
       const { error: deleteTagsError } = await supabase
         .from("episode_tags")
         .delete()
@@ -177,7 +163,6 @@ export function EditEpisodeDialog({
 
       if (deleteTagsError) throw deleteTagsError;
 
-      // 2.2. Inserir as novas associações de tags, se houver alguma
       if (selectedTags.length > 0) {
         const newEpisodeTags = selectedTags.map((tag) => ({
           episode_id: episode.id,
@@ -208,7 +193,6 @@ export function EditEpisodeDialog({
     }
   };
 
-  // + Lógica para anexo de documento
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
@@ -236,8 +220,8 @@ export function EditEpisodeDialog({
 
       const newDocument = await response.json();
       setDocuments((prev) => [...prev, newDocument]);
-      setSelectedFile(null); // Limpa o input
-      // Resetar o valor do input de arquivo para permitir selecionar o mesmo arquivo novamente
+      setSelectedFile(null);
+
       const fileInput = document.getElementById(
         "document-upload"
       ) as HTMLInputElement;
@@ -258,22 +242,19 @@ export function EditEpisodeDialog({
     }
   };
 
-  // + Lógica para exclusão de documento
   const handleDeleteDocument = async (doc: EpisodeDocument) => {
     setDeletingId(doc.id);
     try {
-      // 1. Deletar do R2
       const response = await fetch("/api/delete-file", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileKey: doc.file_key }),
+        body: JSON.stringify({ fileKey: doc.storage_path }),
       });
 
       if (!response.ok) {
         throw new Error("Falha ao deletar o arquivo do armazenamento.");
       }
 
-      // 2. Deletar do Supabase
       const { error: dbError } = await supabase
         .from("episode_documents")
         .delete()
@@ -299,156 +280,159 @@ export function EditEpisodeDialog({
     }
   };
 
+  function handleDescriptionChange(markdown: string): void {
+    throw new Error("Function not implemented.");
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-3xl p-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>Editar Episódio</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-6 py-4">
-          {/* Formulário de Edição do Episódio */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="title" className="text-right">
-              Título
-            </Label>
-            <Input
-              id="title"
-              value={formData.title || ""}
-              onChange={handleInputChange}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label htmlFor="description" className="text-right pt-2">
-              Descrição
-            </Label>
-            <Textarea
-              id="description"
-              value={formData.description || ""}
-              onChange={handleInputChange}
-              className="col-span-3"
-              rows={5}
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="category_id" className="text-right">
-              Categoria
-            </Label>
-            <Select
-              value={formData.category_id || ""}
-              onValueChange={(value) =>
-                handleSelectChange("category_id", value)
-              }
-            >
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Selecione uma categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="subcategory_id" className="text-right">
-              Subcategoria
-            </Label>
-            <Select
-              value={formData.subcategory_id || ""}
-              onValueChange={(value) =>
-                handleSelectChange("subcategory_id", value)
-              }
-              disabled={!formData.category_id || subcategories.length === 0}
-            >
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Selecione uma subcategoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {subcategories.map((sub) => (
-                  <SelectItem key={sub.id} value={sub.id}>
-                    {sub.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* Seção de Tags */}
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label htmlFor="tags" className="text-right pt-2">
-              Tags
-            </Label>
-            <div className="col-span-3">
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="flex flex-col gap-6 p-6">
+            {/* Título */}
+            <div className="space-y-2">
+              <Label htmlFor="title">Título</Label>
+              <Input
+                id="title"
+                value={formData.title || ""}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Categoria e Subcategoria lado a lado */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Select
+                  value={formData.category_id || ""}
+                  onValueChange={(value) =>
+                    handleSelectChange("category_id", value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Subcategoria</Label>
+                <Select
+                  value={formData.subcategory_id || ""}
+                  onValueChange={(value) =>
+                    handleSelectChange("subcategory_id", value)
+                  }
+                  disabled={!formData.category_id || subcategories.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma subcategoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subcategories.map((sub) => (
+                      <SelectItem key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Descrição */}
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <RichTextEditor
+                content={formData.description || ""}
+                onChange={handleDescriptionChange}
+              />
+            </div>
+
+            {/* Tags */}
+            <div className="space-y-2">
+              <Label>Tags</Label>
               <TagSelector
                 selectedTags={selectedTags}
                 onSelectedTagsChange={setSelectedTags}
               />
             </div>
-          </div>
 
-          {/* Seção de Documentos */}
-          <div className="col-span-4 space-y-4 pt-4 border-t">
-            <Label className="font-semibold">Documentos Anexados</Label>
-            <div className="space-y-2">
-              {documents.length > 0 ? (
-                documents.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="flex items-center justify-between rounded-md border p-2"
-                  >
-                    <div className="flex items-center gap-2">
-                      <File className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{doc.file_name}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteDocument(doc)}
-                      disabled={deletingId === doc.id}
+            {/* Documentos */}
+            <div className="space-y-4 pt-6 border-t">
+              <Label className="font-semibold text-base">
+                Documentos Anexados
+              </Label>
+              <div className="space-y-2">
+                {documents.length > 0 ? (
+                  documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between rounded-md border p-2"
                     >
-                      {deletingId === doc.id ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                      ) : (
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      )}
-                    </Button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Nenhum documento anexado.
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Input
-                id="document-upload"
-                type="file"
-                onChange={handleFileChange}
-                className="flex-grow"
-                accept=".pdf" // Aceita apenas PDFs como exemplo
-              />
-              <Button
-                onClick={handleAttachDocument}
-                disabled={!selectedFile || isUploading}
-              >
-                {isUploading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                      <div className="flex items-center gap-2 truncate">
+                        <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-sm truncate">
+                          {doc.file_name}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteDocument(doc)}
+                        disabled={deletingId === doc.id}
+                        className="flex-shrink-0"
+                      >
+                        {deletingId === doc.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        )}
+                      </Button>
+                    </div>
+                  ))
                 ) : (
-                  <Upload className="h-4 w-4" />
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum documento anexado.
+                  </p>
                 )}
-                <span className="ml-2">
-                  {isUploading ? "Enviando..." : "Anexar"}
-                </span>
-              </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="document-upload"
+                  type="file"
+                  onChange={handleFileChange}
+                  className="flex-grow"
+                  accept=".pdf"
+                />
+                <Button
+                  onClick={handleAttachDocument}
+                  disabled={!selectedFile || isUploading}
+                >
+                  {isUploading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  <span className="ml-2 hidden sm:inline">
+                    {isUploading ? "Enviando..." : "Anexar"}
+                  </span>
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-        <DialogFooter>
+        </ScrollArea>
+
+        {/* RODAPÉ FIXO */}
+        <DialogFooter className="p-6 pt-4 border-t">
           <Button
             type="button"
             onClick={handleSaveChanges}

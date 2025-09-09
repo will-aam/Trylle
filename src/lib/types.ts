@@ -47,3 +47,14 @@ export type Tag = {
   name: string;
   created_at: string;
 };
+
+export type EpisodeDocument = {
+  id: string;
+  episode_id: string;
+  file_name: string;
+  // Renomeado para public_url para consistência com o que a API retorna
+  public_url: string;
+  // Renomeado para storage_path para consistência
+  storage_path: string;
+  created_at: string;
+};
