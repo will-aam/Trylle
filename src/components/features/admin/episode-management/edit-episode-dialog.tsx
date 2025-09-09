@@ -301,7 +301,7 @@ export function EditEpisodeDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Editar Episódio</DialogTitle>
         </DialogHeader>

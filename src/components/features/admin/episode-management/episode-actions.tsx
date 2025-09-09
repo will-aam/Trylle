@@ -13,7 +13,7 @@ import { useState } from "react";
 import { usePlayer } from "@/src/hooks/use-player";
 import { useToast } from "@/src/hooks/use-toast";
 import { Episode } from "@/src/lib/types";
-import { EditEpisodeDialog } from "../edit-episode-dialog";
+import { EditEpisodeDialog } from "./edit-episode-dialog";
 
 interface EpisodeActionsProps {
   episode: Episode;
