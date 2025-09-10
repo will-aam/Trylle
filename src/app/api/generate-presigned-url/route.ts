@@ -26,7 +26,9 @@ export async function POST(request: Request) {
     const uniqueFileName = `${Date.now()}-${Math.random()
       .toString(36)
       .substring(2)}.${fileExt}`;
-    const filePath = `documents/${uniqueFileName}`;
+
+    // CORREÇÃO APLICADA AQUI
+    const filePath = `audio/${uniqueFileName}`;
 
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,
