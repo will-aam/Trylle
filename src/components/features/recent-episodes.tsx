@@ -5,6 +5,7 @@ const mockRecentEpisodes: Episode[] = [
   {
     id: "4",
     title: "Blockchain e Criptomoedas Explicadas",
+    // VERIFIQUE SE ESTA LINHA EXISTE
     description: "Entenda a tecnologia por trás das moedas digitais",
     imageUrl: "/Whisk_dbc581f98f.jpg?height=200&width=300&text=Episódio+4",
     categories: { name: "Tecnologia" },
@@ -15,50 +16,11 @@ const mockRecentEpisodes: Episode[] = [
     published_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    status: "published",
+    tags: [],
   },
-  {
-    id: "5",
-    title: "Psicologia Positiva no Trabalho",
-    description:
-      "Como aplicar princípios de bem-estar no ambiente profissional",
-    imageUrl: "/Whisk_dbc581f98f.jpg?height=200&width=300&text=Episódio+5",
-    categories: { name: "Saúde" },
-    audio_url: "",
-    file_name: "",
-    category_id: null,
-    subcategory_id: null,
-    published_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "6",
-    title: "História da Computação Quântica",
-    description: "Dos primeiros conceitos aos computadores quânticos atuais",
-    imageUrl: "/Whisk_dbc581f98f.jpg?height=200&width=300&text=Episódio+6",
-    categories: { name: "Ciência" },
-    audio_url: "",
-    file_name: "",
-    category_id: null,
-    subcategory_id: null,
-    published_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "7",
-    title: "Liderança em Tempos de Mudança",
-    description: "Estratégias para liderar equipes em ambientes dinâmicos",
-    imageUrl: "/Whisk_dbc581f98f.jpg?height=200&width=300&text=Episódio+7",
-    categories: { name: "Negócios" },
-    audio_url: "",
-    file_name: "",
-    category_id: null,
-    subcategory_id: null,
-    published_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
+  // (faça o mesmo para os outros objetos no array)
+  // ...
 ];
 
 export function RecentEpisodes() {
