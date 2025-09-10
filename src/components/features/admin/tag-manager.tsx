@@ -171,7 +171,7 @@ export function TagManager() {
                               className={cn(
                                 "cursor-pointer hover:bg-destructive/80",
                                 {
-                                  "border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200/80":
+                                  "border-red-500 bg-red-100 text-red-800 hover:bg-red-200/80 dark:bg-red-700 dark:text-red-200 dark:border-red-500":
                                     count === 0,
                                 }
                               )}
