@@ -58,23 +58,23 @@ export async function POST(request: Request) {
     const generatedFileName = `${Date.now()}-${Math.random()
       .toString(36)
       .substring(2)}.${fileExt}`;
-    const file_key = `documents/${generatedFileName}`;
+    const storage_path = `documents/${generatedFileName}`;
 
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME!,
-      Key: file_key,
+      Key: storage_path,
       Body: Buffer.from(fileBuffer),
       ContentType: file.type,
     });
 
     await s3Client.send(command);
 
-    const file_url = `${process.env.NEXT_PUBLIC_R2_PUBLIC_DOMAIN}/${file_key}`;
+    const public_url = `${process.env.NEXT_PUBLIC_R2_PUBLIC_DOMAIN}/${storage_path}`;
     const file_name = file.name;
 
     const { data, error } = await supabase
       .from("episode_documents")
-      .insert([{ episode_id, file_name, file_url, file_key }])
+      .insert([{ episode_id, file_name, public_url, storage_path }])
       .select()
       .single();
 

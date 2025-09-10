@@ -36,38 +36,48 @@ export async function POST(request: Request) {
 
   try {
     const formData = await request.formData();
-    const file = formData.get("file") as File;
+    const audioFile = formData.get("file") as File | null;
+    const thumbnailFile = formData.get("thumbnail") as File | null;
 
-    if (!file) {
+    if (!audioFile) {
       return NextResponse.json(
-        { error: "Nenhum arquivo enviado." },
+        { error: "Audio file is required." },
         { status: 400 }
       );
     }
 
-    const fileBuffer = await file.arrayBuffer();
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(2)}.${fileExt}`;
-    const filePath = `audios/${fileName}`;
+    const uploadFile = async (file: File, folder: string) => {
+      const fileBuffer = await file.arrayBuffer();
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2)}.${fileExt}`;
+      const storage_path = `${folder}/${fileName}`;
 
-    const command = new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME!,
-      Key: filePath,
-      Body: Buffer.from(fileBuffer),
-      ContentType: file.type,
-    });
+      const command = new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME!,
+        Key: storage_path,
+        Body: Buffer.from(fileBuffer),
+        ContentType: file.type,
+      });
 
-    await s3Client.send(command);
+      await s3Client.send(command);
+      return `${process.env.NEXT_PUBLIC_R2_PUBLIC_DOMAIN}/${storage_path}`;
+    };
 
-    const publicUrl = `${process.env.NEXT_PUBLIC_R2_PUBLIC_DOMAIN}/${filePath}`;
+    const uploadPromises = [];
+    uploadPromises.push(uploadFile(audioFile, "audio"));
+    if (thumbnailFile) {
+      uploadPromises.push(uploadFile(thumbnailFile, "thumbnails"));
+    }
 
-    return NextResponse.json({ publicUrl, filePath });
+    const [audio_url, thumbnail_url] = await Promise.all(uploadPromises);
+
+    return NextResponse.json({ audio_url, thumbnail_url });
   } catch (error: any) {
-    console.error("Erro ao enviar o arquivo para o R2:", error);
+    console.error("Error uploading files to R2:", error);
     const errorMessage =
-      error.message || "Erro no servidor ao tentar fazer upload do arquivo.";
+      error.message || "Server error while attempting to upload files.";
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
