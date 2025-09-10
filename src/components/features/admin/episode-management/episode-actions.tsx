@@ -66,27 +66,29 @@ export function EpisodeActions({
         console.warn(`Falha ao deletar o arquivo de áudio: ${audioKey}`);
       }
 
-      // 3. Buscar e deletar todos os documentos associados ao episódio
+      // 3. CORREÇÃO FINAL: Buscar na tabela correta "episode_documents"
       const { data: documents } = await supabase
-        .from("episode_attachments")
+        .from("episode_documents")
         .select("storage_path")
         .eq("episode_id", episode.id);
 
       if (documents) {
         for (const doc of documents) {
-          const docDeleteResponse = await fetch("/api/delete-file", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fileKey: doc.storage_path }),
-          });
-          if (!docDeleteResponse.ok) {
-            console.warn(`Falha ao deletar o documento: ${doc.storage_path}`);
+          // Garante que o doc e o storage_path existem
+          if (doc && doc.storage_path) {
+            const docDeleteResponse = await fetch("/api/delete-file", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ fileKey: doc.storage_path }),
+            });
+            if (!docDeleteResponse.ok) {
+              console.warn(`Falha ao deletar o documento: ${doc.storage_path}`);
+            }
           }
         }
       }
 
       // 4. Deletar o registro do episódio no Supabase
-      // A exclusão em cascata cuidará das tags e documentos associados no banco.
       const { error: deleteError } = await supabase
         .from("episodes")
         .delete()
@@ -101,7 +103,7 @@ export function EpisodeActions({
         description: "O episódio e todos os seus arquivos foram removidos.",
       });
 
-      onEpisodeUpdate(); // Atualiza a lista de episódios na UI
+      onEpisodeUpdate();
     } catch (error: any) {
       toast({
         title: "Erro ao excluir",

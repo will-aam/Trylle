@@ -200,7 +200,7 @@ export function UploadForm() {
               throw new Error(`Falha no upload do documento ${file.name}`);
             }
 
-            await supabase.from("episode_attachments").insert([
+            await supabase.from("episode_documents").insert([
               {
                 episode_id: episodeData.id,
                 file_name: file.name,
