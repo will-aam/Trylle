@@ -135,7 +135,11 @@ export function EpisodeManager() {
       )}
 
       {filteredEpisodes.length > 0 ? (
-        <EpisodeTable episodes={filteredEpisodes} setEpisodes={setEpisodes} />
+        <EpisodeTable
+          episodes={filteredEpisodes}
+          setEpisodes={setEpisodes}
+          onEpisodeUpdate={fetchEpisodesAndCategories}
+        />
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
