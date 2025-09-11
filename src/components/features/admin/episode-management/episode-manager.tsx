@@ -22,9 +22,23 @@ export function EpisodeManager() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Efeito para aplicar o "debounce"
+  useEffect(() => {
+    // Inicia um timer sempre que o 'searchTerm' mudar
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // Atraso de 500ms
+
+    // Limpa o timer anterior se o usuário digitar novamente antes dos 500ms
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchTerm]); // Roda este efeito apenas quando o searchTerm muda
 
   const fetchEpisodesAndCategories = useCallback(async () => {
     setLoading(true);
@@ -32,15 +46,15 @@ export function EpisodeManager() {
       const from = (currentPage - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
 
-      // Constrói a query de episódios dinamicamente
       let episodeQuery = supabase
         .from("episodes")
         .select(`*, categories (name), tags:episode_tags (tags (id, name))`, {
           count: "exact",
         });
 
-      if (searchTerm) {
-        episodeQuery = episodeQuery.ilike("title", `%${searchTerm}%`);
+      // MODIFICADO: A query agora usa o 'debouncedSearchTerm'
+      if (debouncedSearchTerm) {
+        episodeQuery = episodeQuery.ilike("title", `%${debouncedSearchTerm}%`);
       }
       if (statusFilter.length > 0) {
         episodeQuery = episodeQuery.in("status", statusFilter);
@@ -71,24 +85,29 @@ export function EpisodeManager() {
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
-        description:
-          "Não foi possível buscar os episódios e categorias. Tente novamente.",
+        description: "Não foi possível buscar os episódios. Tente novamente.",
         variant: "destructive",
       });
       console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
-  }, [supabase, toast, currentPage, searchTerm, statusFilter, categoryFilter]);
+  }, [
+    supabase,
+    toast,
+    currentPage,
+    debouncedSearchTerm,
+    statusFilter,
+    categoryFilter,
+  ]); // MODIFICADO: A dependência agora é o 'debouncedSearchTerm'
 
   useEffect(() => {
     fetchEpisodesAndCategories();
   }, [fetchEpisodesAndCategories]);
 
-  // Reseta a página para 1 quando os filtros mudam
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, categoryFilter]);
+  }, [debouncedSearchTerm, statusFilter, categoryFilter]); // MODIFICADO: Reseta a página com base no 'debouncedSearchTerm'
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -131,8 +150,8 @@ export function EpisodeManager() {
 
       <EpisodeFilters
         categories={categories}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
+        searchTerm={searchTerm} // O input ainda reflete o 'searchTerm' para ser instantâneo
+        setSearchTerm={setSearchTerm} // O input ainda atualiza o 'searchTerm'
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
         categoryFilter={categoryFilter}
