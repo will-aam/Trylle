@@ -146,6 +146,7 @@ export function UploadForm() {
             category_id: formData.categoryId || null,
             subcategory_id: formData.subcategoryId || null,
             published_at: new Date(formData.publishedAt).toISOString(),
+            status: "draft",
           },
         ])
         .select()

@@ -1,45 +1,73 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { EpisodeStats } from "../episode-management/episode-stats";
-import { EpisodeTable } from "../episode-management/episode-table";
-import { EpisodeFilters } from "../episode-management/episode-filters";
+import { EpisodeStats } from "./episode-stats";
+import { EpisodeTable } from "./episode-table";
+import { EpisodeFilters } from "./episode-filters";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { ListMusic } from "lucide-react";
 import { createClient } from "@/src/lib/supabase-client";
 import { Episode, Category } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";
+import { EpisodeTablePagination } from "./episode-table-pagination";
+
+const ITEMS_PER_PAGE = 10; // Define quantos episódios por página
 
 export function EpisodeManager() {
   const supabase = createClient();
   const { toast } = useToast();
 
   const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [totalEpisodes, setTotalEpisodes] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchEpisodesAndCategories = useCallback(async () => {
     setLoading(true);
     try {
-      const episodesPromise = supabase
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+
+      // Constrói a query de episódios dinamicamente
+      let episodeQuery = supabase
         .from("episodes")
-        .select(`*, categories (name), tags:episode_tags (tags (id, name))`);
+        .select(`*, categories (name), tags:episode_tags (tags (id, name))`, {
+          count: "exact",
+        });
 
-      const categoriesPromise = supabase.from("categories").select("*");
+      if (searchTerm) {
+        episodeQuery = episodeQuery.ilike("title", `%${searchTerm}%`);
+      }
+      if (statusFilter.length > 0) {
+        episodeQuery = episodeQuery.in("status", statusFilter);
+      }
+      if (categoryFilter.length > 0) {
+        episodeQuery = episodeQuery.in("category_id", categoryFilter);
+      }
 
-      const [episodesResult, categoriesResult] = await Promise.all([
-        episodesPromise,
-        categoriesPromise,
-      ]);
+      const {
+        data: episodesData,
+        error: episodesError,
+        count,
+      } = await episodeQuery
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
-      if (episodesResult.error) throw episodesResult.error;
-      if (categoriesResult.error) throw categoriesResult.error;
+      if (episodesError) throw episodesError;
 
-      setEpisodes(episodesResult.data as any[]);
-      setCategories(categoriesResult.data as Category[]);
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from("categories")
+        .select("*");
+
+      if (categoriesError) throw categoriesError;
+
+      setEpisodes(episodesData as any[]);
+      setTotalEpisodes(count || 0);
+      setCategories(categoriesData as Category[]);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar dados",
@@ -51,31 +79,16 @@ export function EpisodeManager() {
     } finally {
       setLoading(false);
     }
-  }, [supabase, toast]);
+  }, [supabase, toast, currentPage, searchTerm, statusFilter, categoryFilter]);
 
   useEffect(() => {
     fetchEpisodesAndCategories();
   }, [fetchEpisodesAndCategories]);
 
-  const filteredEpisodes = useMemo(() => {
-    return episodes.filter((episode: any) => {
-      const matchesSearch =
-        episode.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (episode.tags &&
-          episode.tags.some((tagObj: any) =>
-            tagObj.tags.name.toLowerCase().includes(searchTerm.toLowerCase())
-          ));
-
-      const matchesStatus =
-        statusFilter.length === 0 || statusFilter.includes(episode.status);
-
-      const matchesCategory =
-        categoryFilter.length === 0 ||
-        (episode.category_id && categoryFilter.includes(episode.category_id));
-
-      return matchesSearch && matchesStatus && matchesCategory;
-    });
-  }, [episodes, searchTerm, statusFilter, categoryFilter]);
+  // Reseta a página para 1 quando os filtros mudam
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, categoryFilter]);
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -86,7 +99,7 @@ export function EpisodeManager() {
   const hasActiveFilters =
     Boolean(searchTerm) || statusFilter.length > 0 || categoryFilter.length > 0;
 
-  if (loading) {
+  if (loading && episodes.length === 0) {
     return (
       <div className="space-y-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -130,16 +143,24 @@ export function EpisodeManager() {
 
       {hasActiveFilters && (
         <div className="text-sm text-muted-foreground">
-          Mostrando {filteredEpisodes.length} de {episodes.length} episódios
+          Mostrando {episodes.length} de {totalEpisodes} episódios encontrados
         </div>
       )}
 
-      {filteredEpisodes.length > 0 ? (
-        <EpisodeTable
-          episodes={filteredEpisodes}
-          setEpisodes={setEpisodes}
-          onEpisodeUpdate={fetchEpisodesAndCategories}
-        />
+      {episodes.length > 0 ? (
+        <>
+          <EpisodeTable
+            episodes={episodes}
+            setEpisodes={setEpisodes}
+            onEpisodeUpdate={fetchEpisodesAndCategories}
+          />
+          <EpisodeTablePagination
+            currentPage={currentPage}
+            totalCount={totalEpisodes}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={setCurrentPage}
+          />
+        </>
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">

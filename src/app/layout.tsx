@@ -3,7 +3,6 @@ import { ThemeProvider } from "@/src/components/theme-provider";
 import { Toaster } from "@/src/components/ui/sonner";
 import { ClientLayoutWrapper } from "@/src/components/client-layout-wrapper";
 
-// A exportação de metadados  só funciona em Componentes de Servidor
 export const metadata = {
   title: "PlayCast | Sua plataforma de áudio",
   description: "Ouça seus podcasts e áudios favoritos.",

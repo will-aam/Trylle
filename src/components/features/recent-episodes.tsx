@@ -5,7 +5,6 @@ const mockRecentEpisodes: Episode[] = [
   {
     id: "4",
     title: "Blockchain e Criptomoedas Explicadas",
-    // VERIFIQUE SE ESTA LINHA EXISTE
     description: "Entenda a tecnologia por trás das moedas digitais",
     imageUrl: "/Whisk_dbc581f98f.jpg?height=200&width=300&text=Episódio+4",
     categories: { name: "Tecnologia" },

@@ -19,7 +19,15 @@ import {
   AlertDialogTrigger,
 } from "@/src/components/ui/alert-dialog";
 import { Button } from "@/src/components/ui/button";
-import { MoreHorizontal, Edit, Archive, Play, Trash2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  Edit,
+  Archive,
+  Play,
+  Trash2,
+  Send,
+  Clock,
+} from "lucide-react";
 import { useState } from "react";
 import { usePlayer } from "@/src/hooks/use-player";
 import { useToast } from "@/src/hooks/use-toast";
@@ -115,6 +123,35 @@ export function EpisodeActions({
     }
   };
 
+  const handleArchive = async () => {
+    if (episode.status === "draft") {
+      toast({
+        title: "Sem alterações",
+        description: "Este episódio já é um rascunho.",
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("episodes")
+      .update({ status: "draft" })
+      .eq("id", episode.id);
+
+    if (error) {
+      toast({
+        title: "Erro ao arquivar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Episódio arquivado",
+        description: `"${episode.title}" foi movido para rascunhos.`,
+      });
+      onEpisodeUpdate(); // Atualiza a lista de episódios
+    }
+  };
+
   return (
     <>
       <AlertDialog>
@@ -133,7 +170,23 @@ export function EpisodeActions({
               <Edit className="mr-2 h-4 w-4" />
               Editar
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            {/* ITEM ADICIONADO - ESTÁTICO */}
+            <DropdownMenuItem
+              onSelect={(e) => e.preventDefault()}
+              className="text-muted-foreground focus:text-muted-foreground"
+            >
+              <Send className="mr-2 h-4 w-4" />
+              Publicar
+            </DropdownMenuItem>
+            {/* ITEM ADICIONADO - ESTÁTICO */}
+            <DropdownMenuItem
+              onSelect={(e) => e.preventDefault()}
+              className="text-muted-foreground focus:text-muted-foreground"
+            >
+              <Clock className="mr-2 h-4 w-4" />
+              Agendar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleArchive}>
               <Archive className="mr-2 h-4 w-4" />
               Arquivar
             </DropdownMenuItem>

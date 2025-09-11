@@ -1,7 +1,6 @@
 import { EpisodeCard } from "./episode-card";
 import { Episode } from "@/src/lib/types";
 
-// Usando dados estáticos para o front-end
 const mockEpisodes: Episode[] = Array(3)
   .fill(0)
   .map((_, i) => ({
@@ -9,7 +8,6 @@ const mockEpisodes: Episode[] = Array(3)
     title: `Episódio em Destaque ${i + 1}`,
     imageUrl: `/background.jpg?height=200&width=300&text=Episódio+${i + 1}`,
     categories: { name: "Tecnologia" },
-    // ADICIONE ESTA LINHA DE VOLTA
     description: `Descrição do episódio em destaque ${i + 1}.`,
     audio_url: "",
     file_name: "",
