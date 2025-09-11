@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import {
   Card,
   CardContent,
@@ -20,6 +21,7 @@ import {
   ChevronsUpDown,
   ArrowDownUp,
   Pencil,
+  ChevronDown,
 } from "lucide-react";
 import {
   Popover,
@@ -52,6 +54,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/src/components/ui/table";
+import { cn } from "@/src/lib/utils";
+
+const Accordion = AccordionPrimitive.Root;
+const AccordionItem = AccordionPrimitive.Item;
+const AccordionContent = AccordionPrimitive.Content;
 
 export function CategoryManager() {
   const supabase = createClient();
@@ -68,7 +75,6 @@ export function CategoryManager() {
     null
   );
   const [editingCategoryName, setEditingCategoryName] = useState("");
-
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -275,88 +281,84 @@ export function CategoryManager() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-      <div className="lg:col-span-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Categorias e Subcategorias</CardTitle>
-            <CardDescription>
-              Exibindo {categories.length} categorias e {subcategories.length}{" "}
-              subcategorias.
-            </CardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>Categorias e Subcategorias</CardTitle>
+        <CardDescription>
+          Exibindo {categories.length} categorias e {subcategories.length}{" "}
+          subcategorias.
+        </CardDescription>
 
-            <div className="flex flex-col sm:flex-row gap-2 mt-4">
-              <div className="relative flex-1">
-                <Popover open={open} onOpenChange={setOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={open}
-                      className="w-full justify-between"
-                    >
-                      {categorySearchTerm || "Buscar categorias..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput
-                        placeholder="Buscar categoria..."
-                        onValueChange={setCategorySearchTerm}
-                      />
-                      <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
-                      <CommandGroup>
-                        {categories.map((category) => (
-                          <CommandItem
-                            key={category.id}
-                            onSelect={() => {
-                              setCategorySearchTerm(category.name);
-                              setOpen(false);
-                            }}
-                          >
-                            {category.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() =>
-                  setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                }
-              >
-                <ArrowDownUp className="h-4 w-4" />
-              </Button>
-              <div className="flex space-x-2">
-                <Input
-                  placeholder="Nome da nova categoria"
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-                />
+        <div className="flex flex-col sm:flex-row gap-2 mt-4">
+          <div className="relative flex-1">
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
                 <Button
-                  onClick={handleAddCategory}
-                  className="whitespace-nowrap"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={open}
+                  className="w-full justify-between"
                 >
-                  <Plus className="mr-2 h-4 w-4" /> Adicionar
+                  {categorySearchTerm || "Buscar categorias..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-              {filteredCategories.length > 0 ? (
-                filteredCategories.map((category) => (
-                  <div
-                    key={category.id}
-                    className="p-3 border rounded-md bg-muted/50"
-                  >
-                    <div className="flex justify-between items-center">
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput
+                    placeholder="Buscar categoria..."
+                    onValueChange={setCategorySearchTerm}
+                  />
+                  <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                  <CommandGroup>
+                    {categories.map((category) => (
+                      <CommandItem
+                        key={category.id}
+                        onSelect={() => {
+                          setCategorySearchTerm(category.name);
+                          setOpen(false);
+                        }}
+                      >
+                        {category.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+          >
+            <ArrowDownUp className="h-4 w-4" />
+          </Button>
+          <div className="flex space-x-2">
+            <Input
+              placeholder="Nome da nova categoria"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+            />
+            <Button onClick={handleAddCategory} className="whitespace-nowrap">
+              <Plus className="mr-2 h-4 w-4" /> Adicionar
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Accordion type="multiple" className="w-full space-y-2">
+          {filteredCategories.length > 0 ? (
+            filteredCategories.map((category) => (
+              <AccordionItem
+                key={category.id}
+                value={category.id}
+                className="border rounded-md px-4 bg-muted/50"
+              >
+                <AccordionPrimitive.Header className="flex items-center w-full py-2">
+                  <AccordionPrimitive.Trigger className="flex flex-1 items-center gap-3 text-left font-semibold group">
+                    <span>
                       {editingCategoryId === category.id ? (
                         <Input
                           value={editingCategoryName}
@@ -368,154 +370,150 @@ export function CategoryManager() {
                             if (e.key === "Escape") cancelEditing();
                           }}
                           onBlur={handleUpdateCategory}
+                          onClick={(e) => e.stopPropagation()}
                           autoFocus
                           className="h-9"
                         />
                       ) : (
-                        <div
-                          className="flex items-center group gap-2"
-                          onDoubleClick={() => startEditing(category)}
-                        >
-                          <h3 className="font-semibold text-md">
-                            {category.name}
-                          </h3>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => startEditing(category)}
-                            className="opacity-0 group-hover:opacity-100 h-7 w-7"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <span onDoubleClick={() => startEditing(category)}>
+                          {category.name}
+                        </span>
                       )}
-                      <AlertDialog>
-                        <AlertDialogTrigger
-                          asChild
-                          disabled={editingCategoryId !== null}
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Você tem certeza?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação não pode ser desfeita. Isso excluirá
-                              permanentemente a categoria "{category.name}" e
-                              TODAS as suas subcategorias.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteCategory(category.id)}
-                            >
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                    <div className="pl-4 mt-2 space-y-2">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Nome da Subcategoria</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {subcategories
-                            .filter((sub) => sub.category_id === category.id)
-                            .map((sub) => (
-                              <TableRow key={sub.id}>
-                                <TableCell>{sub.name}</TableCell>
-                                <TableCell className="text-right">
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-red-500"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>
-                                          Você tem certeza?
-                                        </AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Esta ação não pode ser desfeita. Isso
-                                          excluirá permanentemente a
-                                          subcategoria "{sub.name}".
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>
-                                          Cancelar
-                                        </AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() =>
-                                            handleDeleteSubcategory(sub.id)
-                                          }
-                                        >
-                                          Excluir
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                        </TableBody>
-                      </Table>
-                      <div className="flex space-x-2 pt-2">
-                        <Input
-                          placeholder="Nova subcategoria"
-                          className="h-8"
-                          value={newSubcategoryNames[category.id] || ""}
-                          onChange={(e) =>
-                            setNewSubcategoryNames({
-                              ...newSubcategoryNames,
-                              [category.id]: e.target.value,
-                            })
-                          }
-                          onKeyDown={(e) =>
-                            e.key === "Enter" &&
-                            handleAddSubcategory(category.id)
-                          }
-                        />
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </AccordionPrimitive.Trigger>
+
+                  <div className="flex-shrink-0 ml-4">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => startEditing(category)}
+                      className="h-8 w-8"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
                         <Button
-                          size="sm"
-                          onClick={() => handleAddSubcategory(category.id)}
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500 hover:text-red-700"
                         >
-                          <Plus className="mr-1 h-4 w-4" /> Adicionar
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                      </div>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isso excluirá
+                            permanentemente a categoria "{category.name}" e
+                            TODAS as suas subcategorias.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteCategory(category.id)}
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </AccordionPrimitive.Header>
+                <AccordionContent className="pt-2 pb-4">
+                  <div className="pl-4 mt-2 space-y-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome da Subcategoria</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {subcategories
+                          .filter((sub) => sub.category_id === category.id)
+                          .map((sub) => (
+                            <TableRow key={sub.id}>
+                              <TableCell>{sub.name}</TableCell>
+                              <TableCell className="text-right">
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-red-500"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Você tem certeza?
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Esta ação não pode ser desfeita. Isso
+                                        excluirá permanentemente a subcategoria
+                                        "{sub.name}".
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>
+                                        Cancelar
+                                      </AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() =>
+                                          handleDeleteSubcategory(sub.id)
+                                        }
+                                      >
+                                        Excluir
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                    <div className="flex space-x-2 pt-2">
+                      <Input
+                        placeholder="Nova subcategoria"
+                        className="h-8"
+                        value={newSubcategoryNames[category.id] || ""}
+                        onChange={(e) =>
+                          setNewSubcategoryNames({
+                            ...newSubcategoryNames,
+                            [category.id]: e.target.value,
+                          })
+                        }
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && handleAddSubcategory(category.id)
+                        }
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => handleAddSubcategory(category.id)}
+                      >
+                        <Plus className="mr-1 h-4 w-4" /> Adicionar
+                      </Button>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    Nenhuma categoria encontrada.
-                  </p>
-                </div>
-              )}
+                </AccordionContent>
+              </AccordionItem>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                Nenhuma categoria encontrada.
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          )}
+        </Accordion>
+      </CardContent>
+    </Card>
   );
 }

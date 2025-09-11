@@ -21,14 +21,21 @@ import {
   SelectValue,
 } from "../../ui/select";
 import { useToast } from "@/src/hooks/use-toast";
-import { Upload } from "lucide-react";
+import { Upload, CheckCircle } from "lucide-react";
 import { createClient } from "@/src/lib/supabase-client";
 import { Category, Subcategory, Tag } from "@/src/lib/types";
 import { TagSelector } from "./TagSelector";
+import { cn } from "@/src/lib/utils";
 
 export function UploadForm() {
   const supabase = createClient();
-  const [isLoading, setIsLoading] = useState(false);
+  // 1. Estado para controlar o status do upload
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "uploading" | "success"
+  >("idle");
+  // 2. Chave para forçar a recriação do formulário
+  const [formKey, setFormKey] = useState(Date.now());
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
@@ -56,7 +63,7 @@ export function UploadForm() {
       setCategories(catData || []);
     };
     loadInitialData();
-  }, [supabase]);
+  }, [supabase, formKey]); // Recarrega categorias se o form for resetado
 
   useEffect(() => {
     if (selectedCategory) {
@@ -72,7 +79,7 @@ export function UploadForm() {
     } else {
       setSubcategories([]);
     }
-  }, [selectedCategory, supabase]);
+  }, [selectedCategory, supabase, formKey]); // Recarrega subcategorias se o form for resetado
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,6 +99,23 @@ export function UploadForm() {
     }
   };
 
+  // Função para resetar todos os estados para o valor inicial
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      description: "",
+      categoryId: "",
+      subcategoryId: "",
+      publishedAt: new Date().toISOString().split("T")[0],
+    });
+    setAudioFile(null);
+    setDocumentFiles([]);
+    setSelectedTags([]);
+    setSelectedCategory("");
+    // A mágica acontece aqui: mudamos a chave, o React recria o formulário
+    setFormKey(Date.now());
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!audioFile || !formData.title.trim()) {
@@ -102,7 +126,7 @@ export function UploadForm() {
       });
       return;
     }
-    setIsLoading(true);
+    setUploadStatus("uploading");
 
     try {
       // 1. Pedir a Pre-signed URL para a nossa nova API
@@ -146,7 +170,6 @@ export function UploadForm() {
             category_id: formData.categoryId || null,
             subcategory_id: formData.subcategoryId || null,
             published_at: new Date(formData.publishedAt).toISOString(),
-            status: "draft",
           },
         ])
         .select()
@@ -220,23 +243,20 @@ export function UploadForm() {
         }
       }
 
+      // Lógica de sucesso
+      setUploadStatus("success");
       toast({
         title: "Sucesso!",
         description: "Episódio e anexos enviados com sucesso!",
       });
 
-      setFormData({
-        title: "",
-        description: "",
-        categoryId: "",
-        subcategoryId: "",
-        publishedAt: new Date().toISOString().split("T")[0],
-      });
-      setAudioFile(null);
-      setDocumentFiles([]);
-      setSelectedTags([]);
-      setSelectedCategory("");
+      resetForm();
       router.refresh();
+
+      // Volta o botão para o estado normal após 3 segundos
+      setTimeout(() => {
+        setUploadStatus("idle");
+      }, 3000);
     } catch (error: any) {
       console.error("Erro no processo de upload:", error);
       toast({
@@ -244,13 +264,17 @@ export function UploadForm() {
         description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+      setUploadStatus("idle"); // Volta ao estado normal em caso de erro
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="h-full flex flex-col">
+    // 3. Aplicando a chave ao formulário
+    <form
+      onSubmit={handleSubmit}
+      key={formKey}
+      className="h-full flex flex-col"
+    >
       <Card className="flex-1 flex flex-col overflow-hidden">
         <CardHeader className="border-b">
           <CardTitle className="flex items-center gap-2">
@@ -259,7 +283,6 @@ export function UploadForm() {
         </CardHeader>
         <CardContent className="overflow-y-auto p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* ... o resto do seu JSX do formulário permanece o mesmo ... */}
             <div className="space-y-6">
               <div>
                 <Label htmlFor="title">Título *</Label>
@@ -402,7 +425,7 @@ export function UploadForm() {
             <Button
               type="button"
               variant="outline"
-              disabled={isLoading}
+              disabled={uploadStatus !== "idle"}
               onClick={() =>
                 toast({
                   title: "Em breve!",
@@ -412,8 +435,20 @@ export function UploadForm() {
             >
               Enviar e Publicar Episódio
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Enviando..." : "Enviar Episódio"}
+            <Button
+              type="submit"
+              disabled={uploadStatus !== "idle"}
+              className={cn({
+                "bg-green-600 hover:bg-green-700": uploadStatus === "success",
+              })}
+            >
+              {uploadStatus === "uploading" && "Enviando..."}
+              {uploadStatus === "success" && (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" /> Enviado com Sucesso!
+                </>
+              )}
+              {uploadStatus === "idle" && "Enviar Episódio"}
             </Button>
           </div>
         </CardFooter>
