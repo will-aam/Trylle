@@ -19,7 +19,7 @@ import {
 import { createClient } from "@/src/lib/supabase-client";
 import { Tag } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";
-import { Plus, Search, Download, Upload } from "lucide-react";
+import { Plus, Search, Download, Upload, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,35 +33,27 @@ import {
 } from "@/src/components/ui/alert-dialog";
 import { Badge } from "@/src/components/ui/badge";
 import { cn } from "@/src/lib/utils";
+import { ToggleGroup, ToggleGroupItem } from "@/src/components/ui/toggle-group";
 
-// Define a more specific type for tags that include the episode count
 type TagWithCount = Tag & {
   episode_tags: { count: number }[];
 };
 
-// Renamed component to reflect its single responsibility
 export function TagManager() {
   const supabase = createClient();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null); // Ref para o input de arquivo
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [tags, setTags] = useState<TagWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTagName, setNewTagName] = useState("");
   const [tagSearchTerm, setTagSearchTerm] = useState("");
-
-  const filteredTags = useMemo(() => {
-    if (!tagSearchTerm.trim()) {
-      return tags;
-    }
-    return tags.filter((tag) =>
-      tag.name.toLowerCase().includes(tagSearchTerm.toLowerCase())
-    );
-  }, [tags, tagSearchTerm]);
+  const [filterMode, setFilterMode] = useState<"all" | "used" | "unused">(
+    "all"
+  );
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    // Fetch tags and the count of related episodes
     const { data, error } = await supabase
       .from("tags")
       .select("*, episode_tags(count)")
@@ -84,6 +76,28 @@ export function TagManager() {
     fetchData();
   }, [fetchData]);
 
+  const unusedTags = useMemo(() => {
+    return tags.filter((tag) => (tag.episode_tags[0]?.count || 0) === 0);
+  }, [tags]);
+
+  const filteredTags = useMemo(() => {
+    let filtered = tags;
+
+    if (filterMode === "used") {
+      filtered = tags.filter((tag) => (tag.episode_tags[0]?.count || 0) > 0);
+    } else if (filterMode === "unused") {
+      filtered = unusedTags;
+    }
+
+    if (!tagSearchTerm.trim()) {
+      return filtered;
+    }
+
+    return filtered.filter((tag) =>
+      tag.name.toLowerCase().includes(tagSearchTerm.toLowerCase())
+    );
+  }, [tags, tagSearchTerm, filterMode, unusedTags]);
+
   const handleAddTag = async () => {
     if (!newTagName.trim()) return;
     const { data, error } = await supabase
@@ -99,7 +113,6 @@ export function TagManager() {
         variant: "destructive",
       });
     } else {
-      // Create a new TagWithCount object to add to the state
       const newTag: TagWithCount = { ...data, episode_tags: [{ count: 0 }] };
       setTags([...tags, newTag].sort((a, b) => a.name.localeCompare(b.name)));
       setNewTagName("");
@@ -137,17 +150,25 @@ export function TagManager() {
     }
 
     const csvHeader = "name\n";
-    const csvRows = tagsToExport.map((tag) => `"${tag.name}"`).join("\n");
-    const csvContent = csvHeader + csvRows;
+    const csvRows = tagsToExport
+      .map((tag) => `"${tag.name.replace(/"/g, '""')}"`)
+      .join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const encoder = new TextEncoder();
+    const csvContent = encoder.encode("\uFEFF" + csvHeader + csvRows);
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
     link.setAttribute("download", "playcast_tags.csv");
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
   };
 
   const handleFileImport = async (
@@ -158,73 +179,119 @@ export function TagManager() {
 
     const reader = new FileReader();
     reader.onload = async (e) => {
-      const text = e.target?.result as string;
-      const lines = text
-        .split("\n")
-        .map((line) => line.trim().toLowerCase())
-        .filter(Boolean);
+      try {
+        const arrayBuffer = e.target?.result as ArrayBuffer;
+        const decoder = new TextDecoder("utf-8");
+        const text = decoder.decode(arrayBuffer);
 
-      if (lines.length === 0) {
-        toast({ title: "Arquivo vazio", variant: "destructive" });
-        return;
-      }
+        const lines = text
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
+          .map((line) => line.replace(/^"|"$/g, ""));
 
-      // Remove o header se existir
-      const header = lines[0].toLowerCase();
-      const tagNames =
-        header === "name" || header === '"name"' ? lines.slice(1) : lines;
+        if (lines.length === 0) {
+          toast({ title: "Arquivo vazio", variant: "destructive" });
+          return;
+        }
 
-      const uniqueTagNames = [...new Set(tagNames)].filter((name) => name);
+        const hasHeader = lines[0].toLowerCase() === "name";
+        const tagNames = hasHeader ? lines.slice(1) : lines;
 
-      const { data: existingTags, error: fetchError } = await supabase
-        .from("tags")
-        .select("name")
-        .in("name", uniqueTagNames);
+        const uniqueTagNames = [...new Set(tagNames)]
+          .filter((name) => name && name.trim().length > 0)
+          .map((name) => name.trim().toLowerCase());
 
-      if (fetchError) {
+        const { data: existingTags, error: fetchError } = await supabase
+          .from("tags")
+          .select("name")
+          .in("name", uniqueTagNames);
+
+        if (fetchError) {
+          toast({
+            title: "Erro ao verificar tags existentes",
+            description: fetchError.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const existingTagNames = new Set(
+          existingTags?.map((t) => t.name) || []
+        );
+        const newTagsToInsert = uniqueTagNames
+          .filter((name) => !existingTagNames.has(name))
+          .map((name) => ({ name }));
+
+        if (newTagsToInsert.length === 0) {
+          toast({
+            title: "Nenhuma nova tag para importar",
+            description: "Todas as tags do arquivo já existem.",
+          });
+          return;
+        }
+
+        const { error: insertError } = await supabase
+          .from("tags")
+          .insert(newTagsToInsert);
+
+        if (insertError) {
+          toast({
+            title: "Erro ao importar tags",
+            description: insertError.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Importação concluída!",
+            description: `${newTagsToInsert.length} novas tags foram adicionadas. ${existingTagNames.size} tags já existiam.`,
+          });
+          fetchData();
+        }
+      } catch (error) {
         toast({
-          title: "Erro ao verificar tags existentes",
+          title: "Erro ao processar arquivo",
+          description: "Verifique se o arquivo está no formato correto.",
           variant: "destructive",
         });
-        return;
-      }
-
-      const existingTagNames = new Set(existingTags.map((t) => t.name));
-      const newTagsToInsert = uniqueTagNames
-        .filter((name) => !existingTagNames.has(name))
-        .map((name) => ({ name }));
-
-      if (newTagsToInsert.length === 0) {
-        toast({
-          title: "Nenhuma nova tag para importar",
-          description: "Todas as tags do arquivo já existem.",
-        });
-        return;
-      }
-
-      const { error: insertError } = await supabase
-        .from("tags")
-        .insert(newTagsToInsert);
-
-      if (insertError) {
-        toast({
-          title: "Erro ao importar tags",
-          description: insertError.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Importação concluída!",
-          description: `${newTagsToInsert.length} novas tags foram adicionadas. ${existingTagNames.size} tags já existiam.`,
-        });
-        fetchData(); // Atualiza a lista
       }
     };
-    reader.readAsText(file);
 
-    // Reseta o input para permitir o upload do mesmo arquivo novamente
+    reader.readAsArrayBuffer(file);
+
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteUnusedTags = async () => {
+    const tagsToDelete = unusedTags.map((tag) => tag.id);
+
+    if (tagsToDelete.length === 0) {
+      toast({
+        title: "Nenhuma tag para excluir",
+        description: "Todas as tags estão em uso.",
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("tags")
+      .delete()
+      .in("id", tagsToDelete);
+
+    if (error) {
+      toast({
+        title: "Erro ao excluir tags",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Limpeza concluída!",
+        description: `${tagsToDelete.length} tags não utilizadas foram excluídas.`,
+      });
+      fetchData();
     }
   };
 
@@ -237,9 +304,24 @@ export function TagManager() {
       <CardHeader>
         <CardTitle>Tags</CardTitle>
         <CardDescription>
-          Atualmente, existem <strong>{tags.length}</strong> tags cadastradas.
+          Atualmente, existem <strong>{tags.length}</strong> tags cadastradas.{" "}
+          <span className="text-red-500">{unusedTags.length}</span> não estão em
+          uso.
         </CardDescription>
-        <div className="flex flex-col gap-2 mt-4">
+
+        <ToggleGroup
+          type="single"
+          value={filterMode}
+          onValueChange={(value: "all" | "used" | "unused") => {
+            if (value) setFilterMode(value);
+          }}
+          className="justify-start"
+        >
+          <ToggleGroupItem value="all">Todas</ToggleGroupItem>
+          <ToggleGroupItem value="used">Utilizadas</ToggleGroupItem>
+          <ToggleGroupItem value="unused">Não Utilizadas</ToggleGroupItem>
+        </ToggleGroup>
+        <div className="flex flex-col gap-4 mt-4">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -249,6 +331,7 @@ export function TagManager() {
               className="pl-8"
             />
           </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div className="flex space-x-2">
               <Input
@@ -266,7 +349,7 @@ export function TagManager() {
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
-                accept=".csv"
+                accept=".csv,.txt"
                 onChange={handleFileImport}
               />
               <Button
@@ -285,6 +368,32 @@ export function TagManager() {
               </Button>
             </div>
           </div>
+          {unusedTags.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full sm:w-auto">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Limpar {unusedTags.length} Tags Não Usadas
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Isso excluirá
+                    permanentemente {unusedTags.length} tags que não estão
+                    associadas a nenhum episódio.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteUnusedTags}>
+                    Sim, excluir tags
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -304,7 +413,7 @@ export function TagManager() {
                               className={cn(
                                 "cursor-pointer hover:bg-destructive/80",
                                 {
-                                  "border-red-500 bg-red-100 text-red-800 hover:bg-red-200/80 dark:bg-red-700 dark:text-red-200 dark:border-red-500":
+                                  "border-red-500 bg-red-100 text-red-800 hover:bg-red-200/80 dark:bg-red-700/50 dark:text-red-200 dark:border-red-500/50":
                                     count === 0,
                                 }
                               )}
@@ -348,9 +457,7 @@ export function TagManager() {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">
-              {tagSearchTerm
-                ? "Nenhuma tag encontrada."
-                : "Nenhuma tag criada."}
+              Nenhuma tag encontrada para o filtro selecionado.
             </p>
           )}
         </div>

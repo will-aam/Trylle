@@ -46,14 +46,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/src/components/ui/alert-dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/src/components/ui/table";
 import { cn } from "@/src/lib/utils";
 
 const Accordion = AccordionPrimitive.Root;
@@ -227,7 +219,6 @@ export function CategoryManager() {
 
   const handleUpdateCategory = async () => {
     if (!editingCategoryId) return;
-
     const trimmedName = editingCategoryName.trim();
     if (!trimmedName) {
       toast({
@@ -237,20 +228,17 @@ export function CategoryManager() {
       });
       return;
     }
-
     const originalCategory = categories.find((c) => c.id === editingCategoryId);
     if (originalCategory && originalCategory.name === trimmedName) {
       cancelEditing();
       return;
     }
-
     const { data, error } = await supabase
       .from("categories")
       .update({ name: trimmedName })
       .eq("id", editingCategoryId)
       .select()
       .single();
-
     if (error) {
       toast({
         title: "Erro ao atualizar categoria",
@@ -284,11 +272,7 @@ export function CategoryManager() {
     <Card>
       <CardHeader>
         <CardTitle>Categorias e Subcategorias</CardTitle>
-        <CardDescription>
-          Exibindo {categories.length} categorias e {subcategories.length}{" "}
-          subcategorias.
-        </CardDescription>
-
+        <CardDescription>Gerencie a taxonomia do seu conteúdo.</CardDescription>
         <div className="flex flex-col sm:flex-row gap-2 mt-4">
           <div className="relative flex-1">
             <Popover open={open} onOpenChange={setOpen}>
@@ -342,13 +326,13 @@ export function CategoryManager() {
               onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
             />
             <Button onClick={handleAddCategory} className="whitespace-nowrap">
-              <Plus className="mr-2 h-4 w-4" /> Adicionar
+              <Plus className="mr-2 h-4 w-4" /> Adicionar Categoria
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <Accordion type="multiple" className="w-full space-y-2">
+        <Accordion type="single" collapsible className="w-full space-y-2">
           {filteredCategories.length > 0 ? (
             filteredCategories.map((category) => (
               <AccordionItem
@@ -424,65 +408,11 @@ export function CategoryManager() {
                   </div>
                 </AccordionPrimitive.Header>
                 <AccordionContent className="pt-2 pb-4">
-                  <div className="pl-4 mt-2 space-y-2">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nome da Subcategoria</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {subcategories
-                          .filter((sub) => sub.category_id === category.id)
-                          .map((sub) => (
-                            <TableRow key={sub.id}>
-                              <TableCell>{sub.name}</TableCell>
-                              <TableCell className="text-right">
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="text-red-500"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>
-                                        Você tem certeza?
-                                      </AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Esta ação não pode ser desfeita. Isso
-                                        excluirá permanentemente a subcategoria
-                                        "{sub.name}".
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>
-                                        Cancelar
-                                      </AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() =>
-                                          handleDeleteSubcategory(sub.id)
-                                        }
-                                      >
-                                        Excluir
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                      </TableBody>
-                    </Table>
-                    <div className="flex space-x-2 pt-2">
+                  <div className="pl-4 mt-2 space-y-4">
+                    <div className="flex space-x-2">
                       <Input
                         placeholder="Nova subcategoria"
-                        className="h-8"
+                        className="h-9"
                         value={newSubcategoryNames[category.id] || ""}
                         onChange={(e) =>
                           setNewSubcategoryNames({
@@ -500,6 +430,41 @@ export function CategoryManager() {
                       >
                         <Plus className="mr-1 h-4 w-4" /> Adicionar
                       </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {subcategories
+                        .filter((sub) => sub.category_id === category.id)
+                        .map((sub) => (
+                          <AlertDialog key={sub.id}>
+                            <AlertDialogTrigger asChild>
+                              <div className="bg-background rounded-md p-2 text-center text-sm font-medium cursor-pointer hover:bg-destructive/80 transition-colors border">
+                                {sub.name}
+                              </div>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Você tem certeza?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta ação não pode ser desfeita. Isso excluirá
+                                  permanentemente a subcategoria "{sub.name}".
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() =>
+                                    handleDeleteSubcategory(sub.id)
+                                  }
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        ))}
                     </div>
                   </div>
                 </AccordionContent>
