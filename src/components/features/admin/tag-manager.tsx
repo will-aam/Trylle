@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -19,7 +19,7 @@ import {
 import { createClient } from "@/src/lib/supabase-client";
 import { Tag } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Download, Upload } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +43,7 @@ type TagWithCount = Tag & {
 export function TagManager() {
   const supabase = createClient();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null); // Ref para o input de arquivo
 
   const [tags, setTags] = useState<TagWithCount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +121,113 @@ export function TagManager() {
     }
   };
 
+  const handleExportTags = async () => {
+    const { data: tagsToExport, error } = await supabase
+      .from("tags")
+      .select("name")
+      .order("name");
+
+    if (error) {
+      toast({
+        title: "Erro ao exportar",
+        description: "Não foi possível buscar as tags.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const csvHeader = "name\n";
+    const csvRows = tagsToExport.map((tag) => `"${tag.name}"`).join("\n");
+    const csvContent = csvHeader + csvRows;
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "playcast_tags.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileImport = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      const lines = text
+        .split("\n")
+        .map((line) => line.trim().toLowerCase())
+        .filter(Boolean);
+
+      if (lines.length === 0) {
+        toast({ title: "Arquivo vazio", variant: "destructive" });
+        return;
+      }
+
+      // Remove o header se existir
+      const header = lines[0].toLowerCase();
+      const tagNames =
+        header === "name" || header === '"name"' ? lines.slice(1) : lines;
+
+      const uniqueTagNames = [...new Set(tagNames)].filter((name) => name);
+
+      const { data: existingTags, error: fetchError } = await supabase
+        .from("tags")
+        .select("name")
+        .in("name", uniqueTagNames);
+
+      if (fetchError) {
+        toast({
+          title: "Erro ao verificar tags existentes",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const existingTagNames = new Set(existingTags.map((t) => t.name));
+      const newTagsToInsert = uniqueTagNames
+        .filter((name) => !existingTagNames.has(name))
+        .map((name) => ({ name }));
+
+      if (newTagsToInsert.length === 0) {
+        toast({
+          title: "Nenhuma nova tag para importar",
+          description: "Todas as tags do arquivo já existem.",
+        });
+        return;
+      }
+
+      const { error: insertError } = await supabase
+        .from("tags")
+        .insert(newTagsToInsert);
+
+      if (insertError) {
+        toast({
+          title: "Erro ao importar tags",
+          description: insertError.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Importação concluída!",
+          description: `${newTagsToInsert.length} novas tags foram adicionadas. ${existingTagNames.size} tags já existiam.`,
+        });
+        fetchData(); // Atualiza a lista
+      }
+    };
+    reader.readAsText(file);
+
+    // Reseta o input para permitir o upload do mesmo arquivo novamente
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   if (loading) {
     return <p>Carregando tags...</p>;
   }
@@ -141,16 +249,41 @@ export function TagManager() {
               className="pl-8"
             />
           </div>
-          <div className="flex space-x-2">
-            <Input
-              placeholder="Nome da nova tag"
-              value={newTagName}
-              onChange={(e) => setNewTagName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
-            />
-            <Button onClick={handleAddTag}>
-              <Plus className="mr-2 h-4 w-4" /> Adicionar
-            </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="flex space-x-2">
+              <Input
+                placeholder="Nome da nova tag"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+              />
+              <Button onClick={handleAddTag}>
+                <Plus className="mr-2 h-4 w-4" /> Adicionar
+              </Button>
+            </div>
+            <div className="flex space-x-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".csv"
+                onChange={handleFileImport}
+              />
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="mr-2 h-4 w-4" /> Importar CSV
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleExportTags}
+              >
+                <Download className="mr-2 h-4 w-4" /> Exportar CSV
+              </Button>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -203,7 +336,7 @@ export function TagManager() {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => handleDeleteTag(tag.id)} // O erro foi corrigido aqui
+                          onClick={() => handleDeleteTag(tag.id)}
                         >
                           Excluir
                         </AlertDialogAction>
