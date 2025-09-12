@@ -5,10 +5,9 @@ import { createClient } from "@/src/lib/supabase-client";
 import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
 import { Play, Users, Star, TrendingUp } from "lucide-react";
 import { Skeleton } from "../../ui/skeleton";
-import { getUserCount } from "@/src/app/admin/actions"; // 1. Importa a Server Action
+import { getUserCount } from "@/src/app/admin/actions";
 
 export function AdminStats() {
-  // O cliente Supabase aqui é o cliente seguro para o navegador (anon key)
   const supabase = createClient();
   const [episodeCount, setEpisodeCount] = useState(0);
   const [userCount, setUserCount] = useState(0);
@@ -18,10 +17,8 @@ export function AdminStats() {
     const fetchStats = async () => {
       setLoading(true);
 
-      // Array para aguardar todas as buscas de dados
       const promises = [];
 
-      // Promessa para buscar o total de episódios
       promises.push(
         supabase
           .from("episodes")
@@ -32,14 +29,12 @@ export function AdminStats() {
           })
       );
 
-      // Promessa para buscar o total de usuários usando a Server Action
       promises.push(
         getUserCount().then((count) => {
           setUserCount(count);
         })
       );
 
-      // Aguarda todas as buscas terminarem
       await Promise.all(promises);
 
       setLoading(false);
@@ -58,7 +53,7 @@ export function AdminStats() {
       isLoading: loading,
     },
     {
-      title: "Total de Usuários", // 2. Texto corrigido
+      title: "Total de Usuários",
       value: userCount.toString(),
       change: "+8%",
       icon: Users,

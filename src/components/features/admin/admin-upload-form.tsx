@@ -423,19 +423,6 @@ export function UploadForm() {
         <CardFooter className="border-t pt-6">
           <div className="w-full md:w-auto ml-auto flex flex-col md:flex-row gap-2">
             <Button
-              type="button"
-              variant="outline"
-              disabled={uploadStatus !== "idle"}
-              onClick={() =>
-                toast({
-                  title: "Em breve!",
-                  description: "A publicação direta será implementada.",
-                })
-              }
-            >
-              Enviar e Publicar Episódio
-            </Button>
-            <Button
               type="submit"
               disabled={uploadStatus !== "idle"}
               className={cn({
