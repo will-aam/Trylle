@@ -19,7 +19,7 @@ import { TagMergeDialog } from "@/src/components/features/admin/tag-manager/TagM
 import { TagBulkActions } from "@/src/components/features/admin/tag-manager/TagBulkActions";
 import { TagPagination } from "@/src/components/features/admin/tag-manager/TagPagination";
 import { TagWithCount, FilterMode } from "./types";
-import { Button } from "@/src/components/ui/button";
+import { Button } from "../../../ui/button";
 import { Check, Download } from "lucide-react";
 
 const TAGS_PER_PAGE = 25;
@@ -197,12 +197,12 @@ export function TagManager() {
     setSelectedTag(null);
   };
 
-  const handleEditTag = async () => {
-    if (!selectedTag || !editTagName.trim()) return;
+  const handleEditTag = async (tagId: string, newName: string) => {
+    if (!tagId || !newName.trim()) return;
     const { error } = await supabase
       .from("tags")
-      .update({ name: editTagName.trim().toLowerCase() })
-      .eq("id", selectedTag.id);
+      .update({ name: newName.trim().toLowerCase() })
+      .eq("id", tagId);
     if (error) {
       toast({
         title: "Erro ao atualizar tag",
@@ -215,7 +215,6 @@ export function TagManager() {
       fetchTags();
     }
     setSelectedTag(null);
-    setEditTagName("");
   };
 
   const handleDeleteUnusedTags = async () => {
@@ -452,8 +451,7 @@ export function TagManager() {
           <span className="text-red-500">{unusedTagCount}</span> não estão em
           uso.
         </CardDescription>
-        {/* 
-          <CardDescription className="mt-2">
+        {/* <CardDescription className="mt-2">
           <div className="space-y-2">
             <p>
               <strong>Dica:</strong> Para mesclar tags, selecione duas ou mais
@@ -525,7 +523,7 @@ export function TagManager() {
         {/* Botões de seleção e mesclagem */}
         {selectedTags.length > 0 && (
           <div className="mt-2">
-            <div className="flex justify-between items-center p-3 bg-blue-50 rounded-md">
+            <div className="flex justify-between items-center p-3 rounded-md">
               <div className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-blue-600" />
                 <span className="text-sm text-blue-700">
