@@ -1,6 +1,7 @@
 "use client";
-import { Button } from "@/src/components/ui/button";
-import { Download, Trash2 } from "lucide-react";
+import { Button } from "../../../ui/button";
+import { Upload, Download, Trash2 } from "lucide-react";
+import { FileInput } from "./FileInput";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,25 +12,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/src/components/ui/alert-dialog";
+} from "../../../ui/alert-dialog";
 
 interface TagBulkActionsProps {
   unusedTagCount: number;
   onDeleteUnusedTags: () => void;
+  onImportTags: () => void;
   onExportTags: () => void;
 }
 
 export function TagBulkActions({
   unusedTagCount,
   onDeleteUnusedTags,
+  onImportTags,
   onExportTags,
 }: TagBulkActionsProps) {
   return (
-    <div className="flex flex-col sm:flex-row gap-2">
-      <Button variant="outline" onClick={onExportTags}>
-        <Download className="mr-2 h-4 w-4" /> Exportar
-      </Button>
-
+    <div className="flex space-x-2">
       {unusedTagCount > 0 && (
         <AlertDialog>
           <AlertDialogTrigger asChild>

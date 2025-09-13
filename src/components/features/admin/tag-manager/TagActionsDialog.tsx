@@ -49,7 +49,7 @@ export function TagActionsDialog({
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className="sm:max-w-[425px]">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Ações para a Tag</AlertDialogTitle>
           <AlertDialogDescription>
@@ -69,16 +69,12 @@ export function TagActionsDialog({
               className="w-full"
             />
           </div>
-          <div className="flex justify-between items-center">
-            <Button variant="outline" onClick={onClose} className="px-4 py-2">
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={onClose}>
               Cancelar
             </Button>
             <div className="flex space-x-2">
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                className="px-4 py-2"
-              >
+              <Button variant="destructive" onClick={handleDelete}>
                 <Trash2 className="mr-2 h-4 w-4" /> Excluir
               </Button>
               <Button
@@ -87,7 +83,6 @@ export function TagActionsDialog({
                   !editName.trim() ||
                   editName.trim().toLowerCase() === tag?.name?.toLowerCase()
                 }
-                className="px-4 py-2"
               >
                 <Edit className="mr-2 h-4 w-4" /> Salvar Alterações
               </Button>

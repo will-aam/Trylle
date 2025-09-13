@@ -1,71 +1,64 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { FileInput } from "./FileInput";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/src/components/ui/tooltip";
+} from "../../../ui/card";
+import { useToast } from "@/src/hooks/use-toast";
 import { createClient } from "@/src/lib/supabase-client";
 import { Tag } from "@/src/lib/types";
-import { useToast } from "@/src/hooks/use-toast";
-import { Plus, Search, Download, Upload, Trash2, Edit } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/src/components/ui/alert-dialog";
-import { Badge } from "@/src/components/ui/badge";
-import { cn } from "@/src/lib/utils";
-import { ToggleGroup, ToggleGroupItem } from "@/src/components/ui/toggle-group";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/src/components/ui/pagination";
-import { Skeleton } from "@/src/components/ui/skeleton";
+import { TagList } from "@/src/components/features/admin/tag-manager/TagList";
+import { TagFilters } from "@/src/components/features/admin/tag-manager/TagFilters";
+import { TagForm } from "@/src/components/features/admin/tag-manager/TagForm";
+import { TagActionsDialog } from "@/src/components/features/admin/tag-manager/TagActionsDialog";
+import { TagMergeDialog } from "@/src/components/features/admin/tag-manager/TagMergeDialog";
+import { TagBulkActions } from "@/src/components/features/admin/tag-manager/TagBulkActions";
+import { TagPagination } from "@/src/components/features/admin/tag-manager/TagPagination";
+import { TagWithCount, FilterMode } from "./types";
+import { Button } from "@/src/components/ui/button";
+import { Check, Download } from "lucide-react";
 
-type TagWithCount = Tag & {
-  episode_count: number;
-};
-
-const TAGS_PER_PAGE = 50;
+const TAGS_PER_PAGE = 25;
 
 export function TagManager() {
   const supabase = createClient();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Estados principais
   const [tags, setTags] = useState<TagWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTagName, setNewTagName] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [filterMode, setFilterMode] = useState<"all" | "used" | "unused">(
-    "all"
-  );
+  const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [unusedTagCount, setUnusedTagCount] = useState(0);
   const [totalTagCount, setTotalTagCount] = useState(0);
+
+  // Estados de seleção
   const [selectedTag, setSelectedTag] = useState<TagWithCount | null>(null);
+  const [selectedTags, setSelectedTags] = useState<TagWithCount[]>([]);
+  const [mainTag, setMainTag] = useState<TagWithCount | null>(null);
+
+  // Estados de diálogo
+  const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   const [editTagName, setEditTagName] = useState("");
+
+  // Função para ação na tag (preenche o campo imediatamente)
+  const handleTagAction = (tag: TagWithCount | null) => {
+    if (tag) {
+      setSelectedTag(tag);
+      setEditTagName(tag.name); // Preenche imediatamente
+    } else {
+      setSelectedTag(null);
+      setEditTagName(""); // Limpa o campo
+    }
+  };
 
   // Debounce search input
   useEffect(() => {
@@ -87,6 +80,7 @@ export function TagManager() {
     if (!totalError) {
       setTotalTagCount(totalCount || 0);
     }
+
     // Get count of unused tags (tags with no episode associations)
     const { data: allTags, error: tagsError } = await supabase.from("tags")
       .select(`
@@ -110,10 +104,12 @@ export function TagManager() {
         *,
         episode_tags(count)
       `);
+
     // Apply search filter if needed
     if (debouncedSearchTerm) {
       baseQuery = baseQuery.ilike("name", `%${debouncedSearchTerm}%`);
     }
+
     const { data: allFilteredTags, error: fetchError } = await baseQuery.order(
       "name"
     );
@@ -127,6 +123,7 @@ export function TagManager() {
       setLoading(false);
       return;
     }
+
     // Process tags to add episode count
     const processedTags: TagWithCount[] = (allFilteredTags || []).map(
       (tag) => ({
@@ -134,6 +131,7 @@ export function TagManager() {
         episode_count: tag.episode_tags?.[0]?.count || 0,
       })
     );
+
     // Apply filter mode
     let filteredTags = processedTags;
     if (filterMode === "used") {
@@ -141,8 +139,10 @@ export function TagManager() {
     } else if (filterMode === "unused") {
       filteredTags = processedTags.filter((tag) => tag.episode_count === 0);
     }
+
     // Set total count for pagination
     setTotalCount(filteredTags.length);
+
     // Apply pagination
     const from = (currentPage - 1) * TAGS_PER_PAGE;
     const to = from + TAGS_PER_PAGE;
@@ -159,6 +159,7 @@ export function TagManager() {
 
   const totalPages = Math.ceil(totalCount / TAGS_PER_PAGE);
 
+  // Handlers
   const handleAddTag = async () => {
     if (!newTagName.trim()) return;
     const { data, error } = await supabase
@@ -198,12 +199,10 @@ export function TagManager() {
 
   const handleEditTag = async () => {
     if (!selectedTag || !editTagName.trim()) return;
-
     const { error } = await supabase
       .from("tags")
       .update({ name: editTagName.trim().toLowerCase() })
       .eq("id", selectedTag.id);
-
     if (error) {
       toast({
         title: "Erro ao atualizar tag",
@@ -234,11 +233,13 @@ export function TagManager() {
       });
       return;
     }
+
     // Filter to get only unused tags
     const unusedTags = allTags.filter((tag) => {
       const count = tag.episode_tags?.[0]?.count || 0;
       return count === 0;
     });
+
     if (unusedTags.length === 0) {
       toast({
         title: "Nenhuma tag para excluir",
@@ -246,11 +247,13 @@ export function TagManager() {
       });
       return;
     }
+
     const tagsToDelete = unusedTags.map((tag) => tag.id);
     const { error: deleteError } = await supabase
       .from("tags")
       .delete()
       .in("id", tagsToDelete);
+
     if (deleteError) {
       toast({
         title: "Erro ao excluir tags",
@@ -358,7 +361,86 @@ export function TagManager() {
       }
     };
     reader.readAsText(file);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleTagSelect = (tag: TagWithCount) => {
+    if (selectedTags.find((t) => t.id === tag.id)) {
+      setSelectedTags(selectedTags.filter((t) => t.id !== tag.id));
+    } else {
+      setSelectedTags([...selectedTags, tag]);
+    }
+  };
+
+  const handleMergeTags = async () => {
+    if (!mainTag || selectedTags.length < 2) return;
+    try {
+      // 1. Obter todos os episódios que usam as tags selecionadas (exceto a principal)
+      const { data: episodes, error: episodesError } = await supabase
+        .from("episode_tags")
+        .select("episode_id")
+        .in(
+          "tag_id",
+          selectedTags
+            .filter((tag) => tag.id !== mainTag.id)
+            .map((tag) => tag.id)
+        );
+      if (episodesError) throw episodesError;
+
+      // 2. Atualizar os episódios para usarem a tag principal
+      if (episodes && episodes.length > 0) {
+        const { error: updateError } = await supabase
+          .from("episode_tags")
+          .delete()
+          .in(
+            "episode_id",
+            episodes.map((e) => e.episode_id)
+          );
+        if (updateError) throw updateError;
+
+        const { error: insertError } = await supabase
+          .from("episode_tags")
+          .insert(
+            episodes.map((episode) => ({
+              episode_id: episode.episode_id,
+              tag_id: mainTag.id,
+            }))
+          );
+        if (insertError) throw insertError;
+      }
+
+      // 3. Excluir as tags antigas (exceto a principal)
+      const { error: deleteError } = await supabase
+        .from("tags")
+        .delete()
+        .in(
+          "id",
+          selectedTags
+            .filter((tag) => tag.id !== mainTag.id)
+            .map((tag) => tag.id)
+        );
+      if (deleteError) throw deleteError;
+
+      // 4. Atualizar a interface
+      toast({
+        title: "Mesclagem concluída!",
+        description: `${selectedTags.length - 1} tags foram mescladas em "${
+          mainTag.name
+        }".`,
+      });
+
+      // Resetar estados
+      setSelectedTags([]);
+      setMainTag(null);
+      setIsMergeDialogOpen(false);
+      fetchGlobalCounts();
+      fetchTags();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao mesclar tags",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -370,243 +452,134 @@ export function TagManager() {
           <span className="text-red-500">{unusedTagCount}</span> não estão em
           uso.
         </CardDescription>
-        <div className="flex flex-col gap-4 mt-4">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-grow">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar tags..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            <ToggleGroup
-              type="single"
-              value={filterMode}
-              onValueChange={(value: "all" | "used" | "unused") => {
-                if (value) setFilterMode(value);
-              }}
-              className="justify-start"
-            >
-              <ToggleGroupItem value="all">Todas</ToggleGroupItem>
-              <ToggleGroupItem value="used">Utilizadas</ToggleGroupItem>
-              <ToggleGroupItem value="unused">Não Utilizadas</ToggleGroupItem>
-            </ToggleGroup>
+        {/* 
+          <CardDescription className="mt-2">
+          <div className="space-y-2">
+            <p>
+              <strong>Dica:</strong> Para mesclar tags, selecione duas ou mais
+              tags e clique em "Mesclar Tags".
+            </p>
+            <p>
+              <strong>Atenção:</strong> Esta ação é irreversível. Todas as
+              associações de episódios serão atualizadas.
+            </p>
           </div>
+        </CardDescription> 
+        */}
+        <div className="flex flex-col gap-4 mt-4">
+          {/* Adicionando os filtros de volta */}
+          <TagFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            filterMode={filterMode}
+            onFilterChange={setFilterMode}
+            totalTagCount={totalTagCount}
+            unusedTagCount={unusedTagCount}
+          />
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <TagForm
+              newTagName={newTagName}
+              onTagNameChange={setNewTagName}
+              onAddTag={handleAddTag}
+            />
             <div className="flex space-x-2">
-              <Input
-                placeholder="Nome da nova tag"
-                value={newTagName}
-                onChange={(e) => setNewTagName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
-              />
-              <Button onClick={handleAddTag}>
-                <Plus className="mr-2 h-4 w-4" /> Adicionar
-              </Button>
-            </div>
-            <div className="flex space-x-2">
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept=".csv,.txt"
-                onChange={handleFileImport}
-              />
+              <FileInput onFileChange={handleFileImport} />
               <Button
                 variant="outline"
-                className="w-full"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="mr-2 h-4 w-4" /> Importar
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full"
                 onClick={handleExportTags}
+                className="w-full"
               >
                 <Download className="mr-2 h-4 w-4" /> Exportar
               </Button>
             </div>
           </div>
+
           {unusedTagCount > 0 && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full sm:w-auto">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Limpar {unusedTagCount} Tags Não Usadas
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta ação não pode ser desfeita. Isso excluirá
-                    permanentemente {unusedTagCount} tags que não estão
-                    associadas a nenhum episódio.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteUnusedTags}>
-                    Sim, excluir tags
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <div className="mt-2">
+              <TagBulkActions
+                unusedTagCount={unusedTagCount}
+                onDeleteUnusedTags={handleDeleteUnusedTags}
+                onImportTags={() => {
+                  /* Função vazia, pois o FileInput lida com isso */
+                }}
+                onExportTags={handleExportTags}
+              />
+            </div>
           )}
         </div>
       </CardHeader>
+
       <CardContent>
         <div className="border rounded-md p-4 space-y-2 min-h-[300px] max-h-[60vh] overflow-y-auto">
-          {loading ? (
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 15 }).map((_, i) => (
-                <Skeleton key={i} className="h-6 w-24 rounded-full" />
-              ))}
-            </div>
-          ) : tags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => (
-                <TooltipProvider key={tag.id}>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          "cursor-pointer hover:bg-destructive/80 transition-colors",
-                          {
-                            "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-300":
-                              tag.episode_count === 0,
-                          }
-                        )}
-                        onClick={() => setSelectedTag(tag)}
-                      >
-                        {tag.name} ({tag.episode_count})
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Clique para editar ou excluir esta tag</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhuma tag encontrada para o filtro selecionado.
-            </p>
-          )}
+          <TagList
+            tags={tags}
+            loading={loading}
+            filterMode={filterMode}
+            selectedTags={selectedTags}
+            onTagSelect={handleTagSelect}
+            setSelectedTag={handleTagAction}
+          />
         </div>
 
-        {/* Diálogo de Ações da Tag */}
-        {selectedTag && (
-          <AlertDialog
-            open={!!selectedTag}
-            onOpenChange={() => setSelectedTag(null)}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Ações para a Tag</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Escolha o que você deseja fazer com a tag "{selectedTag.name}"
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <div className="flex flex-col gap-4 py-4">
-                <div className="flex flex-col gap-2">
-                  <label
-                    htmlFor="edit-tag-name"
-                    className="text-sm font-medium"
-                  >
-                    Novo nome da tag:
-                  </label>
-                  <Input
-                    id="edit-tag-name"
-                    value={editTagName}
-                    onChange={(e) => setEditTagName(e.target.value)}
-                    placeholder={selectedTag.name}
-                    className="w-full"
-                  />
-                </div>
-                <div className="flex justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setEditTagName(selectedTag.name);
-                      setSelectedTag(null);
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="destructive"
-                      onClick={() => {
-                        handleDeleteTag(selectedTag.id);
-                        setSelectedTag(null);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                    </Button>
-                    <Button
-                      onClick={handleEditTag}
-                      disabled={
-                        !editTagName.trim() ||
-                        editTagName.trim().toLowerCase() === selectedTag.name
-                      }
-                    >
-                      <Edit className="mr-2 h-4 w-4" /> Salvar Alterações
-                    </Button>
-                  </div>
-                </div>
+        {/* Botões de seleção e mesclagem */}
+        {selectedTags.length > 0 && (
+          <div className="mt-2">
+            <div className="flex justify-between items-center p-3 bg-blue-50 rounded-md">
+              <div className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-blue-600" />
+                <span className="text-sm text-blue-700">
+                  {selectedTags.length} tag(s) selecionada(s)
+                </span>
               </div>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
-
-        {totalPages > 1 && (
-          <div className="mt-4 flex justify-center">
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setCurrentPage((p) => Math.max(1, p - 1));
-                    }}
-                    className={
-                      currentPage === 1
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-                <PaginationItem>
-                  <span className="text-sm px-4">
-                    Página {currentPage} de {totalPages}
-                  </span>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setCurrentPage((p) => Math.min(totalPages, p + 1));
-                    }}
-                    className={
-                      currentPage === totalPages
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedTags([])}
+                >
+                  Limpar seleção
+                </Button>
+                {selectedTags.length > 1 && (
+                  <Button
+                    onClick={() => setIsMergeDialogOpen(true)}
+                    className="text-sm"
+                  >
+                    Mesclar {selectedTags.length} Tags
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         )}
+
+        <TagPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       </CardContent>
+
+      {/* Diálogos */}
+      <TagActionsDialog
+        tag={selectedTag}
+        isOpen={!!selectedTag}
+        onClose={() => {
+          setSelectedTag(null);
+          setEditTagName(""); // Limpa o campo ao fechar
+        }}
+        onEdit={handleEditTag}
+        onDelete={handleDeleteTag}
+      />
+
+      <TagMergeDialog
+        selectedTags={selectedTags}
+        mainTag={mainTag}
+        isOpen={isMergeDialogOpen}
+        onClose={() => setIsMergeDialogOpen(false)}
+        onMainTagChange={setMainTag}
+        onMerge={handleMergeTags}
+      />
     </Card>
   );
 }

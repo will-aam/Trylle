@@ -44,10 +44,6 @@ export function TagFilters({
           <ToggleGroupItem value="unused">Não Utilizadas</ToggleGroupItem>
         </ToggleGroup>
       </div>
-      <div className="text-sm text-muted-foreground">
-        Atualmente, existem <strong>{totalTagCount}</strong> tags cadastradas.{" "}
-        <span className="text-red-500">{unusedTagCount}</span> não estão em uso.
-      </div>
     </div>
   );
 }
