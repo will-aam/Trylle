@@ -200,7 +200,7 @@ export default function SignupPage() {
           )}
         </div>
       </div>
-      <div className="hidden bg-muted lg:block">
+      {/* <div className="hidden bg-muted lg:block">
         <Image
           src="/placeholder.jpg"
           alt="Imagem de fundo da página de cadastro"
@@ -208,7 +208,7 @@ export default function SignupPage() {
           height={1080}
           className="h-full w-full object-cover dark:brightness-[0.2]"
         />
-      </div>
+      </div> */}
     </div>
   );
 }

@@ -1,13 +1,27 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { Button } from "@/src/components/ui/button"
-import { Badge } from "@/src/components/ui/badge"
-import { Crown, Download, Zap, BarChart3, Clock, Headphones, History, FileText } from "lucide-react"
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
+import { Button } from "@/src/components/ui/button";
+import { Badge } from "@/src/components/ui/badge";
+import {
+  Crown,
+  Download,
+  Zap,
+  BarChart3,
+  Clock,
+  Headphones,
+  History,
+  FileText,
+} from "lucide-react";
 
 export function PremiumPlans() {
-  const [isAnnual, setIsAnnual] = useState(true)
+  const [isAnnual, setIsAnnual] = useState(true);
 
   const features = [
     {
@@ -38,24 +52,31 @@ export function PremiumPlans() {
       icon: <FileText className="w-5 h-5" />,
       text: "Downloads de documentos de apoio",
     },
-  ]
+  ];
 
-  const monthlyPrice = 9.9
-  const annualPrice = 79.9
-  const annualMonthlyEquivalent = annualPrice / 12
+  const monthlyPrice = 9.9;
+  const annualPrice = 99.96;
+  const annualMonthlyEquivalent = annualPrice / 12;
 
   return (
     <section className="py-16 md:py-24 bg-muted/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Escolha o melhor plano para você</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Escolha o melhor plano para você
+          </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Desbloqueie todo o potencial do PlayCast com recursos exclusivos e conteúdo premium.
+            Desbloqueie todo o potencial do PlayCast com recursos exclusivos e
+            conteúdo premium.
           </p>
 
           {/* Toggle Switch */}
           <div className="flex items-center justify-center gap-4 mb-8">
-            <span className={`text-sm font-medium ${!isAnnual ? "text-foreground" : "text-muted-foreground"}`}>
+            <span
+              className={`text-sm font-medium ${
+                !isAnnual ? "text-foreground" : "text-muted-foreground"
+              }`}
+            >
               Mensal
             </span>
             <button
@@ -72,10 +93,18 @@ export function PremiumPlans() {
                 `}
               />
             </button>
-            <span className={`text-sm font-medium ${isAnnual ? "text-foreground" : "text-muted-foreground"}`}>
+            <span
+              className={`text-sm font-medium ${
+                isAnnual ? "text-foreground" : "text-muted-foreground"
+              }`}
+            >
               Anual
             </span>
-            {isAnnual && <Badge className="ml-2 bg-green-500 hover:bg-green-600">Economize 33%</Badge>}
+            {isAnnual && (
+              <Badge className="ml-2 bg-green-500 hover:bg-green-600">
+                6 meses grátis
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -89,22 +118,33 @@ export function PremiumPlans() {
               </Badge>
             </div>
 
-            {/* Special Offer Badge */}
+            {/* Special Offer Badge
             {isAnnual && (
               <div className="absolute top-4 left-4">
-                <Badge className="bg-green-500 hover:bg-green-600 text-white">6 meses grátis</Badge>
+                <Badge className="bg-green-500 hover:bg-green-600 text-white">
+                  6 meses grátis
+                </Badge>
               </div>
-            )}
+            )} */}
 
             <CardHeader className="text-center pb-4 pt-12">
-              <CardTitle className="text-2xl font-bold">Plano Premium</CardTitle>
+              <CardTitle className="text-2xl font-bold">
+                Plano Premium
+              </CardTitle>
               <div className="space-y-2">
                 <div className="text-4xl font-bold text-primary">
-                  R$ {isAnnual ? annualMonthlyEquivalent.toFixed(2) : monthlyPrice.toFixed(2)}
-                  <span className="text-lg font-normal text-muted-foreground">/mês</span>
+                  R${" "}
+                  {isAnnual
+                    ? annualMonthlyEquivalent.toFixed(2)
+                    : monthlyPrice.toFixed(2)}
+                  <span className="text-lg font-normal text-muted-foreground">
+                    /mês
+                  </span>
                 </div>
                 {isAnnual && (
-                  <p className="text-sm text-muted-foreground">Cobrado anualmente R$ {annualPrice.toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Cobrado anualmente R$ {annualPrice.toFixed(2)}
+                  </p>
                 )}
               </div>
             </CardHeader>
@@ -128,11 +168,11 @@ export function PremiumPlans() {
                 Começar Premium
               </Button>
 
-              {/* Additional Info */}
+              {/* Additional Info
               <div className="text-center space-y-2">
                 <p className="text-xs text-muted-foreground">Cancele a qualquer momento</p>
                 <p className="text-xs text-muted-foreground">Teste grátis por 7 dias</p>
-              </div>
+              </div> */}
             </CardContent>
 
             {/* Decorative Elements */}
@@ -150,25 +190,31 @@ export function PremiumPlans() {
                 <Download className="w-6 h-6 text-primary" />
               </div>
               <h4 className="font-medium">Ouça Offline</h4>
-              <p className="text-sm text-muted-foreground">Baixe seus episódios favoritos e ouça sem internet</p>
+              <p className="text-sm text-muted-foreground">
+                Baixe seus episódios favoritos e ouça sem internet
+              </p>
             </div>
             <div className="text-center space-y-2">
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto">
                 <Zap className="w-6 h-6 text-primary" />
               </div>
               <h4 className="font-medium">Acesso Antecipado</h4>
-              <p className="text-sm text-muted-foreground">Seja o primeiro a ouvir novos episódios</p>
+              <p className="text-sm text-muted-foreground">
+                Seja o primeiro a ouvir novos episódios
+              </p>
             </div>
             <div className="text-center space-y-2">
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto">
                 <BarChart3 className="w-6 h-6 text-primary" />
               </div>
               <h4 className="font-medium">Estatísticas</h4>
-              <p className="text-sm text-muted-foreground">Acompanhe seus hábitos de escuta</p>
+              <p className="text-sm text-muted-foreground">
+                Acompanhe seus hábitos de escuta
+              </p>
             </div>
           </div>
         </div>
       </div>
     </section>
-  )
+  );
 }
