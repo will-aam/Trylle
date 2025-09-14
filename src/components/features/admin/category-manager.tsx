@@ -22,6 +22,7 @@ import {
   ArrowDownUp,
   Pencil,
   ChevronDown,
+  AlertCircle,
 } from "lucide-react";
 import {
   Popover,
@@ -71,27 +72,41 @@ export function CategoryManager() {
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortType, setSortType] = useState<"name" | "episodes">("name");
   const [selectedSubcategory, setSelectedSubcategory] =
     useState<Subcategory | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [catRes, subRes] = await Promise.all([
-      supabase.from("categories").select("*").order("name"),
-      supabase.from("subcategories").select("*").order("name"),
-    ]);
 
-    if (catRes.error || subRes.error) {
-      console.error("Erro ao buscar dados:", catRes.error || subRes.error);
+    const { data: catData, error: catError } = await supabase
+      .from("categories")
+      .select("*, episodes!inner(count)");
+
+    const { data: subData, error: subError } = await supabase
+      .from("subcategories")
+      .select("*, episodes!inner(count)");
+
+    if (catError || subError) {
+      console.error("Error fetching data:", catError || subError);
       toast({
         title: "Erro",
         description: "Não foi possível carregar a taxonomia.",
         variant: "destructive",
       });
     } else {
-      setCategories(catRes.data || []);
-      setSubcategories(subRes.data || []);
+      const categoriesWithCount = (catData || []).map((c) => ({
+        ...c,
+        episode_count: c.episodes[0].count,
+      }));
+      const subcategoriesWithCount = (subData || []).map((s) => ({
+        ...s,
+        episode_count: s.episodes[0].count,
+      }));
+
+      setCategories(categoriesWithCount);
+      setSubcategories(subcategoriesWithCount);
     }
     setLoading(false);
   }, [supabase, toast]);
@@ -102,10 +117,15 @@ export function CategoryManager() {
 
   const filteredCategories = useMemo(() => {
     const sortedCategories = [...categories].sort((a, b) => {
-      if (sortOrder === "asc") {
-        return a.name.localeCompare(b.name);
+      if (sortType === "name") {
+        return sortOrder === "asc"
+          ? a.name.localeCompare(b.name)
+          : b.name.localeCompare(a.name);
       } else {
-        return b.name.localeCompare(a.name);
+        // Ordenar por contagem de episódios
+        const countA = a.episode_count || 0;
+        const countB = b.episode_count || 0;
+        return sortOrder === "asc" ? countA - countB : countB - countA;
       }
     });
 
@@ -350,13 +370,27 @@ export function CategoryManager() {
               </PopoverContent>
             </Popover>
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-          >
-            <ArrowDownUp className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={sortType === "name" ? "secondary" : "outline"}
+              onClick={() => setSortType("name")}
+            >
+              Nome
+            </Button>
+            <Button
+              variant={sortType === "episodes" ? "secondary" : "outline"}
+              onClick={() => setSortType("episodes")}
+            >
+              Episódios
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            >
+              <ArrowDownUp className="h-4 w-4" />
+            </Button>
+          </div>
           <div className="flex space-x-2">
             <Input
               placeholder="Nome da nova categoria"
@@ -398,8 +432,17 @@ export function CategoryManager() {
                           className="h-9"
                         />
                       ) : (
-                        <span onDoubleClick={() => startEditing(category)}>
+                        <span
+                          onDoubleClick={() => startEditing(category)}
+                          className="flex items-center"
+                        >
                           {category.name}
+                          <span className="ml-2 text-muted-foreground font-normal">
+                            ({category.episode_count})
+                          </span>
+                          {category.episode_count === 0 && (
+                            <AlertCircle className="ml-2 h-4 w-4 text-yellow-500" />
+                          )}
                         </span>
                       )}
                     </span>
@@ -477,10 +520,15 @@ export function CategoryManager() {
                         .map((sub) => (
                           <div
                             key={sub.id}
-                            className="bg-background rounded-md p-2 text-center text-sm font-medium cursor-pointer hover:bg-accent transition-colors border"
+                            className="bg-background rounded-md p-2 text-sm font-medium cursor-pointer hover:bg-accent transition-colors border flex justify-center items-center gap-2"
                             onClick={() => handleOpenModal(sub)}
                           >
-                            {sub.name}
+                            <span>
+                              {sub.name} ({sub.episode_count})
+                            </span>
+                            {sub.episode_count === 0 && (
+                              <AlertCircle className="h-4 w-4 text-yellow-500" />
+                            )}
                           </div>
                         ))}
                     </div>

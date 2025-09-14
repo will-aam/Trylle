@@ -26,6 +26,7 @@ export type Category = {
   id: string;
   name: string;
   created_at: string;
+  episode_count?: number;
 };
 
 /**
@@ -38,6 +39,7 @@ export type Subcategory = {
   category_id: string;
   created_at: string;
   categories?: { name: string };
+  episode_count?: number;
 };
 
 /**
