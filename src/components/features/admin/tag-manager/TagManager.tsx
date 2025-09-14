@@ -568,6 +568,7 @@ export function TagManager() {
         }}
         onEdit={handleEditTag}
         onDelete={handleDeleteTag}
+        tagGroups={[]}
       />
 
       <TagMergeDialog

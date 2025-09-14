@@ -8,6 +8,7 @@ import { Tag } from "@/src/lib/types";
  */
 export type TagWithCount = Tag & {
   episode_count: number;
+  group_id?: string | null;
 };
 
 /**
