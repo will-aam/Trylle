@@ -12,6 +12,8 @@ import {
   Wallet,
   Home,
   LibraryBig,
+  MessagesSquare,
+  Eye,
 } from "lucide-react";
 import {
   Tooltip,
@@ -74,7 +76,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
             <nav className="grid items-start px-2 text-sm font-medium space-y-1">
               <SidebarLink
                 href="/"
-                icon={<Home className="h-4 w-4" />}
+                icon={<Eye className="h-4 w-4" />}
                 label="Início"
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/"}
@@ -89,16 +91,23 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
               <SidebarLink
                 href="/admin/episodes"
                 icon={<LibraryBig className="h-4 w-4" />}
-                label="Gerenciar Episódios"
+                label="Gerenciador de Episódios"
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/admin/episodes"}
               />
               <SidebarLink
                 href="/admin/users"
                 icon={<Users className="h-4 w-4" />}
-                label="Gerenciador de usuários"
+                label="Gerenciador de Usuários"
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/admin/users"}
+              />
+              <SidebarLink
+                href="/"
+                icon={<MessagesSquare className="h-4 w-4" />}
+                label="Comunidade"
+                isCollapsed={isCollapsed}
+                isActive={pathname === "/"}
               />
               <SidebarLink
                 href="/admin/financial"
