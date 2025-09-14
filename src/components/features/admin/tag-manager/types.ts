@@ -34,3 +34,11 @@ export interface TagActionsDialogProps {
   onEdit: (tagId: string, newName: string) => void;
   onDelete: (tagId: string) => void;
 }
+
+/**
+ * Representa um grupo de tags.
+ */
+export type TagGroup = {
+  id: string;
+  name: string;
+};

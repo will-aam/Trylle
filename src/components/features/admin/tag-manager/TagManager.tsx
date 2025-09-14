@@ -18,7 +18,7 @@ import { TagActionsDialog } from "@/src/components/features/admin/tag-manager/Ta
 import { TagMergeDialog } from "@/src/components/features/admin/tag-manager/TagMergeDialog";
 import { TagBulkActions } from "@/src/components/features/admin/tag-manager/TagBulkActions";
 import { TagPagination } from "@/src/components/features/admin/tag-manager/TagPagination";
-import { TagWithCount, FilterMode } from "./types";
+import { TagWithCount, FilterMode, TagGroup } from "./types";
 import { Button } from "../../../ui/button";
 import { Check, Download } from "lucide-react";
 
@@ -39,6 +39,7 @@ export function TagManager() {
   const [currentPage, setCurrentPage] = useState(1);
   const [unusedTagCount, setUnusedTagCount] = useState(0);
   const [totalTagCount, setTotalTagCount] = useState(0);
+  const [tagGroups, setTagGroups] = useState<TagGroup[]>([]);
 
   // Estados de seleção
   const [selectedTag, setSelectedTag] = useState<TagWithCount | null>(null);
@@ -153,9 +154,19 @@ export function TagManager() {
 
   // Initial load
   useEffect(() => {
+    const fetchGroups = async () => {
+      const { data, error } = await supabase
+        .from("tag_groups")
+        .select("id, name")
+        .order("name");
+      if (!error) {
+        setTagGroups(data || []);
+      }
+    };
     fetchGlobalCounts();
     fetchTags();
-  }, [fetchGlobalCounts, fetchTags]);
+    fetchGroups();
+  }, [fetchGlobalCounts, fetchTags, supabase]);
 
   const totalPages = Math.ceil(totalCount / TAGS_PER_PAGE);
 
@@ -197,11 +208,15 @@ export function TagManager() {
     setSelectedTag(null);
   };
 
-  const handleEditTag = async (tagId: string, newName: string) => {
+  const handleEditTag = async (
+    tagId: string,
+    newName: string,
+    groupId: string | null
+  ) => {
     if (!tagId || !newName.trim()) return;
     const { error } = await supabase
       .from("tags")
-      .update({ name: newName.trim().toLowerCase() })
+      .update({ name: newName.trim().toLowerCase(), group_id: groupId })
       .eq("id", tagId);
     if (error) {
       toast({
@@ -568,7 +583,7 @@ export function TagManager() {
         }}
         onEdit={handleEditTag}
         onDelete={handleDeleteTag}
-        tagGroups={[]}
+        tagGroups={tagGroups}
       />
 
       <TagMergeDialog

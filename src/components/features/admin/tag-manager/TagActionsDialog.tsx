@@ -18,13 +18,7 @@ import {
   SelectValue,
 } from "@/src/components/ui/select";
 import { Trash2, Edit } from "lucide-react";
-import { TagWithCount } from "./types";
-
-// Adicionamos a definição para TagGroup aqui
-type TagGroup = {
-  id: string;
-  name: string;
-};
+import { TagWithCount, TagGroup } from "./types";
 
 interface TagActionsDialogProps {
   tag: TagWithCount | null;
@@ -43,7 +37,7 @@ export function TagActionsDialog({
   onClose,
   onEdit,
   onDelete,
-  tagGroups = [], // Adicione = [] aqui
+  tagGroups,
 }: TagActionsDialogProps) {
   const [editName, setEditName] = useState("");
   // Novo estado para guardar o ID do grupo selecionado
