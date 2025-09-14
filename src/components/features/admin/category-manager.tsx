@@ -46,6 +46,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/src/components/ui/alert-dialog";
+import { SubcategoryActionsModal } from "./SubcategoryActionsModal";
 import { cn } from "@/src/lib/utils";
 
 const Accordion = AccordionPrimitive.Root;
@@ -70,6 +71,9 @@ export function CategoryManager() {
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [selectedSubcategory, setSelectedSubcategory] =
+    useState<Subcategory | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -215,6 +219,41 @@ export function CategoryManager() {
       setSubcategories(subcategories.filter((s) => s.id !== subcategoryId));
       toast({ title: "Sucesso!", description: "Subcategoria excluída." });
     }
+  };
+
+  const handleUpdateSubcategory = async (
+    subcategoryId: string,
+    newName: string
+  ) => {
+    const { data, error } = await supabase
+      .from("subcategories")
+      .update({ name: newName })
+      .eq("id", subcategoryId)
+      .select()
+      .single();
+
+    if (error) {
+      toast({
+        title: "Erro ao atualizar subcategoria",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setSubcategories(
+        subcategories.map((s) => (s.id === subcategoryId ? data : s))
+      );
+      toast({ title: "Sucesso!", description: "Subcategoria atualizada." });
+    }
+  };
+
+  const handleOpenModal = (subcategory: Subcategory) => {
+    setSelectedSubcategory(subcategory);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedSubcategory(null);
+    setIsModalOpen(false);
   };
 
   const handleUpdateCategory = async () => {
@@ -436,34 +475,13 @@ export function CategoryManager() {
                       {subcategories
                         .filter((sub) => sub.category_id === category.id)
                         .map((sub) => (
-                          <AlertDialog key={sub.id}>
-                            <AlertDialogTrigger asChild>
-                              <div className="bg-background rounded-md p-2 text-center text-sm font-medium cursor-pointer hover:bg-destructive/80 transition-colors border">
-                                {sub.name}
-                              </div>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Você tem certeza?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Esta ação não pode ser desfeita. Isso excluirá
-                                  permanentemente a subcategoria "{sub.name}".
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() =>
-                                    handleDeleteSubcategory(sub.id)
-                                  }
-                                >
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <div
+                            key={sub.id}
+                            className="bg-background rounded-md p-2 text-center text-sm font-medium cursor-pointer hover:bg-accent transition-colors border"
+                            onClick={() => handleOpenModal(sub)}
+                          >
+                            {sub.name}
+                          </div>
                         ))}
                     </div>
                   </div>
@@ -479,6 +497,13 @@ export function CategoryManager() {
           )}
         </Accordion>
       </CardContent>
+      <SubcategoryActionsModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        subcategory={selectedSubcategory}
+        onEdit={handleUpdateSubcategory}
+        onDelete={handleDeleteSubcategory}
+      />
     </Card>
   );
 }

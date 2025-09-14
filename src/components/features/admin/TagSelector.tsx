@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Command,
   CommandEmpty,
@@ -48,6 +48,7 @@ export function TagSelector({
     if (!selectedTags.some((t) => t.id === tag.id)) {
       onSelectedTagsChange([...selectedTags, tag]);
     }
+    setTagInputValue("");
     setPopoverOpen(false);
   };
 
@@ -56,20 +57,28 @@ export function TagSelector({
   };
 
   const handleCreateTag = async (tagName: string) => {
-    const name = tagName.trim().toLowerCase();
-    if (
-      !name ||
-      selectedTags.some((t) => t.name === name) ||
-      allTags.some((t) => t.name === name)
-    ) {
-      setPopoverOpen(false);
+    const trimmedName = tagName.trim();
+    if (!trimmedName) return;
+
+    const existingTag = allTags.find(
+      (t) => t.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (existingTag) {
+      toast({
+        title: "Tag já existente",
+        description: `A tag "${existingTag.name}" foi adicionada à sua seleção.`,
+      });
+      handleTagSelect(existingTag);
       return;
     }
+
     const { data, error } = await supabase
       .from("tags")
-      .insert([{ name }])
+      .insert([{ name: trimmedName }])
       .select()
       .single();
+
     if (error) {
       toast({
         title: "Erro",
@@ -81,9 +90,36 @@ export function TagSelector({
         [...prev, data].sort((a, b) => a.name.localeCompare(b.name))
       );
       handleTagSelect(data);
+      toast({
+        title: "Tag criada",
+        description: `A tag "${data.name}" foi criada e selecionada.`,
+      });
     }
+    setTagInputValue("");
     setPopoverOpen(false);
   };
+
+  const filteredTags = useMemo(() => {
+    if (!tagInputValue) return allTags;
+    return allTags.filter((tag) =>
+      tag.name.toLowerCase().includes(tagInputValue.toLowerCase())
+    );
+  }, [tagInputValue, allTags]);
+
+  const availableTags = useMemo(() => {
+    return filteredTags.filter(
+      (tag) => !selectedTags.some((s) => s.id === tag.id)
+    );
+  }, [filteredTags, selectedTags]);
+
+  const showCreateOption =
+    tagInputValue &&
+    !availableTags.some(
+      (t) => t.name.toLowerCase() === tagInputValue.toLowerCase()
+    ) &&
+    !selectedTags.some(
+      (t) => t.name.toLowerCase() === tagInputValue.toLowerCase()
+    );
 
   return (
     <div>
@@ -107,23 +143,27 @@ export function TagSelector({
           <Command>
             <CommandInput
               placeholder="Buscar ou criar tag..."
+              value={tagInputValue}
               onValueChange={setTagInputValue}
             />
             <CommandList>
-              <CommandEmpty onSelect={() => handleCreateTag(tagInputValue)}>
-                Criar nova tag: "{tagInputValue}"
-              </CommandEmpty>
+              {availableTags.length === 0 && !showCreateOption ? (
+                <CommandEmpty>Nenhuma tag encontrada.</CommandEmpty>
+              ) : null}
               <CommandGroup>
-                {allTags
-                  .filter((tag) => !selectedTags.some((s) => s.id === tag.id))
-                  .map((tag) => (
-                    <CommandItem
-                      key={tag.id}
-                      onSelect={() => handleTagSelect(tag)}
-                    >
-                      {tag.name}
-                    </CommandItem>
-                  ))}
+                {availableTags.map((tag) => (
+                  <CommandItem
+                    key={tag.id}
+                    onSelect={() => handleTagSelect(tag)}
+                  >
+                    {tag.name}
+                  </CommandItem>
+                ))}
+                {showCreateOption ? (
+                  <CommandItem onSelect={() => handleCreateTag(tagInputValue)}>
+                    Criar nova tag: "{tagInputValue}"
+                  </CommandItem>
+                ) : null}
               </CommandGroup>
             </CommandList>
           </Command>
