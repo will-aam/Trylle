@@ -14,11 +14,19 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Plus, Trash2, Edit, Check, X } from "lucide-react";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/src/components/ui/accordion";
+import { Badge } from "@/src/components/ui/badge";
 
 type TagGroup = {
   id: string;
   name: string;
   created_at: string;
+  tags: { id: string; name: string }[];
 };
 
 export function TagGroupManager() {
@@ -35,7 +43,7 @@ export function TagGroupManager() {
     setLoading(true);
     const { data, error } = await supabase
       .from("tag_groups")
-      .select("*")
+      .select("*, tags(id, name)")
       .order("name", { ascending: true });
 
     if (error) {
@@ -140,79 +148,114 @@ export function TagGroupManager() {
             <Plus className="mr-2 h-4 w-4" /> Adicionar Grupo
           </Button>
         </div>
-        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
+        <Accordion
+          type="multiple"
+          className="w-full max-h-[60vh] overflow-y-auto pr-2"
+        >
           {loading
-            ? Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full rounded-md" />
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-md mb-1" />
               ))
             : groups.map((group) => (
-                <div
+                <AccordionItem
                   key={group.id}
-                  className="flex items-center justify-between rounded-md border p-2 bg-background hover:bg-muted/50"
+                  value={group.id}
+                  className="border-b"
                 >
-                  {editingGroup?.id === group.id ? (
-                    <Input
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleUpdateGroup();
-                        if (e.key === "Escape") setEditingGroup(null);
-                      }}
-                      className="h-8"
-                    />
-                  ) : (
-                    <span className="text-sm font-medium pl-2">
-                      {group.name}
-                    </span>
-                  )}
-                  <div className="flex items-center">
-                    {editingGroup?.id === group.id ? (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleUpdateGroup}
-                          className="h-8 w-8"
-                        >
-                          <Check className="h-4 w-4 text-green-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setEditingGroup(null)}
-                          className="h-8 w-8"
-                        >
-                          <X className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setEditingGroup(group);
-                            setEditingName(group.name);
+                  <div className="flex items-center w-full">
+                    <AccordionTrigger className="flex-grow text-left hover:no-underline px-4 py-3">
+                      {editingGroup?.id === group.id ? (
+                        <Input
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleUpdateGroup();
+                            if (e.key === "Escape") setEditingGroup(null);
+                            e.stopPropagation();
                           }}
-                          className="h-8 w-8"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteGroup(group.id)}
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
+                          className="h-8"
+                        />
+                      ) : (
+                        <span className="text-sm font-medium">
+                          {group.name}
+                        </span>
+                      )}
+                    </AccordionTrigger>
+                    <div className="flex items-center pr-2">
+                      {editingGroup?.id === group.id ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdateGroup();
+                            }}
+                            className="h-8 w-8"
+                          >
+                            <Check className="h-4 w-4 text-green-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingGroup(null);
+                            }}
+                            className="h-8 w-8"
+                          >
+                            <X className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingGroup(group);
+                              setEditingName(group.name);
+                            }}
+                            className="h-8 w-8"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteGroup(group.id);
+                            }}
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
+                  <AccordionContent className="px-4 pb-3">
+                    {group.tags && group.tags.length > 0 ? (
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        {group.tags.map((tag) => (
+                          <Badge key={tag.id} variant="secondary">
+                            {tag.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic pt-2">
+                        Nenhuma tag associada a este grupo.
+                      </p>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-        </div>
+        </Accordion>
       </CardContent>
     </Card>
   );
