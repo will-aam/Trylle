@@ -7,7 +7,7 @@ const testimonials = [
     name: "Maria Silva",
     role: "Desenvolvedora",
     content:
-      "O PlayCast transformou minha rotina de aprendizado. Escuto enquanto caminho para o trabalho e já aprendi tanto sobre tecnologia!",
+      "O PlayPath transformou minha rotina de aprendizado. Escuto enquanto caminho para o trabalho e já aprendi tanto sobre tecnologia!",
     rating: 5,
     avatar: "https://api.dicebear.com/9.x/thumbs/svg?seed=Maria",
   },

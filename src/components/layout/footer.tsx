@@ -13,7 +13,7 @@ export function Footer() {
                   <AudioLines className="w-5 h-5" />
                 </span>
               </div>
-              <span className="font-bold text-lg">PlayCast</span>
+              <span className="font-bold text-lg">PlayPath</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Descubra, ouça e compartilhe podcasts incríveis de criadores do
@@ -130,7 +130,7 @@ export function Footer() {
               <div className="flex items-center space-x-3">
                 <Mail className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
-                  contato@playcast.com
+                  contato@PlayPath.com
                 </span>
               </div>
             </div>
@@ -141,7 +141,7 @@ export function Footer() {
         <div className="border-t border-border mt-8 pt-8 lg:mt-12">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground text-center md:text-left">
-              © {new Date().getFullYear()} PlayCast. Todos os direitos
+              © {new Date().getFullYear()} PlayPath. Todos os direitos
               reservados.
             </p>
             <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-2">

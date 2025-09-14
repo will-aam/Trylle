@@ -4,7 +4,7 @@ import { Toaster } from "@/src/components/ui/sonner";
 import { ClientLayoutWrapper } from "@/src/components/client-layout-wrapper";
 
 export const metadata = {
-  title: "PlayCast | Sua plataforma de áudio",
+  title: "PlayPath | Sua plataforma de áudio",
   description: "Ouça seus podcasts e áudios favoritos.",
 };
 

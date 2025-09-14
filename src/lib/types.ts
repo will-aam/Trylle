@@ -22,6 +22,7 @@ export type Episode = {
  * Representa a estrutura de uma categoria.
  */
 export type Category = {
+  description: string;
   id: string;
   name: string;
   created_at: string;
@@ -31,6 +32,7 @@ export type Category = {
  * Representa a estrutura de uma subcategoria.
  */
 export type Subcategory = {
+  description: string;
   id: string;
   name: string;
   category_id: string;

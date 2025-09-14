@@ -66,7 +66,7 @@ export function PremiumPlans() {
             Escolha o melhor plano para você
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Desbloqueie todo o potencial do PlayCast com recursos exclusivos e
+            Desbloqueie todo o potencial do PlayPath com recursos exclusivos e
             conteúdo premium.
           </p>
 

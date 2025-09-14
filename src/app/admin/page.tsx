@@ -4,6 +4,7 @@ import { UploadForm } from "@/src/components/features/admin/admin-upload-form";
 import { CategoryManager } from "@/src/components/features/admin/category-manager";
 import { TagManager } from "@/src/components/features/admin/tag-manager/TagManager";
 import { TagGroupManager } from "@/src/components/features/admin/tag-group-manager/TagGroupManager";
+import { TagAliasManager } from "@/src/components/features/admin/tag-alias-manager/TagAliasManager";
 import {
   Tabs,
   TabsContent,
@@ -23,11 +24,12 @@ export default function AdminPage() {
       </Suspense>
 
       <Tabs defaultValue="upload" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="upload">Upload</TabsTrigger>
           <TabsTrigger value="categories">Categorias e Subs</TabsTrigger>
           <TabsTrigger value="tags">Tags</TabsTrigger>
           <TabsTrigger value="tag-groups">Grupos de Tags</TabsTrigger>
+          <TabsTrigger value="tag-aliases">Sinônimos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="upload">
@@ -44,6 +46,10 @@ export default function AdminPage() {
 
         <TabsContent value="tag-groups">
           <TagGroupManager />
+        </TabsContent>
+
+        <TabsContent value="tag-aliases">
+          <TagAliasManager />
         </TabsContent>
       </Tabs>
     </div>
