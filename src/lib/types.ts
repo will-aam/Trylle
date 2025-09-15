@@ -27,6 +27,8 @@ export type Category = {
   name: string;
   created_at: string;
   episode_count?: number;
+  subcategories?: Subcategory[];
+  subcategoriesLoading?: boolean;
 };
 
 /**

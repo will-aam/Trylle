@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import {
   Card,
   CardContent,
+  CardFooter,
   CardHeader,
   CardTitle,
   CardDescription,
@@ -47,6 +48,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/src/components/ui/alert-dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/src/components/ui/pagination";
+import { Skeleton } from "@/src/components/ui/skeleton";
 import { SubcategoryActionsModal } from "./SubcategoryActionsModal";
 import { cn } from "@/src/lib/utils";
 
@@ -54,12 +63,31 @@ const Accordion = AccordionPrimitive.Root;
 const AccordionItem = AccordionPrimitive.Item;
 const AccordionContent = AccordionPrimitive.Content;
 
+function CategoryListSkeleton() {
+  return (
+    <div className="space-y-2">
+      {[...Array(5)].map((_, i) => (
+        <div
+          key={i}
+          className="border rounded-md px-4 py-3 bg-muted/50 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-10" />
+          </div>
+          <Skeleton className="h-4 w-4" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function CategoryManager() {
   const supabase = createClient();
   const { toast } = useToast();
+  const isInitialMount = useRef(true);
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newSubcategoryNames, setNewSubcategoryNames] = useState<{
@@ -70,26 +98,44 @@ export function CategoryManager() {
   );
   const [editingCategoryName, setEditingCategoryName] = useState("");
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] =
+    useState(categorySearchTerm);
   const [open, setOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [sortType, setSortType] = useState<"name" | "episodes">("name");
   const [selectedSubcategory, setSelectedSubcategory] =
     useState<Subcategory | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    const from = (currentPage - 1) * itemsPerPage;
+    const to = from + itemsPerPage - 1;
 
-    const { data: catData, error: catError } = await supabase
+    let query = supabase
       .from("categories")
-      .select("*, episodes!inner(count)");
+      .select("*, episodes!inner(count)", { count: "exact" });
 
-    const { data: subData, error: subError } = await supabase
-      .from("subcategories")
-      .select("*, episodes!inner(count)");
+    if (debouncedSearchTerm) {
+      query = query.ilike("name", `%${debouncedSearchTerm}%`);
+    }
 
-    if (catError || subError) {
-      console.error("Error fetching data:", catError || subError);
+    query = query.order(sortType === "name" ? "name" : "episodes(count)", {
+      ascending: sortOrder === "asc",
+      foreignTable: sortType === "episodes" ? "episodes" : undefined,
+    });
+
+    const {
+      data: catData,
+      error: catError,
+      count: catCount,
+    } = await query.range(from, to);
+
+    if (catError) {
+      console.error("Error fetching data:", catError);
       toast({
         title: "Erro",
         description: "Não foi possível carregar a taxonomia.",
@@ -100,50 +146,56 @@ export function CategoryManager() {
         ...c,
         episode_count: c.episodes[0].count,
       }));
-      const subcategoriesWithCount = (subData || []).map((s) => ({
-        ...s,
-        episode_count: s.episodes[0].count,
-      }));
 
       setCategories(categoriesWithCount);
-      setSubcategories(subcategoriesWithCount);
+      setTotalCount(catCount || 0);
     }
     setLoading(false);
-  }, [supabase, toast]);
+  }, [
+    supabase,
+    toast,
+    currentPage,
+    itemsPerPage,
+    debouncedSearchTerm,
+    sortType,
+    sortOrder,
+  ]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(categorySearchTerm);
+    }, 500); // 500ms delay
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [categorySearchTerm]);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    } else {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchTerm]);
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, currentPage]);
 
-  const filteredCategories = useMemo(() => {
-    const sortedCategories = [...categories].sort((a, b) => {
+  const sortedCategories = useMemo(() => {
+    return [...categories].sort((a, b) => {
       if (sortType === "name") {
         return sortOrder === "asc"
           ? a.name.localeCompare(b.name)
           : b.name.localeCompare(a.name);
       } else {
-        // Ordenar por contagem de episódios
         const countA = a.episode_count || 0;
         const countB = b.episode_count || 0;
         return sortOrder === "asc" ? countA - countB : countB - countA;
       }
     });
-
-    if (!categorySearchTerm.trim()) {
-      return sortedCategories;
-    }
-    return sortedCategories.filter(
-      (category) =>
-        category.name
-          .toLowerCase()
-          .includes(categorySearchTerm.toLowerCase()) ||
-        subcategories.some(
-          (sub) =>
-            sub.category_id === category.id &&
-            sub.name.toLowerCase().includes(categorySearchTerm.toLowerCase())
-        )
-    );
-  }, [categories, subcategories, categorySearchTerm, sortOrder]);
+  }, [categories, sortType, sortOrder]);
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
@@ -165,30 +217,6 @@ export function CategoryManager() {
       );
       setNewCategoryName("");
       toast({ title: "Sucesso!", description: "Categoria criada." });
-    }
-  };
-
-  const handleAddSubcategory = async (categoryId: string) => {
-    const subcategoryName = newSubcategoryNames[categoryId];
-    if (!subcategoryName || !subcategoryName.trim()) return;
-    const { data, error } = await supabase
-      .from("subcategories")
-      .insert([{ name: subcategoryName.trim(), category_id: categoryId }])
-      .select()
-      .single();
-
-    if (error) {
-      toast({
-        title: "Erro ao criar subcategoria",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      setSubcategories(
-        [...subcategories, data].sort((a, b) => a.name.localeCompare(b.name))
-      );
-      setNewSubcategoryNames({ ...newSubcategoryNames, [categoryId]: "" });
-      toast({ title: "Sucesso!", description: "Subcategoria criada." });
     }
   };
 
@@ -224,20 +252,105 @@ export function CategoryManager() {
     }
   };
 
-  const handleDeleteSubcategory = async (subcategoryId: string) => {
-    const { error } = await supabase
+  const handleAccordionChange = async (categoryId: string) => {
+    if (!categoryId) return;
+
+    const categoryIndex = categories.findIndex((c) => c.id === categoryId);
+    if (categoryIndex === -1) return;
+
+    const category = categories[categoryIndex];
+
+    // Somente busca se as subcategorias ainda não foram carregadas
+    if (!category.subcategories) {
+      const updatedCategories = [...categories];
+      updatedCategories[categoryIndex] = {
+        ...updatedCategories[categoryIndex],
+        subcategoriesLoading: true,
+      };
+      setCategories(updatedCategories);
+
+      const { data: subData, error: subError } = await supabase
+        .from("subcategories")
+        .select("*, episodes!inner(count)")
+        .eq("category_id", categoryId);
+
+      if (subError) {
+        toast({
+          title: "Erro ao carregar subcategorias",
+          description: subError.message,
+          variant: "destructive",
+        });
+        // Reset loading state on error
+        const errorCategories = [...categories];
+        errorCategories[categoryIndex] = {
+          ...errorCategories[categoryIndex],
+          subcategoriesLoading: false,
+        };
+        setCategories(errorCategories);
+      } else {
+        const subcategoriesWithCount = (subData || []).map((s) => ({
+          ...s,
+          episode_count: s.episodes[0].count,
+        }));
+
+        const finalCategories = [...categories];
+        finalCategories[categoryIndex] = {
+          ...finalCategories[categoryIndex],
+          subcategories: subcategoriesWithCount,
+          subcategoriesLoading: false,
+        };
+        // This is a bit tricky. When we set the state, the component re-renders.
+        // If we use `categories` from the closure, it will be stale.
+        // A functional update is better here.
+        setCategories((prevCategories) => {
+          const newCategories = [...prevCategories];
+          const catIndex = newCategories.findIndex((c) => c.id === categoryId);
+          if (catIndex !== -1) {
+            newCategories[catIndex] = {
+              ...newCategories[catIndex],
+              subcategories: subcategoriesWithCount,
+              subcategoriesLoading: false,
+            };
+          }
+          return newCategories;
+        });
+      }
+    }
+  };
+
+  const handleAddSubcategory = async (categoryId: string) => {
+    const subcategoryName = newSubcategoryNames[categoryId];
+    if (!subcategoryName || !subcategoryName.trim()) return;
+    const { data, error } = await supabase
       .from("subcategories")
-      .delete()
-      .eq("id", subcategoryId);
+      .insert([{ name: subcategoryName.trim(), category_id: categoryId }])
+      .select("*, episodes!inner(count)")
+      .single();
+
     if (error) {
       toast({
-        title: "Erro ao excluir subcategoria",
-        description: "Verifique se não há episódios associados a ela.",
+        title: "Erro ao criar subcategoria",
+        description: error.message,
         variant: "destructive",
       });
     } else {
-      setSubcategories(subcategories.filter((s) => s.id !== subcategoryId));
-      toast({ title: "Sucesso!", description: "Subcategoria excluída." });
+      const newSubcategory = { ...data, episode_count: data.episodes[0].count };
+      setCategories((prevCategories) =>
+        prevCategories.map((c) =>
+          c.id === categoryId
+            ? {
+                ...c,
+                subcategories: c.subcategories
+                  ? [...c.subcategories, newSubcategory].sort((a, b) =>
+                      a.name.localeCompare(b.name)
+                    )
+                  : [newSubcategory],
+              }
+            : c
+        )
+      );
+      setNewSubcategoryNames({ ...newSubcategoryNames, [categoryId]: "" });
+      toast({ title: "Sucesso!", description: "Subcategoria criada." });
     }
   };
 
@@ -249,7 +362,7 @@ export function CategoryManager() {
       .from("subcategories")
       .update({ name: newName })
       .eq("id", subcategoryId)
-      .select()
+      .select("*, episodes!inner(count)")
       .single();
 
     if (error) {
@@ -259,10 +372,59 @@ export function CategoryManager() {
         variant: "destructive",
       });
     } else {
-      setSubcategories(
-        subcategories.map((s) => (s.id === subcategoryId ? data : s))
+      const updatedSubcategory = {
+        ...data,
+        episode_count: data.episodes[0].count,
+      };
+      setCategories((prevCategories) =>
+        prevCategories.map((c) =>
+          c.id === updatedSubcategory.category_id
+            ? {
+                ...c,
+                subcategories: c.subcategories?.map((s) =>
+                  s.id === subcategoryId ? updatedSubcategory : s
+                ),
+              }
+            : c
+        )
       );
       toast({ title: "Sucesso!", description: "Subcategoria atualizada." });
+      handleCloseModal();
+    }
+  };
+
+  const handleDeleteSubcategory = async (subcategoryId: string) => {
+    const subcategoryToDelete = categories
+      .flatMap((c) => c.subcategories || [])
+      .find((s) => s.id === subcategoryId);
+    if (!subcategoryToDelete) return;
+
+    const { error } = await supabase
+      .from("subcategories")
+      .delete()
+      .eq("id", subcategoryId);
+
+    if (error) {
+      toast({
+        title: "Erro ao excluir subcategoria",
+        description: "Verifique se não há episódios associados a ela.",
+        variant: "destructive",
+      });
+    } else {
+      setCategories((prevCategories) =>
+        prevCategories.map((c) =>
+          c.id === subcategoryToDelete.category_id
+            ? {
+                ...c,
+                subcategories: c.subcategories?.filter(
+                  (s) => s.id !== subcategoryId
+                ),
+              }
+            : c
+        )
+      );
+      toast({ title: "Sucesso!", description: "Subcategoria excluída." });
+      handleCloseModal();
     }
   };
 
@@ -323,9 +485,11 @@ export function CategoryManager() {
     setEditingCategoryName("");
   };
 
-  if (loading) {
-    return <p>Carregando taxonomia...</p>;
-  }
+  const handlePageChange = (page: number) => {
+    if (page > 0 && page <= Math.ceil(totalCount / itemsPerPage)) {
+      setCurrentPage(page);
+    }
+  };
 
   return (
     <Card>
@@ -405,145 +569,166 @@ export function CategoryManager() {
         </div>
       </CardHeader>
       <CardContent>
-        <Accordion type="single" collapsible className="w-full space-y-2">
-          {filteredCategories.length > 0 ? (
-            filteredCategories.map((category) => (
-              <AccordionItem
-                key={category.id}
-                value={category.id}
-                className="border rounded-md px-4 bg-muted/50"
-              >
-                <AccordionPrimitive.Header className="flex items-center w-full py-2">
-                  <AccordionPrimitive.Trigger className="flex flex-1 items-center gap-3 text-left font-semibold group">
-                    <span>
-                      {editingCategoryId === category.id ? (
-                        <Input
-                          value={editingCategoryName}
-                          onChange={(e) =>
-                            setEditingCategoryName(e.target.value)
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleUpdateCategory();
-                            if (e.key === "Escape") cancelEditing();
-                          }}
-                          onBlur={handleUpdateCategory}
-                          onClick={(e) => e.stopPropagation()}
-                          autoFocus
-                          className="h-9"
-                        />
-                      ) : (
-                        <span
-                          onDoubleClick={() => startEditing(category)}
-                          className="flex items-center"
-                        >
-                          {category.name}
-                          <span className="ml-2 text-muted-foreground font-normal">
-                            ({category.episode_count})
-                          </span>
-                          {category.episode_count === 0 && (
-                            <AlertCircle className="ml-2 h-4 w-4 text-yellow-500" />
-                          )}
-                        </span>
-                      )}
-                    </span>
-                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                  </AccordionPrimitive.Trigger>
-
-                  <div className="flex-shrink-0 ml-4">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => startEditing(category)}
-                      className="h-8 w-8"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esta ação não pode ser desfeita. Isso excluirá
-                            permanentemente a categoria "{category.name}" e
-                            TODAS as suas subcategorias.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDeleteCategory(category.id)}
+        {loading ? (
+          <CategoryListSkeleton />
+        ) : (
+          <Accordion
+            type="single"
+            collapsible
+            className="w-full space-y-2"
+            onValueChange={handleAccordionChange}
+          >
+            {sortedCategories.length > 0 ? (
+              sortedCategories.map((category) => (
+                <AccordionItem
+                  key={category.id}
+                  value={category.id}
+                  className="border rounded-md px-4 bg-muted/50"
+                >
+                  <AccordionPrimitive.Header className="flex items-center w-full py-2">
+                    <AccordionPrimitive.Trigger className="flex flex-1 items-center gap-3 text-left font-semibold group">
+                      <span>
+                        {editingCategoryId === category.id ? (
+                          <Input
+                            value={editingCategoryName}
+                            onChange={(e) =>
+                              setEditingCategoryName(e.target.value)
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleUpdateCategory();
+                              if (e.key === "Escape") cancelEditing();
+                            }}
+                            onBlur={handleUpdateCategory}
+                            onClick={(e) => e.stopPropagation()}
+                            autoFocus
+                            className="h-9"
+                          />
+                        ) : (
+                          <span
+                            onDoubleClick={() => startEditing(category)}
+                            className="flex items-center"
                           >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </AccordionPrimitive.Header>
-                <AccordionContent className="pt-2 pb-4">
-                  <div className="pl-4 mt-2 space-y-4">
-                    <div className="flex space-x-2">
-                      <Input
-                        placeholder="Nova subcategoria"
-                        className="h-9"
-                        value={newSubcategoryNames[category.id] || ""}
-                        onChange={(e) =>
-                          setNewSubcategoryNames({
-                            ...newSubcategoryNames,
-                            [category.id]: e.target.value,
-                          })
-                        }
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && handleAddSubcategory(category.id)
-                        }
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => handleAddSubcategory(category.id)}
-                      >
-                        <Plus className="mr-1 h-4 w-4" /> Adicionar
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {subcategories
-                        .filter((sub) => sub.category_id === category.id)
-                        .map((sub) => (
-                          <div
-                            key={sub.id}
-                            className="bg-background rounded-md p-2 text-sm font-medium cursor-pointer hover:bg-accent transition-colors border flex justify-center items-center gap-2"
-                            onClick={() => handleOpenModal(sub)}
-                          >
-                            <span>
-                              {sub.name} ({sub.episode_count})
+                            {category.name}
+                            <span className="ml-2 text-muted-foreground font-normal">
+                              ({category.episode_count})
                             </span>
-                            {sub.episode_count === 0 && (
-                              <AlertCircle className="h-4 w-4 text-yellow-500" />
+                            {category.episode_count === 0 && (
+                              <AlertCircle className="ml-2 h-4 w-4 text-yellow-500" />
                             )}
-                          </div>
-                        ))}
+                          </span>
+                        )}
+                      </span>
+                      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                    </AccordionPrimitive.Trigger>
+
+                    <div className="flex-shrink-0 ml-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => startEditing(category)}
+                        className="h-8 w-8"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Você tem certeza?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta ação não pode ser desfeita. Isso excluirá
+                              permanentemente a categoria "{category.name}" e
+                              TODAS as suas subcategorias.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteCategory(category.id)}
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            ))
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                Nenhuma categoria encontrada.
-              </p>
-            </div>
-          )}
-        </Accordion>
+                  </AccordionPrimitive.Header>
+                  <AccordionContent className="pt-2 pb-4">
+                    <div className="pl-4 mt-2 space-y-4">
+                      <div className="flex space-x-2">
+                        <Input
+                          placeholder="Nova subcategoria"
+                          className="h-9"
+                          value={newSubcategoryNames[category.id] || ""}
+                          onChange={(e) =>
+                            setNewSubcategoryNames({
+                              ...newSubcategoryNames,
+                              [category.id]: e.target.value,
+                            })
+                          }
+                          onKeyDown={(e) =>
+                            e.key === "Enter" &&
+                            handleAddSubcategory(category.id)
+                          }
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddSubcategory(category.id)}
+                        >
+                          <Plus className="mr-1 h-4 w-4" /> Adicionar
+                        </Button>
+                      </div>
+
+                      {category.subcategoriesLoading ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          {[...Array(3)].map((_, i) => (
+                            <Skeleton
+                              key={i}
+                              className="h-9 w-full rounded-md"
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          {category.subcategories?.map((sub) => (
+                            <div
+                              key={sub.id}
+                              className="bg-background rounded-md p-2 text-sm font-medium cursor-pointer hover:bg-accent transition-colors border flex justify-center items-center gap-2"
+                              onClick={() => handleOpenModal(sub)}
+                            >
+                              <span>
+                                {sub.name} ({sub.episode_count})
+                              </span>
+                              {sub.episode_count === 0 && (
+                                <AlertCircle className="h-4 w-4 text-yellow-500" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  Nenhuma categoria encontrada.
+                </p>
+              </div>
+            )}
+          </Accordion>
+        )}
       </CardContent>
       <SubcategoryActionsModal
         isOpen={isModalOpen}
@@ -552,6 +737,50 @@ export function CategoryManager() {
         onEdit={handleUpdateSubcategory}
         onDelete={handleDeleteSubcategory}
       />
+      {totalCount > itemsPerPage && (
+        <CardFooter>
+          <div className="mt-4 flex justify-center w-full">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handlePageChange(currentPage - 1);
+                    }}
+                    className={
+                      currentPage === 1
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <span className="text-sm px-4">
+                    Página {currentPage} de{" "}
+                    {Math.ceil(totalCount / itemsPerPage)}
+                  </span>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handlePageChange(currentPage + 1);
+                    }}
+                    className={
+                      currentPage === Math.ceil(totalCount / itemsPerPage)
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        </CardFooter>
+      )}
     </Card>
   );
 }
