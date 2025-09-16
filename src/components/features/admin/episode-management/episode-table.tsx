@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/src/components/ui/card";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import { EpisodeActions } from "./episode-actions";
 import { Episode } from "@/src/lib/types"; // Importação correta
+import { formatTime } from "@/src/lib/utils"; // 1. IMPORTAR A FUNÇÃO
 
 interface EpisodeTableProps {
   episodes: Episode[];
@@ -72,6 +73,10 @@ export function EpisodeTable({
                 <th className="text-left p-4 font-medium text-muted-foreground">
                   Título
                 </th>
+                {/* 2. NOVA COLUNA DE DURAÇÃO */}
+                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
+                  Duração
+                </th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
                   Categoria
                 </th>
@@ -100,9 +105,12 @@ export function EpisodeTable({
                     <div className="font-medium truncate max-w-xs">
                       {episode.title}
                     </div>
-                    {/* <div className="text-sm text-muted-foreground">
-                      {episode.duration}
-                    </div> */}
+                  </td>
+                  {/* 3. EXIBIR A DURAÇÃO FORMATADA */}
+                  <td className="p-4 hidden md:table-cell">
+                    {episode.duration_in_seconds
+                      ? formatTime(episode.duration_in_seconds)
+                      : "--:--"}
                   </td>
                   <td className="p-4 hidden md:table-cell">
                     {episode.categories?.name || "N/A"}

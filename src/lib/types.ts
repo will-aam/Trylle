@@ -13,6 +13,7 @@ export type Episode = {
   published_at: string;
   created_at: string;
   updated_at: string;
+  duration_in_seconds: number | null; // ADICIONE ESTA LINHA
   // Propriedades opcionais para quando fazemos JOIN com outras tabelas
   categories?: { name: string } | null;
   subcategories?: { name: string } | null;

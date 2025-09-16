@@ -41,6 +41,7 @@ export function UploadForm() {
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioDuration, setAudioDuration] = useState<number | null>(null); // NOVO ESTADO
   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
 
   const { toast } = useToast();
@@ -81,6 +82,7 @@ export function UploadForm() {
     }
   }, [selectedCategory, supabase, formKey]); // Recarrega subcategorias se o form for resetado
 
+  // FUNÇÃO MODIFICADA
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -90,12 +92,20 @@ export function UploadForm() {
           description: "Por favor, selecione um arquivo de áudio.",
           variant: "destructive",
         });
+        setAudioFile(null);
+        setAudioDuration(null);
         return;
       }
       setAudioFile(file);
       if (!formData.title) {
         setFormData({ ...formData, title: file.name.replace(/\.[^/.]+$/, "") });
       }
+
+      // Lógica para obter a duração do áudio
+      const audio = new Audio(URL.createObjectURL(file));
+      audio.onloadedmetadata = () => {
+        setAudioDuration(Math.round(audio.duration));
+      };
     }
   };
 
@@ -109,6 +119,7 @@ export function UploadForm() {
       publishedAt: new Date().toISOString().split("T")[0],
     });
     setAudioFile(null);
+    setAudioDuration(null); // RESET ADICIONADO
     setDocumentFiles([]);
     setSelectedTags([]);
     setSelectedCategory("");
@@ -116,6 +127,7 @@ export function UploadForm() {
     setFormKey(Date.now());
   };
 
+  // FUNÇÃO MODIFICADA
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!audioFile || !formData.title.trim()) {
@@ -170,6 +182,7 @@ export function UploadForm() {
             category_id: formData.categoryId || null,
             subcategory_id: formData.subcategoryId || null,
             published_at: new Date(formData.publishedAt).toISOString(),
+            duration_in_seconds: audioDuration, // DADO ADICIONADO
           },
         ])
         .select()
@@ -318,7 +331,11 @@ export function UploadForm() {
                 />
                 {audioFile && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Arquivo: {audioFile.name}
+                    Arquivo: {audioFile.name}{" "}
+                    {audioDuration &&
+                      `(${Math.floor(audioDuration / 60)}:${String(
+                        audioDuration % 60
+                      ).padStart(2, "0")})`}
                   </p>
                 )}
               </div>
