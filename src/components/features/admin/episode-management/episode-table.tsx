@@ -4,21 +4,30 @@ import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import { EpisodeActions } from "./episode-actions";
-import { Episode } from "@/src/lib/types"; // Importação correta
-import { formatTime } from "@/src/lib/utils"; // 1. IMPORTAR A FUNÇÃO
+import { Episode, SortDirection } from "@/src/lib/types";
+import { formatTime } from "@/src/lib/utils";
+import { ChevronsUpDown, ArrowDown, ArrowUp } from "lucide-react";
+import { Button } from "@/src/components/ui/button";
 
 interface EpisodeTableProps {
   episodes: Episode[];
   setEpisodes: (episodes: Episode[]) => void;
   onEpisodeUpdate: () => void;
+  onSort: (column: keyof Episode) => void;
+  sortColumn: keyof Episode | "";
+  sortDirection: SortDirection;
 }
 
 export function EpisodeTable({
   episodes,
   setEpisodes,
   onEpisodeUpdate,
+  onSort,
+  sortColumn,
+  sortDirection,
 }: EpisodeTableProps) {
   const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("pt-BR", {
       day: "2-digit",
       month: "short",
@@ -26,10 +35,21 @@ export function EpisodeTable({
     });
   };
 
+  const renderSortIcon = (column: keyof Episode) => {
+    if (sortColumn !== column) {
+      return <ChevronsUpDown className="h-4 w-4" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-4 w-4 text-primary" />
+    ) : (
+      <ArrowDown className="h-4 w-4 text-primary" />
+    );
+  };
+
   const getStatusBadge = (status: Episode["status"]) => {
     switch (status) {
       case "published":
-      case "publicado": // Agora ambos os casos funcionam sem erro
+      case "publicado":
         return (
           <Badge variant="default" className="bg-green-600 hover:bg-green-700">
             Publicado
@@ -68,14 +88,36 @@ export function EpisodeTable({
                   <Checkbox />
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground">
-                  Status
+                  <Button
+                    variant="ghost"
+                    onClick={() => onSort("status")}
+                    className="px-0 hover:bg-transparent"
+                  >
+                    Status
+                    <span className="ml-2">{renderSortIcon("status")}</span>
+                  </Button>
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground">
-                  Título
+                  <Button
+                    variant="ghost"
+                    onClick={() => onSort("title")}
+                    className="px-0 hover:bg-transparent"
+                  >
+                    Título
+                    <span className="ml-2">{renderSortIcon("title")}</span>
+                  </Button>
                 </th>
-                {/* 2. NOVA COLUNA DE DURAÇÃO */}
                 <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
-                  Duração
+                  <Button
+                    variant="ghost"
+                    onClick={() => onSort("duration_in_seconds")}
+                    className="px-0 hover:bg-transparent"
+                  >
+                    Duração
+                    <span className="ml-2">
+                      {renderSortIcon("duration_in_seconds")}
+                    </span>
+                  </Button>
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
                   Categoria
@@ -84,7 +126,16 @@ export function EpisodeTable({
                   Tags
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">
-                  Data
+                  <Button
+                    variant="ghost"
+                    onClick={() => onSort("published_at")}
+                    className="px-0 hover:bg-transparent"
+                  >
+                    Data
+                    <span className="ml-2">
+                      {renderSortIcon("published_at")}
+                    </span>
+                  </Button>
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground">
                   Ações
@@ -106,7 +157,6 @@ export function EpisodeTable({
                       {episode.title}
                     </div>
                   </td>
-                  {/* 3. EXIBIR A DURAÇÃO FORMATADA */}
                   <td className="p-4 hidden md:table-cell">
                     {episode.duration_in_seconds
                       ? formatTime(episode.duration_in_seconds)

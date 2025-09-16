@@ -7,11 +7,11 @@ import { EpisodeFilters } from "./episode-filters";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { ListMusic } from "lucide-react";
 import { createClient } from "@/src/lib/supabase-client";
-import { Episode, Category } from "@/src/lib/types";
+import { Episode, Category, SortDirection } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";
 import { EpisodeTablePagination } from "./episode-table-pagination";
 
-const ITEMS_PER_PAGE = 10; // Define quantos episódios por página
+const ITEMS_PER_PAGE = 10;
 
 export function EpisodeManager() {
   const supabase = createClient();
@@ -26,19 +26,29 @@ export function EpisodeManager() {
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState<keyof Episode | "">(
+    "published_at"
+  );
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  // Efeito para aplicar o "debounce"
+  const handleSort = (column: keyof Episode) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
   useEffect(() => {
-    // Inicia um timer sempre que o 'searchTerm' mudar
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 500); // Atraso de 500ms
+    }, 500);
 
-    // Limpa o timer anterior se o usuário digitar novamente antes dos 500ms
     return () => {
       clearTimeout(timer);
     };
-  }, [searchTerm]); // Roda este efeito apenas quando o searchTerm muda
+  }, [searchTerm]);
 
   const fetchEpisodesAndCategories = useCallback(async () => {
     setLoading(true);
@@ -52,7 +62,6 @@ export function EpisodeManager() {
           count: "exact",
         });
 
-      // MODIFICADO: A query agora usa o 'debouncedSearchTerm'
       if (debouncedSearchTerm) {
         episodeQuery = episodeQuery.ilike("title", `%${debouncedSearchTerm}%`);
       }
@@ -68,7 +77,9 @@ export function EpisodeManager() {
         error: episodesError,
         count,
       } = await episodeQuery
-        .order("created_at", { ascending: false })
+        .order(sortColumn || "published_at", {
+          ascending: sortDirection === "asc",
+        })
         .range(from, to);
 
       if (episodesError) throw episodesError;
@@ -99,7 +110,9 @@ export function EpisodeManager() {
     debouncedSearchTerm,
     statusFilter,
     categoryFilter,
-  ]); // MODIFICADO: A dependência agora é o 'debouncedSearchTerm'
+    sortColumn,
+    sortDirection,
+  ]);
 
   useEffect(() => {
     fetchEpisodesAndCategories();
@@ -107,12 +120,20 @@ export function EpisodeManager() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchTerm, statusFilter, categoryFilter]); // MODIFICADO: Reseta a página com base no 'debouncedSearchTerm'
+  }, [
+    debouncedSearchTerm,
+    statusFilter,
+    categoryFilter,
+    sortColumn,
+    sortDirection,
+  ]);
 
   const clearFilters = () => {
     setSearchTerm("");
     setStatusFilter([]);
     setCategoryFilter([]);
+    setSortColumn("published_at");
+    setSortDirection("desc");
   };
 
   const hasActiveFilters =
@@ -150,8 +171,8 @@ export function EpisodeManager() {
 
       <EpisodeFilters
         categories={categories}
-        searchTerm={searchTerm} // O input ainda reflete o 'searchTerm' para ser instantâneo
-        setSearchTerm={setSearchTerm} // O input ainda atualiza o 'searchTerm'
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
         categoryFilter={categoryFilter}
@@ -172,6 +193,9 @@ export function EpisodeManager() {
             episodes={episodes}
             setEpisodes={setEpisodes}
             onEpisodeUpdate={fetchEpisodesAndCategories}
+            onSort={handleSort}
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
           />
           <EpisodeTablePagination
             currentPage={currentPage}

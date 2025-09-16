@@ -17,6 +17,7 @@ const mockRecentEpisodes: Episode[] = [
     updated_at: new Date().toISOString(),
     status: "published",
     tags: [],
+    duration_in_seconds: null, // Adicione esta linha
   },
   // (faça o mesmo para os outros objetos no array)
   // ...

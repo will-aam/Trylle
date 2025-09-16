@@ -65,3 +65,5 @@ export type EpisodeDocument = {
   storage_path: string;
   created_at: string;
 };
+
+export type SortDirection = "asc" | "desc";
