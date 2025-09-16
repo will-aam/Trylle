@@ -18,6 +18,7 @@ const mockEpisodes: Episode[] = Array(3)
     updated_at: new Date().toISOString(),
     status: "published",
     tags: [],
+    duration_in_seconds: null, // Adicione esta linha
   }));
 
 export function FeaturedEpisodes() {
