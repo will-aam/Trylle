@@ -2,7 +2,7 @@
 
 import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
-import { Checkbox } from "@/src/components/ui/checkbox";
+// import { Checkbox } from "@/src/components/ui/checkbox";
 import { EpisodeActions } from "./episode-actions";
 import { Episode, SortDirection } from "@/src/lib/types";
 import { formatTime } from "@/src/lib/utils";
@@ -84,9 +84,7 @@ export function EpisodeTable({
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                <th className="p-4 w-12">
-                  <Checkbox />
-                </th>
+                <th className="p-4 w-12"></th>
                 <th className="text-left p-4 font-medium text-muted-foreground">
                   <Button
                     variant="ghost"
@@ -148,9 +146,7 @@ export function EpisodeTable({
                   key={episode.id}
                   className="border-b border-border hover:bg-muted/50"
                 >
-                  <td className="p-4">
-                    <Checkbox />
-                  </td>
+                  <td className="p-4"></td>
                   <td className="p-4">{getStatusBadge(episode.status)}</td>
                   <td className="p-4">
                     <div className="font-medium truncate max-w-xs">

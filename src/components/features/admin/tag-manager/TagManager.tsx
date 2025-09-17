@@ -307,7 +307,7 @@ export function TagManager() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", "PlayPath_tags.csv");
+    link.setAttribute("download", "Trylle_tags.csv");
     document.body.appendChild(link);
     link.click();
     setTimeout(() => {
