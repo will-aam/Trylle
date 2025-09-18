@@ -7,14 +7,21 @@ import { Markdown } from "tiptap-markdown";
 import {
   Bold,
   Italic,
+  Strikethrough,
   List,
   ListOrdered,
   Link as LinkIcon,
+  Quote,
+  Code,
+  Minus,
+  Undo,
+  Redo,
+  Heading1,
+  Heading2,
+  Heading3,
 } from "lucide-react";
-// 1. Importando o useState e useEffect para controlar o modal
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react"; // Importe o useRef
 import { cn } from "@/src/lib/utils";
-// 2. Importando os componentes do Modal que vamos usar
 import {
   Dialog,
   DialogContent,
@@ -23,18 +30,23 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/src/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/src/components/ui/tooltip";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Button } from "@/src/components/ui/button";
 
+// O componente EditorToolbar permanece exatamente o mesmo
 const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
-  // 3. Estados para controlar o modal e o valor da URL
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
 
   useEffect(() => {
     if (isLinkModalOpen && editor) {
-      // Quando o modal abre, preenche o input com a URL existente, se houver
       const previousUrl = editor.getAttributes("link").href;
       setLinkUrl(previousUrl || "");
     }
@@ -42,12 +54,9 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
 
   const handleSetLink = useCallback(() => {
     if (!editor) return;
-
     if (linkUrl === "") {
-      // Se o input estiver vazio, remove o link
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
     } else {
-      // Caso contrário, adiciona ou atualiza o link
       editor
         .chain()
         .focus()
@@ -55,7 +64,6 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         .setLink({ href: linkUrl })
         .run();
     }
-    // Fecha o modal
     setIsLinkModalOpen(false);
   }, [editor, linkUrl]);
 
@@ -63,103 +71,203 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
     return null;
   }
 
-  const ToggleButton = ({ onClick, disabled, isActive, children }: any) => (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "p-2 rounded hover:bg-muted transition-colors",
-        isActive ? "bg-muted text-foreground" : "text-muted-foreground"
-      )}
-    >
-      {children}
-    </button>
+  const ToggleButton = ({
+    onClick,
+    disabled,
+    isActive,
+    children,
+    tooltip,
+  }: any) => (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={disabled}
+          className={cn(
+            "p-2 rounded hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+            isActive ? "bg-muted text-foreground" : "text-muted-foreground"
+          )}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        <p>{tooltip}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 
-  return (
-    <div className="border border-input bg-transparent rounded-t-md p-1 flex gap-1 flex-wrap">
-      {/* Botões existentes... */}
-      <ToggleButton
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        isActive={editor.isActive("bold")}
-      >
-        <Bold className="w-4 h-4" />
-      </ToggleButton>
-      <ToggleButton
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        isActive={editor.isActive("italic")}
-      >
-        <Italic className="w-4 h-4" />
-      </ToggleButton>
-      <ToggleButton
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        isActive={editor.isActive("heading", { level: 2 })}
-      >
-        <span className="font-bold text-sm">H2</span>
-      </ToggleButton>
-      <ToggleButton
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        isActive={editor.isActive("bulletList")}
-      >
-        <List className="w-4 h-4" />
-      </ToggleButton>
-      <ToggleButton
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        isActive={editor.isActive("orderedList")}
-      >
-        <ListOrdered className="w-4 h-4" />
-      </ToggleButton>
+  const Separator = () => <div className="w-[1px] bg-border mx-1 my-1" />;
 
-      {/* 4. Lógica do Modal de Link */}
-      <Dialog open={isLinkModalOpen} onOpenChange={setIsLinkModalOpen}>
-        <DialogTrigger asChild>
-          <ToggleButton isActive={editor.isActive("link")}>
-            <LinkIcon className="w-4 h-4" />
-          </ToggleButton>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Editar Link</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="url" className="text-right">
-                URL
-              </Label>
-              <Input
-                id="url"
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-                className="col-span-3"
-                placeholder="https://exemplo.com"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSetLink();
-                  }
-                }}
-              />
+  return (
+    <TooltipProvider delayDuration={100}>
+      <div className="border border-input bg-transparent rounded-t-md p-1 flex gap-0.5 flex-wrap">
+        {/* Formatação Básica */}
+        <ToggleButton
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          isActive={editor.isActive("bold")}
+          tooltip="Negrito (Ctrl+B)"
+        >
+          <Bold className="w-4 h-4" />
+        </ToggleButton>
+        <ToggleButton
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          isActive={editor.isActive("italic")}
+          tooltip="Itálico (Ctrl+I)"
+        >
+          <Italic className="w-4 h-4" />
+        </ToggleButton>
+        <ToggleButton
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          isActive={editor.isActive("strike")}
+          tooltip="Riscado (Ctrl+Shift+X)"
+        >
+          <Strikethrough className="w-4 h-4" />
+        </ToggleButton>
+
+        <Separator />
+
+        {/* Títulos */}
+        <ToggleButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 1 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 1 })}
+          tooltip="Título 1"
+        >
+          <Heading1 className="w-4 h-4" />
+        </ToggleButton>
+        <ToggleButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 2 })}
+          tooltip="Título 2"
+        >
+          <Heading2 className="w-4 h-4" />
+        </ToggleButton>
+        <ToggleButton
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 3 }).run()
+          }
+          isActive={editor.isActive("heading", { level: 3 })}
+          tooltip="Título 3"
+        >
+          <Heading3 className="w-4 h-4" />
+        </ToggleButton>
+
+        <Separator />
+
+        {/* Listas */}
+        <ToggleButton
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          isActive={editor.isActive("bulletList")}
+          tooltip="Lista com marcadores"
+        >
+          <List className="w-4 h-4" />
+        </ToggleButton>
+        <ToggleButton
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          isActive={editor.isActive("orderedList")}
+          tooltip="Lista numerada"
+        >
+          <ListOrdered className="w-4 h-4" />
+        </ToggleButton>
+
+        <Separator />
+
+        {/* Elementos de Bloco */}
+        <ToggleButton
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          isActive={editor.isActive("blockquote")}
+          tooltip="Citação"
+        >
+          <Quote className="w-4 h-4" />
+        </ToggleButton>
+        <ToggleButton
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          isActive={editor.isActive("codeBlock")}
+          tooltip="Bloco de código"
+        >
+          <Code className="w-4 h-4" />
+        </ToggleButton>
+        <ToggleButton
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          tooltip="Linha horizontal"
+        >
+          <Minus className="w-4 h-4" />
+        </ToggleButton>
+
+        <Separator />
+
+        {/* Link Modal */}
+        <Dialog open={isLinkModalOpen} onOpenChange={setIsLinkModalOpen}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "p-2 rounded hover:bg-muted transition-colors",
+                    editor.isActive("link")
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  <LinkIcon className="w-4 h-4" />
+                </button>
+              </DialogTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Adicionar Link (Ctrl+K)</p>
+            </TooltipContent>
+          </Tooltip>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Editar Link</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="url" className="text-right">
+                  URL
+                </Label>
+                <Input
+                  id="url"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  className="col-span-3"
+                  placeholder="https://exemplo.com"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSetLink();
+                    }
+                  }}
+                />
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" onClick={handleSetLink}>
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            <DialogFooter>
+              <Button type="button" onClick={handleSetLink}>
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </TooltipProvider>
   );
 };
 
-// O restante do componente permanece o mesmo
 interface RichTextEditorProps {
   content: Content;
   onChange: (markdown: string) => void;
 }
 
 const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
+  // A MÁGICA ACONTECE AQUI
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -181,6 +289,7 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
       Link.configure({
         openOnClick: false,
         autolink: true,
+        linkOnPaste: true, // Habilita o link inteligente ao colar
         HTMLAttributes: {
           class:
             "text-blue-600 dark:text-blue-400 underline hover:text-blue-700 dark:hover:text-blue-500 transition-colors cursor-pointer",
@@ -189,8 +298,19 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
       Markdown,
     ],
     content: content,
+    // AQUI ESTÁ A OTIMIZAÇÃO
     onUpdate: ({ editor }) => {
-      onChange((editor.storage as any).markdown.getMarkdown());
+      // Limpa o timeout anterior se o usuário continuar digitando
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+
+      // Configura um novo timeout
+      debounceTimeout.current = setTimeout(() => {
+        // A conversão para Markdown e o chamado do `onChange` só acontecem
+        // 300ms depois que o usuário PARAR de digitar.
+        onChange((editor.storage as any).markdown.getMarkdown());
+      }, 300); // 300ms é um bom valor padrão
     },
     editorProps: {
       attributes: {
@@ -199,6 +319,15 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
       },
     },
   });
+
+  // Limpa o timeout quando o componente é desmontado
+  useEffect(() => {
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="mt-1">

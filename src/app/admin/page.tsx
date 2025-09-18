@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { AdminStats } from "@/src/components/features/admin/admin-stats";
 import { UploadForm } from "@/src/components/features/admin/admin-upload-form";
-import { CategoryManager } from "@/src/components/features/admin/category-manager";
+import { CategoryManager } from "@/src/components/features/admin/category-manager/index";
 import { TagManager } from "@/src/components/features/admin/tag-manager/TagManager";
 import { TagGroupManager } from "@/src/components/features/admin/tag-group-manager/TagGroupManager";
 import { TagAliasManager } from "@/src/components/features/admin/tag-alias-manager/TagAliasManager";
