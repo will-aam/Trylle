@@ -91,14 +91,14 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
               <SidebarLink
                 href="/admin/episodes"
                 icon={<LibraryBig className="h-4 w-4" />}
-                label="Gerenciador de Episódios"
+                label="Gerenciar Episódios"
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/admin/episodes"}
               />
               <SidebarLink
                 href="/admin/users"
                 icon={<Users className="h-4 w-4" />}
-                label="Gerenciador de Usuários"
+                label="Gerenciar Usuários"
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/admin/users"}
               />
@@ -192,12 +192,12 @@ function SidebarLink({
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-accent hover:text-foreground",
+        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
         isActive && "bg-accent text-foreground"
       )}
     >
       {icon}
-      {label}
+      <span className="truncate">{label}</span>
     </Link>
   );
 }

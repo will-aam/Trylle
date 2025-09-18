@@ -108,7 +108,7 @@ export function CategoryManager() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -117,21 +117,20 @@ export function CategoryManager() {
 
     let query = supabase
       .from("categories")
-      .select("*, episodes!inner(count)", { count: "exact" });
+      .select("*, episodes(count)", { count: "exact" });
 
     if (debouncedSearchTerm) {
       query = query.ilike("name", `%${debouncedSearchTerm}%`);
     }
-
     query = query.order(sortType === "name" ? "name" : "episodes(count)", {
       ascending: sortOrder === "asc",
-      foreignTable: sortType === "episodes" ? "episodes" : undefined,
+      nullsFirst: false, // Garante que categorias sem episódios fiquem agrupadas.
     });
 
     const {
       data: catData,
       error: catError,
-      count: catCount,
+      count: catCount, // `catCount` agora terá o valor total correto!
     } = await query.range(from, to);
 
     if (catError) {
@@ -142,13 +141,14 @@ export function CategoryManager() {
         variant: "destructive",
       });
     } else {
+      // MUDANÇA 2: Garantimos que o `episode_count` seja 0 se a categoria não tiver episódios.
       const categoriesWithCount = (catData || []).map((c) => ({
         ...c,
-        episode_count: c.episodes[0].count,
+        episode_count: c.episodes[0]?.count || 0,
       }));
 
       setCategories(categoriesWithCount);
-      setTotalCount(catCount || 0);
+      setTotalCount(catCount || 0); // O total de páginas agora será calculado corretamente.
     }
     setLoading(false);
   }, [
@@ -260,7 +260,6 @@ export function CategoryManager() {
 
     const category = categories[categoryIndex];
 
-    // Somente busca se as subcategorias ainda não foram carregadas
     if (!category.subcategories) {
       const updatedCategories = [...categories];
       updatedCategories[categoryIndex] = {
@@ -280,7 +279,6 @@ export function CategoryManager() {
           description: subError.message,
           variant: "destructive",
         });
-        // Reset loading state on error
         const errorCategories = [...categories];
         errorCategories[categoryIndex] = {
           ...errorCategories[categoryIndex],
@@ -293,15 +291,6 @@ export function CategoryManager() {
           episode_count: s.episodes[0].count,
         }));
 
-        const finalCategories = [...categories];
-        finalCategories[categoryIndex] = {
-          ...finalCategories[categoryIndex],
-          subcategories: subcategoriesWithCount,
-          subcategoriesLoading: false,
-        };
-        // This is a bit tricky. When we set the state, the component re-renders.
-        // If we use `categories` from the closure, it will be stale.
-        // A functional update is better here.
         setCategories((prevCategories) => {
           const newCategories = [...prevCategories];
           const catIndex = newCategories.findIndex((c) => c.id === categoryId);
