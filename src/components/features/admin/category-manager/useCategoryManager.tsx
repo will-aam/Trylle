@@ -45,10 +45,18 @@ export function useCategoryManager() {
     if (debouncedSearchTerm) {
       query = query.ilike("name", `%${debouncedSearchTerm}%`);
     }
-    query = query.order(sortType === "name" ? "name" : "episodes(count)", {
-      ascending: sortOrder === "asc",
-      nullsFirst: false,
-    });
+
+    // A CORREÇÃO ESTÁ AQUI:
+    // Voltamos a usar a opção `foreignTable` que é a forma mais robusta
+    // de ordenar por uma contagem de uma tabela relacionada.
+    if (sortType === "name") {
+      query = query.order("name", { ascending: sortOrder === "asc" });
+    } else {
+      query = query.order("count", {
+        foreignTable: "episodes",
+        ascending: sortOrder === "asc",
+      });
+    }
 
     const {
       data: catData,
@@ -59,8 +67,9 @@ export function useCategoryManager() {
     if (catError) {
       console.error("Error fetching data:", catError);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar a taxonomia.",
+        title: "Erro ao buscar dados",
+        description:
+          catError.message || "Não foi possível carregar a taxonomia.",
         variant: "destructive",
       });
     } else {
@@ -68,7 +77,6 @@ export function useCategoryManager() {
         ...c,
         episode_count: c.episodes[0]?.count || 0,
       }));
-
       setCategories(categoriesWithCount);
       setTotalCount(catCount || 0);
     }

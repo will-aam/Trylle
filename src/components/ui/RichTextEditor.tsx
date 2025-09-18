@@ -20,7 +20,7 @@ import {
   Heading2,
   Heading3,
 } from "lucide-react";
-import { useCallback, useState, useEffect, useRef } from "react"; // Importe o useRef
+import { useCallback, useState, useEffect, useRef } from "react";
 import { cn } from "@/src/lib/utils";
 import {
   Dialog,
@@ -40,7 +40,7 @@ import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Button } from "@/src/components/ui/button";
 
-// O componente EditorToolbar permanece exatamente o mesmo
+// O componente EditorToolbar não precisa de alterações
 const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
@@ -103,7 +103,6 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   return (
     <TooltipProvider delayDuration={100}>
       <div className="border border-input bg-transparent rounded-t-md p-1 flex gap-0.5 flex-wrap">
-        {/* Formatação Básica */}
         <ToggleButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive("bold")}
@@ -125,10 +124,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         >
           <Strikethrough className="w-4 h-4" />
         </ToggleButton>
-
         <Separator />
-
-        {/* Títulos */}
         <ToggleButton
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 1 }).run()
@@ -156,10 +152,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         >
           <Heading3 className="w-4 h-4" />
         </ToggleButton>
-
         <Separator />
-
-        {/* Listas */}
         <ToggleButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           isActive={editor.isActive("bulletList")}
@@ -174,10 +167,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         >
           <ListOrdered className="w-4 h-4" />
         </ToggleButton>
-
         <Separator />
-
-        {/* Elementos de Bloco */}
         <ToggleButton
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           isActive={editor.isActive("blockquote")}
@@ -198,10 +188,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         >
           <Minus className="w-4 h-4" />
         </ToggleButton>
-
         <Separator />
-
-        {/* Link Modal */}
         <Dialog open={isLinkModalOpen} onOpenChange={setIsLinkModalOpen}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -265,12 +252,12 @@ interface RichTextEditorProps {
 }
 
 const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
-  // A MÁGICA ACONTECE AQUI
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
+      // AQUI ESTÁ A CORREÇÃO PRINCIPAL
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3],
@@ -285,11 +272,14 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
             class: "list-disc pl-4",
           },
         },
+        // Desabilitamos a extensão de link padrão do StarterKit...
+        link: false,
       }),
+      // ...e adicionamos a nossa própria versão configurada aqui.
       Link.configure({
         openOnClick: false,
         autolink: true,
-        linkOnPaste: true, // Habilita o link inteligente ao colar
+        linkOnPaste: true,
         HTMLAttributes: {
           class:
             "text-blue-600 dark:text-blue-400 underline hover:text-blue-700 dark:hover:text-blue-500 transition-colors cursor-pointer",
@@ -298,19 +288,13 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
       Markdown,
     ],
     content: content,
-    // AQUI ESTÁ A OTIMIZAÇÃO
     onUpdate: ({ editor }) => {
-      // Limpa o timeout anterior se o usuário continuar digitando
       if (debounceTimeout.current) {
         clearTimeout(debounceTimeout.current);
       }
-
-      // Configura um novo timeout
       debounceTimeout.current = setTimeout(() => {
-        // A conversão para Markdown e o chamado do `onChange` só acontecem
-        // 300ms depois que o usuário PARAR de digitar.
         onChange((editor.storage as any).markdown.getMarkdown());
-      }, 300); // 300ms é um bom valor padrão
+      }, 300);
     },
     editorProps: {
       attributes: {
@@ -320,7 +304,6 @@ const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
     },
   });
 
-  // Limpa o timeout quando o componente é desmontado
   useEffect(() => {
     return () => {
       if (debounceTimeout.current) {
