@@ -11,7 +11,7 @@ import { Episode, Category, SortDirection } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";
 import { EpisodeTablePagination } from "./episode-table-pagination";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 export function EpisodeManager() {
   const supabase = createClient();
