@@ -21,6 +21,7 @@ import {
   AccordionTrigger,
 } from "@/src/components/ui/accordion";
 import { Badge } from "@/src/components/ui/badge";
+import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 
 type TagGroup = {
   id: string;
@@ -223,17 +224,25 @@ export function TagGroupManager() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteGroup(group.id);
-                            }}
-                            className="h-8 w-8 text-destructive hover:text-destructive"
+                          <ConfirmationDialog
+                            dialogTitle="Delete Tag Group"
+                            dialogDescription={`Are you sure you want to delete the tag group "${group.name}"? This action cannot be undone.`}
+                            onConfirm={() => handleDeleteGroup(group.id)}
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            {(open) => (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  open();
+                                }}
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </ConfirmationDialog>
                         </>
                       )}
                     </div>

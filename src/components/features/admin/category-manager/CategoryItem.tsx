@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/src/components/ui/alert-dialog";
-import { Pencil, Trash2, ChevronDown, Plus, AlertCircle } from "lucide-react";
+import { Pencil, Trash2, ChevronDown, Plus } from "lucide-react"; // Removido AlertCircle
 import { Category, Subcategory } from "@/src/lib/types";
 import { SubcategoryItem } from "./SubcategoryItem";
 
@@ -72,9 +72,7 @@ export function CategoryItem({
               <span className="ml-2 text-muted-foreground font-normal">
                 ({category.episode_count})
               </span>
-              {category.episode_count === 0 && (
-                <AlertCircle className="ml-2 h-4 w-4 text-yellow-500" />
-              )}
+              {/* O ÍCONE AMARELO FOI REMOVIDO DAQUI */}
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
           </AccordionPrimitive.Trigger>

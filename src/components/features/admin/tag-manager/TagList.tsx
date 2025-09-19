@@ -10,6 +10,7 @@ interface TagListProps {
   selectedTags: TagWithCount[];
   onTagSelect: (tag: TagWithCount) => void;
   setSelectedTag: (tag: TagWithCount | null) => void;
+  onDeleteTag: (tagId: string) => void;
 }
 
 export function TagList({
@@ -19,6 +20,7 @@ export function TagList({
   selectedTags,
   onTagSelect,
   setSelectedTag,
+  onDeleteTag,
 }: TagListProps) {
   if (loading) {
     return (
@@ -47,6 +49,7 @@ export function TagList({
           isSelected={selectedTags.some((t) => t.id === tag.id)}
           onSelect={onTagSelect}
           onTagAction={setSelectedTag}
+          onDelete={onDeleteTag}
         />
       ))}
     </div>

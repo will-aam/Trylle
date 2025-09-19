@@ -532,6 +532,7 @@ export function TagManager() {
             selectedTags={selectedTags}
             onTagSelect={handleTagSelect}
             setSelectedTag={handleTagAction}
+            onDeleteTag={handleDeleteTag}
           />
         </div>
 

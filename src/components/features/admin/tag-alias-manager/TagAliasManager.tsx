@@ -29,6 +29,7 @@ import {
 } from "@/src/components/ui/command";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { Plus, Trash2, ChevronsUpDown, Check, ArrowRight } from "lucide-react";
+import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 
 type TagAlias = {
   id: string;
@@ -41,17 +42,13 @@ export function TagAliasManager() {
   const supabase = createClient();
   const { toast } = useToast();
 
-  // Estados
   const [aliases, setAliases] = useState<TagAlias[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Estados do formulário
   const [newAlias, setNewAlias] = useState("");
   const [selectedTag, setSelectedTag] = useState<Tag | null>(null);
   const [isComboboxOpen, setIsComboboxOpen] = useState(false);
 
-  // Função para buscar todos os dados necessários
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -80,7 +77,6 @@ export function TagAliasManager() {
     fetchData();
   }, [fetchData]);
 
-  // Handler para adicionar um novo sinônimo
   const handleAddAlias = async () => {
     if (!newAlias.trim() || !selectedTag) {
       toast({
@@ -107,11 +103,10 @@ export function TagAliasManager() {
       toast({ title: "Sucesso!", description: "Sinônimo criado." });
       setNewAlias("");
       setSelectedTag(null);
-      fetchData(); // Recarrega a lista
+      fetchData();
     }
   };
 
-  // Handler para deletar um sinônimo
   const handleDeleteAlias = async (aliasId: string) => {
     const { error } = await supabase
       .from("tag_aliases")
@@ -225,14 +220,22 @@ export function TagAliasManager() {
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   <span className="font-semibold">{alias.tags.name}</span>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDeleteAlias(alias.id)}
-                  className="h-8 w-8 text-destructive hover:text-destructive"
+                <ConfirmationDialog
+                  dialogTitle="Delete Synonym"
+                  dialogDescription={`Are you sure you want to delete the synonym "${alias.alias}"? This action cannot be undone.`}
+                  onConfirm={() => handleDeleteAlias(alias.id)}
                 >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                  {(open) => (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={open}
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </ConfirmationDialog>
               </div>
             ))
           )}

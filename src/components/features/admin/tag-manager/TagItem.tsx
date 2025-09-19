@@ -2,14 +2,23 @@
 import { TagWithCount } from "@/src/components/features/admin/tag-manager/types";
 import { Badge } from "../../../ui/badge";
 import { Button } from "../../../ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/src/components/ui/dropdown-menu";
+import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 
 interface TagItemProps {
   tag: TagWithCount;
   isSelected: boolean;
   onSelect: (tag: TagWithCount) => void;
-  onTagAction: (tag: TagWithCount) => void; // Nova prop
+  onTagAction: (tag: TagWithCount) => void;
+  onDelete: (tagId: string) => void;
 }
 
 export function TagItem({
@@ -17,6 +26,7 @@ export function TagItem({
   isSelected,
   onSelect,
   onTagAction,
+  onDelete,
 }: TagItemProps) {
   return (
     <div className="group relative p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200">
@@ -38,17 +48,44 @@ export function TagItem({
           <span className="text-xs opacity-70 ml-2">({tag.episode_count})</span>
         </div>
       </Badge>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={(e) => {
-          e.stopPropagation(); // Impede que o clique afete a tag
-          onTagAction(tag); // Usa a prop passada do pai
-        }}
-        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-muted hover:text-foreground"
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </Button>
+      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hover:bg-muted hover:text-foreground"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onSelect={() => onTagAction(tag)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <ConfirmationDialog
+              dialogTitle="Excluir Tag"
+              dialogDescription={`Tem certeza que deseja excluir a tag "${tag.name}"? Esta ação não pode ser desfeita.`}
+              onConfirm={() => onDelete(tag.id)}
+            >
+              {(open) => (
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    open();
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir
+                </DropdownMenuItem>
+              )}
+            </ConfirmationDialog>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 }
