@@ -11,8 +11,29 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/src/components/ui/tabs";
+import { createClient } from "@/src/lib/supabase-client";
+import { getUserCount } from "./actions";
 
-export default function AdminPage() {
+async function getStats() {
+  const supabase = createClient();
+  const { count: episodeCount, error: episodeError } = await supabase
+    .from("episodes")
+    .select("*", { count: "exact", head: true });
+
+  if (episodeError) {
+    console.error("Error fetching episode count:", episodeError);
+  }
+
+  const userCount = await getUserCount();
+
+  return {
+    episodeCount: episodeCount ?? 0,
+    userCount: userCount ?? 0,
+  };
+}
+
+export default async function AdminPage() {
+  const { episodeCount, userCount } = await getStats();
   return (
     <div className="container mx-auto px-4 py-8">
       <Suspense
@@ -20,7 +41,7 @@ export default function AdminPage() {
           <div className="animate-pulse bg-muted h-32 rounded-lg mb-8" />
         }
       >
-        <AdminStats />
+        <AdminStats episodeCount={episodeCount} userCount={userCount} />
       </Suspense>
 
       <Tabs defaultValue="upload" className="space-y-6">

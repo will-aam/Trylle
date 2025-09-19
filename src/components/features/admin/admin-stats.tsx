@@ -2,12 +2,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/src/lib/supabase-client";
 import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
 import { Play, Users, Database, Cloud } from "lucide-react";
 import { Skeleton } from "../../ui/skeleton";
-import { Progress } from "../../ui/progress"; // Importe o componente de progresso
-import { getUserCount } from "@/src/app/admin/actions";
+import { Progress } from "../../ui/progress";
 
 interface StorageStats {
   usage: string;
@@ -15,10 +13,12 @@ interface StorageStats {
   usagePercentage: number;
 }
 
-export function AdminStats() {
-  const supabase = createClient();
-  const [episodeCount, setEpisodeCount] = useState(0);
-  const [userCount, setUserCount] = useState(0);
+interface AdminStatsProps {
+  episodeCount: number;
+  userCount: number;
+}
+
+export function AdminStats({ episodeCount, userCount }: AdminStatsProps) {
   const [supabaseStorage, setSupabaseStorage] = useState<StorageStats | null>(
     null
   );
@@ -27,20 +27,9 @@ export function AdminStats() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchStorageStats = async () => {
       setLoading(true);
-
       const promises = [
-        supabase
-          .from("episodes")
-          .select("*", { count: "exact", head: true })
-          .then(({ count, error }) => {
-            if (error) console.error("Erro ao buscar episódios:", error);
-            else setEpisodeCount(count || 0);
-          }),
-        getUserCount().then((count) => {
-          setUserCount(count);
-        }),
         fetch("/api/monitoring/supabase")
           .then((res) => res.json())
           .then((data) => setSupabaseStorage(data)),
@@ -48,14 +37,12 @@ export function AdminStats() {
           .then((res) => res.json())
           .then((data) => setCloudflareStorage(data)),
       ];
-
       await Promise.all(promises);
-
       setLoading(false);
     };
 
-    fetchStats();
-  }, [supabase]);
+    fetchStorageStats();
+  }, []);
 
   const stats = [
     {
@@ -63,14 +50,14 @@ export function AdminStats() {
       value: episodeCount.toString(),
       icon: Play,
       color: "text-blue-600",
-      isLoading: loading,
+      isLoading: false,
     },
     {
       title: "Total de Usuários",
       value: userCount.toString(),
       icon: Users,
       color: "text-green-600",
-      isLoading: loading,
+      isLoading: false,
     },
     {
       title: "Uso do Banco (Supabase)",

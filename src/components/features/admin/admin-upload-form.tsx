@@ -26,6 +26,7 @@ import { createClient } from "@/src/lib/supabase-client";
 import { Category, Subcategory, Tag } from "@/src/lib/types";
 import { TagSelector } from "./TagSelector";
 import { cn } from "@/src/lib/utils";
+import { revalidateAdminDashboard } from "@/src/app/admin/actions";
 
 export function UploadForm() {
   const supabase = createClient();
@@ -262,7 +263,7 @@ export function UploadForm() {
         title: "Sucesso!",
         description: "Episódio e anexos enviados com sucesso!",
       });
-
+      revalidateAdminDashboard();
       resetForm();
       router.refresh();
 

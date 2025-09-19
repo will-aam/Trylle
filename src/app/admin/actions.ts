@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
+import { revalidatePath } from "next/cache";
 
 // Este cliente é criado com a chave de serviço e SÓ PODE SER USADO NO SERVIDOR.
 const supabaseAdmin = createClient(
@@ -29,4 +30,8 @@ export async function getUserCount() {
   }
 
   return data.users.length;
+}
+
+export async function revalidateAdminDashboard() {
+  revalidatePath("/admin");
 }
