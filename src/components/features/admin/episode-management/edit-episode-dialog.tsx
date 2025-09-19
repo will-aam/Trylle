@@ -226,13 +226,15 @@ export function EditEpisodeDialog({
       if (fileInput) fileInput.value = "";
 
       toast({
-        title: "Sucesso!",
-        description: "Documento anexado com sucesso.",
+        title: "Episode uploaded successfully!",
+        description:
+          "The episode has been uploaded and is ready to be processed.",
       });
     } catch (error: any) {
       toast({
-        title: "Erro no anexo",
-        description: error.message,
+        title: "Failed to upload episode.",
+        description:
+          "An error occurred while uploading the episode. Please try again.",
         variant: "destructive",
       });
     } finally {

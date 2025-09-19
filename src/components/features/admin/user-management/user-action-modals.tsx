@@ -97,15 +97,24 @@ export function UserActionModals({
       return;
     }
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    onDeleteUser(user.id);
-    toast({
-      title: "Usuário deletado",
-      description: `${user.name} foi removido permanentemente do sistema.`,
-      variant: "destructive",
-    });
-    setIsLoading(false);
-    onClose();
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      onDeleteUser(user.id);
+      toast({
+        title: "User deleted successfully!",
+        description: `${user.name} has been permanently removed from the system.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to delete user.",
+        description:
+          "An error occurred while deleting the user. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      onClose();
+    }
   };
 
   const renderModalContent = () => {
