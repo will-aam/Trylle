@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/src/components/ui/input";
 import { Button } from "@/src/components/ui/button";
+import { CloseButton } from "@/src/components/ui/close-button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,7 +68,8 @@ export function SubcategoryActionsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-background rounded-lg shadow-lg p-6 w-full max-w-md">
+      <div className="relative bg-background rounded-lg shadow-lg p-6 w-full max-w-md">
+        <CloseButton onClick={onClose} className="absolute top-4 right-4" />
         <h2 className="text-lg font-semibold mb-4">Gerenciar Subcategoria</h2>
 
         <div className="mb-4">
