@@ -387,9 +387,14 @@ export function useCategoryManager() {
       });
     } else {
       setCategories(
-        categories.map((c) => (c.id === editingCategoryId ? data : c))
+        categories.map((c) =>
+          c.id === editingCategoryId ? { ...c, ...data } : c
+        )
       );
-      toast({ title: "Sucesso!", description: "Categoria atualizada." });
+      toast({
+        title: "Sucesso!",
+        description: "Categoria atualizada com sucesso!",
+      });
       cancelEditing();
     }
   };

@@ -102,7 +102,12 @@ export function CategoryManager() {
                 <CategoryItem
                   key={category.id}
                   category={category}
+                  editingCategoryId={editingCategoryId}
+                  editingCategoryName={editingCategoryName}
+                  setEditingCategoryName={setEditingCategoryName}
                   onEdit={startEditing}
+                  onUpdate={handleUpdateCategory}
+                  onCancelEdit={cancelEditing}
                   onDelete={handleDeleteCategory}
                   onAddSubcategory={handleAddSubcategory}
                   onAccordionChange={handleAccordionChange}
