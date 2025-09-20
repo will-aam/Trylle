@@ -63,3 +63,5 @@ pnpm adicionar @tiptap/cabeçalho da extensão
 pnpm adicionar @tiptap/core @tiptap/react
 
 pnpm install @hookform/resolvers
+
+pnpm install @tanstack/react-table
