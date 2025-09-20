@@ -16,7 +16,6 @@ import { TagFilters } from "@/src/components/features/admin/tag-manager/TagFilte
 import { TagForm } from "@/src/components/features/admin/tag-manager/TagForm";
 import { TagActionsDialog } from "@/src/components/features/admin/tag-manager/TagActionsDialog";
 import { TagMergeDialog } from "@/src/components/features/admin/tag-manager/TagMergeDialog";
-import { TagBulkActions } from "@/src/components/features/admin/tag-manager/TagBulkActions";
 import { TagPagination } from "@/src/components/features/admin/tag-manager/TagPagination";
 import { TagWithCount, FilterMode, TagGroup } from "./types";
 import { Button } from "../../../ui/button";
@@ -495,6 +494,8 @@ export function TagManager() {
               newTagName={newTagName}
               onTagNameChange={setNewTagName}
               onAddTag={handleAddTag}
+              unusedTagCount={unusedTagCount}
+              onDeleteUnusedTags={handleDeleteUnusedTags}
             />
             <div className="flex space-x-2">
               <FileInput onFileChange={handleFileImport} />
@@ -507,19 +508,6 @@ export function TagManager() {
               </Button>
             </div>
           </div>
-
-          {unusedTagCount > 0 && (
-            <div className="mt-2">
-              <TagBulkActions
-                unusedTagCount={unusedTagCount}
-                onDeleteUnusedTags={handleDeleteUnusedTags}
-                onImportTags={() => {
-                  /* Função vazia, pois o FileInput lida com isso */
-                }}
-                onExportTags={handleExportTags}
-              />
-            </div>
-          )}
         </div>
       </CardHeader>
 
