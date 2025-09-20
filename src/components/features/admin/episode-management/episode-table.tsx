@@ -51,7 +51,7 @@ export function EpisodeTable({
       case "published":
         return (
           <Badge variant="default" className="bg-green-600 hover:bg-green-700">
-            Published
+            Publicar
           </Badge>
         );
       case "draft":
@@ -59,7 +59,7 @@ export function EpisodeTable({
       case "scheduled":
         return (
           <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
-            Scheduled
+            Agendar
           </Badge>
         );
       case "archived":
@@ -68,7 +68,7 @@ export function EpisodeTable({
             variant="default"
             className="bg-yellow-500 hover:bg-yellow-600 text-black"
           >
-            Archived
+            Arquivar
           </Badge>
         );
       default:
@@ -85,57 +85,45 @@ export function EpisodeTable({
               <tr className="border-b border-border">
                 <th className="p-4 w-12"></th>
                 <th className="text-left p-4 font-medium text-muted-foreground">
-                  <Button
-                    variant="ghost"
-                    onClick={() => onSort("status")}
-                    className="px-0 hover:bg-transparent"
-                  >
-                    Status
-                    <span className="ml-2">{renderSortIcon("status")}</span>
-                  </Button>
+                  Status
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground">
-                  <Button
-                    variant="ghost"
-                    onClick={() => onSort("title")}
-                    className="px-0 hover:bg-transparent"
-                  >
-                    Title
-                    <span className="ml-2">{renderSortIcon("title")}</span>
-                  </Button>
+                  Título
+                </th>
+                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
+                  Duração
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
                   <Button
                     variant="ghost"
-                    onClick={() => onSort("duration_in_seconds")}
-                    className="px-0 hover:bg-transparent"
+                    onClick={() => onSort("view_count")}
+                    className={`px-0 hover:bg-transparent ${
+                      sortColumn === "view_count" ? "text-primary" : ""
+                    }`}
                   >
-                    Duration
-                    <span className="ml-2">
-                      {renderSortIcon("duration_in_seconds")}
-                    </span>
+                    Visualizações
+                    <span className="ml-2">{renderSortIcon("view_count")}</span>
                   </Button>
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
-                  Category
-                </th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">
-                  Tags
+                  Categoria
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">
                   <Button
                     variant="ghost"
                     onClick={() => onSort("published_at")}
-                    className="px-0 hover:bg-transparent"
+                    className={`px-0 hover:bg-transparent ${
+                      sortColumn === "published_at" ? "text-primary" : ""
+                    }`}
                   >
-                    Date
+                    Data
                     <span className="ml-2">
                       {renderSortIcon("published_at")}
                     </span>
                   </Button>
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground">
-                  Actions
+                  Ações
                 </th>
               </tr>
             </thead>
@@ -158,21 +146,10 @@ export function EpisodeTable({
                       : "--:--"}
                   </td>
                   <td className="p-4 hidden md:table-cell">
-                    {episode.categories?.name || "N/A"}
+                    {episode.view_count}
                   </td>
-                  <td className="p-4 hidden lg:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      {episode.tags?.slice(0, 2).map((tag: any) => (
-                        <Badge key={tag.tags.id} variant="outline">
-                          {tag.tags.name}
-                        </Badge>
-                      ))}
-                      {episode.tags && episode.tags.length > 2 && (
-                        <Badge variant="outline">
-                          +{episode.tags.length - 2}
-                        </Badge>
-                      )}
-                    </div>
+                  <td className="p-4 hidden md:table-cell">
+                    {episode.categories?.name || "N/A"}
                   </td>
                   <td className="p-4 text-sm hidden xl:table-cell">
                     {formatDate(episode.published_at)}
