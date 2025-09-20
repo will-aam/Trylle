@@ -64,6 +64,9 @@ export type EpisodeDocument = {
   // Renomeado para storage_path para consistência
   storage_path: string;
   created_at: string;
+  file_size: number | null;
+  page_count: number | null;
+  reference_count: number | null;
 };
 
 export type SortDirection = "asc" | "desc";

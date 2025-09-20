@@ -38,6 +38,9 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const episode_id = formData.get("episode_id") as string;
+    const page_count = formData.get("page_count") as string;
+    const reference_count = formData.get("reference_count") as string;
+    const file_size = formData.get("file_size") as string;
 
     if (!file) {
       return NextResponse.json(
@@ -74,7 +77,17 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase
       .from("episode_documents")
-      .insert([{ episode_id, file_name, public_url, storage_path }])
+      .insert([
+        {
+          episode_id,
+          file_name,
+          public_url,
+          storage_path,
+          page_count: Number(page_count) || null,
+          reference_count: Number(reference_count) || null,
+          file_size: Number(file_size) || null,
+        },
+      ])
       .select()
       .single();
 
