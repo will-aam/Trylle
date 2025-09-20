@@ -14,6 +14,7 @@ import {
   LibraryBig,
   MessagesSquare,
   Eye,
+  CalendarArrowUp,
 } from "lucide-react";
 import {
   Tooltip,
@@ -96,6 +97,13 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 label="Gerenciar Episódios"
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/admin/episodes"}
+              />
+              <SidebarLink
+                href="/"
+                icon={<CalendarArrowUp className="h-4 w-4" />}
+                label="Programação"
+                isCollapsed={isCollapsed}
+                isActive={pathname === "/"}
               />
               <SidebarLink
                 href="/admin/users"

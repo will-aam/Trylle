@@ -7,8 +7,14 @@ import { Episode, SortDirection } from "@/src/lib/types";
 import { formatTime } from "@/src/lib/utils";
 import { ChevronsUpDown, ArrowDown, ArrowUp } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/src/components/ui/table";
 
 interface EpisodeTableProps {
   episodes: Episode[];
@@ -27,15 +33,6 @@ export function EpisodeTable({
   sortColumn,
   sortDirection,
 }: EpisodeTableProps) {
-  const parentRef = useRef<HTMLDivElement>(null);
-
-  const rowVirtualizer = useVirtualizer({
-    count: episodes.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 65,
-    overscan: 5,
-  });
-
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("pt-BR", {
@@ -79,148 +76,87 @@ export function EpisodeTable({
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
-  const columns = [
-    {
-      id: "thumbnail",
-      header: "",
-      width: "w-12",
-      cell: () => <div className="w-12"></div>,
-    },
-    {
-      id: "status",
-      header: "Status",
-      width: "min-w-[100px] flex-1",
-      cell: (episode: Episode) => getStatusBadge(episode.status),
-    },
-    {
-      id: "title",
-      header: "Título",
-      width: "min-w-[250px] flex-1",
-      cell: (episode: Episode) => (
-        <div className="font-medium truncate max-w-xs">{episode.title}</div>
-      ),
-    },
-    {
-      id: "duration",
-      header: "Duração",
-      width: "min-w-[100px] flex-1",
-      className: "hidden md:flex",
-      cell: (episode: Episode) => (
-        <>
-          {episode.duration_in_seconds
-            ? formatTime(episode.duration_in_seconds)
-            : "--:--"}
-        </>
-      ),
-    },
-    {
-      id: "category",
-      header: "Categoria",
-      width: "min-w-[150px] flex-1",
-      className: "hidden md:flex",
-      cell: (episode: Episode) => <>{episode.categories?.name || "N/A"}</>,
-    },
-    {
-      id: "published_at",
-      header: "Data",
-      width: "min-w-[150px] flex-1",
-      className: "hidden xl:flex",
-      isSortable: true,
-      cell: (episode: Episode) => <>{formatDate(episode.published_at)}</>,
-    },
-    {
-      id: "view_count",
-      header: "Visualizações",
-      width: "min-w-[120px] flex-1",
-      className: "hidden md:flex",
-      isSortable: true,
-      cell: (episode: Episode) => <>{episode.view_count}</>,
-    },
-    {
-      id: "actions",
-      header: "Ações",
-      width: "w-24",
-      cell: (episode: Episode) => (
-        <EpisodeActions episode={episode} onEpisodeUpdate={onEpisodeUpdate} />
-      ),
-    },
-  ];
 
   return (
     <Card>
       <CardContent className="p-0">
-        <div ref={parentRef} className="overflow-auto max-h-[50vh]">
-          <div style={{ height: `${rowVirtualizer.getTotalSize()}px` }}>
-            <div className="flex items-center border-b border-border sticky top-0 bg-card z-10">
-              {columns.map((column) =>
-                column.isSortable ? (
-                  <div
-                    key={column.id}
-                    className={`py-2 px-4 font-medium text-muted-foreground flex items-center ${
-                      column.width
-                    } ${column.className || ""}`}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12"></TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="min-w-[250px]">
+                  <Button
+                    variant="ghost"
+                    onClick={() => onSort("title")}
+                    className="px-0 hover:bg-transparent"
                   >
-                    <Button
-                      variant="ghost"
-                      onClick={() => onSort(column.id as keyof Episode)}
-                      className={`px-0 hover:bg-transparent ${
-                        sortColumn === column.id ? "text-primary" : ""
-                      }`}
-                    >
-                      {column.header}
-                      <span className="ml-0.1">
-                        {renderSortIcon(column.id as keyof Episode)}
-                      </span>
-                    </Button>
-                  </div>
-                ) : (
-                  <div
-                    key={column.id}
-                    className={`py-2 px-4 font-medium text-muted-foreground ${
-                      column.width
-                    } ${column.className || ""}`}
+                    Título
+                    {renderSortIcon("title")}
+                  </Button>
+                </TableHead>
+                <TableHead className="hidden md:table-cell">Duração</TableHead>
+                <TableHead className="hidden md:table-cell">
+                  Categoria
+                </TableHead>
+                <TableHead className="hidden xl:table-cell">
+                  <Button
+                    variant="ghost"
+                    onClick={() => onSort("published_at")}
+                    className="px-0 hover:bg-transparent"
                   >
-                    {column.header}
-                  </div>
-                )
-              )}
-            </div>
-            <div
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                position: "relative",
-              }}
-            >
-              {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-                const episode = episodes[virtualItem.index];
-                return (
-                  <div
-                    key={episode.id}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: `${virtualItem.size}px`,
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                    className="flex items-center border-b border-border hover:bg-muted/50"
+                    Data
+                    {renderSortIcon("published_at")}
+                  </Button>
+                </TableHead>
+                <TableHead className="hidden md:table-cell">
+                  <Button
+                    variant="ghost"
+                    onClick={() => onSort("view_count")}
+                    className="px-0 hover:bg-transparent"
                   >
-                    {columns.map((column) => (
-                      <div
-                        key={column.id}
-                        className={`py-2 px-4 flex items-center ${
-                          column.width
-                        } ${column.className || ""}`}
-                      >
-                        {column.cell(episode)}
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                    Visualizações
+                    {renderSortIcon("view_count")}
+                  </Button>
+                </TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {episodes.map((episode) => (
+                <TableRow key={episode.id}>
+                  <TableCell></TableCell>
+                  <TableCell>{getStatusBadge(episode.status)}</TableCell>
+                  <TableCell>
+                    <div className="font-medium truncate max-w-xs">
+                      {episode.title}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {episode.duration_in_seconds
+                      ? formatTime(episode.duration_in_seconds)
+                      : "--:--"}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {episode.categories?.name || "N/A"}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell">
+                    {formatDate(episode.published_at)}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {episode.view_count}
+                  </TableCell>
+                  <TableCell>
+                    <EpisodeActions
+                      episode={episode}
+                      onEpisodeUpdate={onEpisodeUpdate}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
     </Card>
