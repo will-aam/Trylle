@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
 import {
   Popover,
   PopoverTrigger,
@@ -15,7 +13,7 @@ import {
   CommandGroup,
   CommandItem,
 } from "@/src/components/ui/command";
-import { Plus, Search, ChevronsUpDown, ArrowDownUp } from "lucide-react";
+import { Plus, ChevronsUpDown, ArrowDownUp } from "lucide-react";
 
 interface CategoryHeaderProps {
   categorySearchTerm: string;
@@ -27,9 +25,7 @@ interface CategoryHeaderProps {
   setSortOrder: (order: "asc" | "desc") => void;
   sortType: "name" | "episodes";
   setSortType: (type: "name" | "episodes") => void;
-  newCategoryName: string;
-  setNewCategoryName: (name: string) => void;
-  handleAddCategory: () => void;
+  onAddCategory: () => void;
 }
 
 export function CategoryHeader({
@@ -42,9 +38,7 @@ export function CategoryHeader({
   setSortOrder,
   sortType,
   setSortType,
-  newCategoryName,
-  setNewCategoryName,
-  handleAddCategory,
+  onAddCategory,
 }: CategoryHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-2 mt-4">
@@ -106,17 +100,9 @@ export function CategoryHeader({
           <ArrowDownUp className="h-4 w-4" />
         </Button>
       </div>
-      <div className="flex space-x-2">
-        <Input
-          placeholder="Nome da nova categoria"
-          value={newCategoryName}
-          onChange={(e) => setNewCategoryName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-        />
-        <Button onClick={handleAddCategory} className="whitespace-nowrap">
-          <Plus className="mr-2 h-4 w-4" /> Adicionar Categoria
-        </Button>
-      </div>
+      <Button onClick={onAddCategory} className="whitespace-nowrap">
+        <Plus className="mr-2 h-4 w-4" /> Adicionar Categoria
+      </Button>
     </div>
   );
 }

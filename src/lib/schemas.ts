@@ -10,10 +10,6 @@ export const categoryFormSchema = z.object({
     .max(50, {
       message: "O nome da categoria não pode ter mais de 50 caracteres.",
     }),
-  description: z
-    .string()
-    .max(200, { message: "A descrição não pode ter mais de 200 caracteres." })
-    .optional(), // Opcional, caso você não queira que a descrição seja obrigatória
 });
 
 // Criamos também um tipo inferido a partir do schema para usar no nosso formulário

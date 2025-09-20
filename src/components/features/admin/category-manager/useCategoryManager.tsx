@@ -3,23 +3,18 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Category, Subcategory } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";
-import { categoryService } from "@/src/services/categoryService"; // Importe o serviço
+import { categoryService } from "@/src/services/categoryService";
+import { CategoryFormData } from "@/src/lib/schemas";
 
 export function useCategoryManager() {
   const { toast } = useToast();
   const isInitialMount = useRef(true);
 
-  // ... (mantenha todos os useState daqui)
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newCategoryName, setNewCategoryName] = useState("");
   const [newSubcategoryNames, setNewSubcategoryNames] = useState<{
     [key: string]: string;
   }>({});
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
-    null
-  );
-  const [editingCategoryName, setEditingCategoryName] = useState("");
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] =
     useState(categorySearchTerm);
@@ -28,7 +23,9 @@ export function useCategoryManager() {
   const [sortType, setSortType] = useState<"name" | "episodes">("name");
   const [selectedSubcategory, setSelectedSubcategory] =
     useState<Subcategory | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubcategoryModalOpen, setIsSubcategoryModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -63,7 +60,6 @@ export function useCategoryManager() {
     toast,
   ]);
 
-  // ... (mantenha os useEffect e o useMemo)
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(categorySearchTerm);
@@ -87,6 +83,7 @@ export function useCategoryManager() {
   }, [fetchData]);
 
   const sortedCategories = useMemo(() => {
+    // A ordenação já é feita no backend, mas podemos manter uma ordenação no cliente como fallback
     return [...categories].sort((a, b) => {
       if (sortType === "name") {
         return sortOrder === "asc"
@@ -100,18 +97,27 @@ export function useCategoryManager() {
     });
   }, [categories, sortType, sortOrder]);
 
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) return;
+  const handleSaveCategory = async (data: CategoryFormData) => {
     try {
-      const data = await categoryService.addCategory(newCategoryName);
-      setCategories(
-        [...categories, data].sort((a, b) => a.name.localeCompare(b.name))
-      );
-      setNewCategoryName("");
-      toast({ title: "Sucesso!", description: "Categoria criada." });
+      let savedCategory;
+      if (editingCategory) {
+        savedCategory = await categoryService.updateCategory(
+          editingCategory.id,
+          data
+        );
+        toast({
+          title: "Sucesso!",
+          description: "Categoria atualizada com sucesso!",
+        });
+      } else {
+        savedCategory = await categoryService.addCategory(data);
+        toast({ title: "Sucesso!", description: "Categoria criada." });
+      }
+      await fetchData(); // Re-fetch all data to ensure consistency
+      closeCategoryModal();
     } catch (error: any) {
       toast({
-        title: "Erro ao criar categoria",
+        title: `Erro ao ${editingCategory ? "atualizar" : "criar"} categoria`,
         description: error.message,
         variant: "destructive",
       });
@@ -137,46 +143,24 @@ export function useCategoryManager() {
 
   const handleAccordionChange = async (categoryId: string) => {
     if (!categoryId) return;
-
-    const categoryIndex = categories.findIndex((c) => c.id === categoryId);
-    if (categoryIndex === -1) return;
-
-    const category = categories[categoryIndex];
-
-    if (!category.subcategories) {
-      const updatedCategories = [...categories];
-      updatedCategories[categoryIndex] = {
-        ...updatedCategories[categoryIndex],
-        subcategoriesLoading: true,
-      };
-      setCategories(updatedCategories);
-
+    const category = categories.find((c) => c.id === categoryId);
+    if (category && !category.subcategories) {
+      // Logic to fetch subcategories if they haven't been fetched yet
       try {
         const subData = await categoryService.fetchSubcategories(categoryId);
-        setCategories((prevCategories) => {
-          const newCategories = [...prevCategories];
-          const catIndex = newCategories.findIndex((c) => c.id === categoryId);
-          if (catIndex !== -1) {
-            newCategories[catIndex] = {
-              ...newCategories[catIndex],
-              subcategories: subData,
-              subcategoriesLoading: false,
-            };
-          }
-          return newCategories;
-        });
+        setCategories((prev) =>
+          prev.map((c) =>
+            c.id === categoryId
+              ? { ...c, subcategories: subData, subcategoriesLoading: false }
+              : c
+          )
+        );
       } catch (error: any) {
         toast({
           title: "Erro ao carregar subcategorias",
           description: error.message,
           variant: "destructive",
         });
-        const errorCategories = [...categories];
-        errorCategories[categoryIndex] = {
-          ...errorCategories[categoryIndex],
-          subcategoriesLoading: false,
-        };
-        setCategories(errorCategories);
       }
     }
   };
@@ -236,7 +220,7 @@ export function useCategoryManager() {
         )
       );
       toast({ title: "Sucesso!", description: "Subcategoria atualizada." });
-      handleCloseModal();
+      closeSubcategoryModal();
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar subcategoria",
@@ -266,7 +250,7 @@ export function useCategoryManager() {
         )
       );
       toast({ title: "Sucesso!", description: "Subcategoria excluída." });
-      handleCloseModal();
+      closeSubcategoryModal();
     } catch (error: any) {
       toast({
         title: "Erro ao excluir subcategoria",
@@ -276,65 +260,24 @@ export function useCategoryManager() {
     }
   };
 
-  const handleUpdateCategory = async () => {
-    if (!editingCategoryId) return;
-    const trimmedName = editingCategoryName.trim();
-    if (!trimmedName) {
-      toast({
-        title: "Erro de validação",
-        description: "O nome da categoria não pode estar vazio.",
-        variant: "destructive",
-      });
-      return;
-    }
-    const originalCategory = categories.find((c) => c.id === editingCategoryId);
-    if (originalCategory && originalCategory.name === trimmedName) {
-      cancelEditing();
-      return;
-    }
-    try {
-      const data = await categoryService.updateCategory(
-        editingCategoryId,
-        trimmedName
-      );
-      setCategories(
-        categories.map((c) =>
-          c.id === editingCategoryId ? { ...c, ...data } : c
-        )
-      );
-      toast({
-        title: "Sucesso!",
-        description: "Categoria atualizada com sucesso!",
-      });
-      cancelEditing();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao atualizar categoria",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+  const openCategoryModal = (category: Category | null = null) => {
+    setEditingCategory(category);
+    setIsCategoryModalOpen(true);
   };
 
-  // ... (mantenha o restante das funções auxiliares: handleOpenModal, handleCloseModal, startEditing, cancelEditing, handlePageChange)
-  const handleOpenModal = (subcategory: Subcategory) => {
+  const closeCategoryModal = () => {
+    setEditingCategory(null);
+    setIsCategoryModalOpen(false);
+  };
+
+  const openSubcategoryModal = (subcategory: Subcategory) => {
     setSelectedSubcategory(subcategory);
-    setIsModalOpen(true);
+    setIsSubcategoryModalOpen(true);
   };
 
-  const handleCloseModal = () => {
+  const closeSubcategoryModal = () => {
     setSelectedSubcategory(null);
-    setIsModalOpen(false);
-  };
-
-  const startEditing = (category: Category) => {
-    setEditingCategoryId(category.id);
-    setEditingCategoryName(category.name);
-  };
-
-  const cancelEditing = () => {
-    setEditingCategoryId(null);
-    setEditingCategoryName("");
+    setIsSubcategoryModalOpen(false);
   };
 
   const handlePageChange = (page: number) => {
@@ -346,14 +289,8 @@ export function useCategoryManager() {
   return {
     categories,
     loading,
-    newCategoryName,
-    setNewCategoryName,
     newSubcategoryNames,
     setNewSubcategoryNames,
-    editingCategoryId,
-    setEditingCategoryId,
-    editingCategoryName,
-    setEditingCategoryName,
     categorySearchTerm,
     setCategorySearchTerm,
     debouncedSearchTerm,
@@ -364,25 +301,23 @@ export function useCategoryManager() {
     sortType,
     setSortType,
     selectedSubcategory,
-    setSelectedSubcategory,
-    isModalOpen,
-    setIsModalOpen,
+    isSubcategoryModalOpen,
+    isCategoryModalOpen,
+    editingCategory,
     currentPage,
-    setCurrentPage,
     totalCount,
     itemsPerPage,
     sortedCategories,
-    handleAddCategory,
     handleDeleteCategory,
     handleAccordionChange,
     handleAddSubcategory,
     handleUpdateSubcategory,
     handleDeleteSubcategory,
-    handleOpenModal,
-    handleCloseModal,
-    handleUpdateCategory,
-    startEditing,
-    cancelEditing,
+    openSubcategoryModal,
+    closeSubcategoryModal,
+    openCategoryModal,
+    closeCategoryModal,
+    handleSaveCategory,
     handlePageChange,
   };
 }

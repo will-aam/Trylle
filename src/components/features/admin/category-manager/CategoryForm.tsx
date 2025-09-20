@@ -13,7 +13,6 @@ import {
 } from "@/src/components/ui/form";
 import { Input } from "@/src/components/ui/input";
 import { Button } from "@/src/components/ui/button";
-import { Textarea } from "@/src/components/ui/textarea";
 import { categoryFormSchema, type CategoryFormData } from "@/src/lib/schemas";
 
 interface CategoryFormProps {
@@ -34,7 +33,6 @@ export function CategoryForm({
     resolver: zodResolver(categoryFormSchema),
     defaultValues: {
       name: "",
-      description: "",
       ...defaultValues,
     },
   });
@@ -50,22 +48,6 @@ export function CategoryForm({
               <FormLabel>Nome da Categoria</FormLabel>
               <FormControl>
                 <Input placeholder="Ex: Tecnologia" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Descrição (Opcional)</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Uma breve descrição sobre a categoria"
-                  {...field}
-                />
               </FormControl>
               <FormMessage />
             </FormItem>

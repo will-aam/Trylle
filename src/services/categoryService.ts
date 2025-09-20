@@ -1,5 +1,6 @@
 import { createClient } from "@/src/lib/supabase-client";
 import { Category, Subcategory } from "@/src/lib/types";
+import { CategoryFormData } from "../lib/schemas";
 
 const supabase = createClient();
 
@@ -54,10 +55,14 @@ export const categoryService = {
     return { data: categoriesWithCount, count: count || 0 };
   },
 
-  async addCategory(name: string): Promise<Category> {
+  async addCategory(categoryData: CategoryFormData): Promise<Category> {
     const { data, error } = await supabase
       .from("categories")
-      .insert([{ name: name.trim() }])
+      .insert([
+        {
+          name: categoryData.name.trim(),
+        },
+      ])
       .select()
       .single();
 
@@ -150,10 +155,15 @@ export const categoryService = {
     }
   },
 
-  async updateCategory(categoryId: string, newName: string): Promise<Category> {
+  async updateCategory(
+    categoryId: string,
+    categoryData: CategoryFormData
+  ): Promise<Category> {
     const { data, error } = await supabase
       .from("categories")
-      .update({ name: newName.trim() })
+      .update({
+        name: categoryData.name.trim(),
+      })
       .eq("id", categoryId)
       .select()
       .single();
