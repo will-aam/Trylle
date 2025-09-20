@@ -58,34 +58,16 @@ export function EpisodeFilters({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por título ou tag..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-          {searchTerm && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
-              onClick={() => setSearchTerm("")}
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="flex-1 w-full md:w-auto">
+        <div className="relative flex items-center w-full max-w-lg border border-input rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 group">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="shrink-0 bg-transparent">
-                <Filter className="mr-2 h-4 w-4" />
-                Filtros
+              <Button
+                variant="ghost"
+                className="pl-3 pr-2 rounded-r-none border-r border-input group-focus-within:border-ring"
+              >
+                <Filter className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56">
@@ -121,19 +103,27 @@ export function EpisodeFilters({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {hasActiveFilters && (
-            <Button
-              variant="outline"
-              onClick={onClearFilters}
-              className="shrink-0 bg-transparent"
-            >
-              <X className="mr-2 h-4 w-4" />
-              Limpar Filtros
-            </Button>
-          )}
+          <div className="relative flex-1">
+            <Input
+              placeholder="Filtrar por título ou tag..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-10 border-0 rounded-l-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+          </div>
         </div>
       </div>
+
+      {hasActiveFilters && (
+        <Button
+          variant="outline"
+          onClick={onClearFilters}
+          className="shrink-0 bg-transparent"
+        >
+          <X className="mr-2 h-4 w-4" />
+          Limpar Filtros
+        </Button>
+      )}
     </div>
   );
 }
