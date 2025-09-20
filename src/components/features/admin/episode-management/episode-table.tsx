@@ -55,17 +55,13 @@ export function EpisodeTable({
           </Badge>
         );
       case "draft":
-        return (
-          <Badge
-            variant="secondary"
-            className="bg-yellow-500 hover:bg-yellow-600 text-black"
-          >
-            Rascunho
-          </Badge>
-        );
+        return <Badge variant="secondary">Rascunho</Badge>;
       case "scheduled":
         return (
-          <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
+          <Badge
+            variant="default"
+            className="bg-yellow-500 hover:bg-yellow-600 text-black"
+          >
             Agendado
           </Badge>
         );
