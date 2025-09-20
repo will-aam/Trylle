@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +38,7 @@ interface EditEpisodeDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onEpisodeUpdate: () => void;
 }
-
+//se eu quiser mudar os quant de doc depois
 const MAX_DOCUMENTS_PER_EPISODE = 1;
 
 export function EditEpisodeDialog({
@@ -61,6 +61,8 @@ export function EditEpisodeDialog({
   );
   const [isUploading, setIsUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [newAudioFile, setNewAudioFile] = useState<File | null>(null);
+  const audioFileInputRef = useRef<HTMLInputElement>(null);
 
   // New states for editing document metadata
   const [editingDoc, setEditingDoc] = useState<EpisodeDocument | null>(null);
@@ -109,6 +111,7 @@ export function EditEpisodeDialog({
     } else {
       setDocuments([]);
       setSelectedFile(null);
+      setNewAudioFile(null);
       setEditingDoc(null);
       setEditingPageCount("");
       setEditingReferenceCount("");
@@ -164,18 +167,63 @@ export function EditEpisodeDialog({
     setIsLoading(true);
 
     try {
+      let audio_url = episode.audio_url;
+      let file_name = episode.file_name;
+      let audioFileChanged = false;
+
+      if (newAudioFile) {
+        audioFileChanged = true;
+        // 1. Delete old audio file
+        if (episode.audio_url) {
+          try {
+            const oldFileKey = episode.audio_url.substring(
+              episode.audio_url.lastIndexOf("com/") + 4
+            );
+            await fetch("/api/delete-file", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ fileKey: oldFileKey }),
+            });
+          } catch (error) {
+            console.error("Failed to delete old audio file:", error);
+            // Non-blocking, maybe the file is already gone
+          }
+        }
+
+        // 2. Upload new audio file
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", newAudioFile);
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: uploadFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload new audio file.");
+        }
+        const uploadResult = await uploadResponse.json();
+        audio_url = uploadResult.audio_url;
+        file_name = newAudioFile.name;
+      }
+
+      // 3. Update episode details in Supabase
+      const updateData: Partial<Episode> = {
+        title: formData.title,
+        description: formData.description,
+        category_id: formData.category_id,
+        subcategory_id: formData.subcategory_id,
+        audio_url,
+        file_name,
+      };
+
       const { error: episodeError } = await supabase
         .from("episodes")
-        .update({
-          title: formData.title,
-          description: formData.description,
-          category_id: formData.category_id,
-          subcategory_id: formData.subcategory_id,
-        })
+        .update(updateData)
         .eq("id", episode.id);
 
       if (episodeError) throw episodeError;
 
+      // ... (rest of the logic for tags and documents remains the same)
       const { error: deleteTagsError } = await supabase
         .from("episode_tags")
         .delete()
@@ -195,7 +243,6 @@ export function EditEpisodeDialog({
         if (insertTagsError) throw insertTagsError;
       }
 
-      // Save document metadata if it exists and has been edited
       if (editingDoc) {
         const { error: docError } = await supabase
           .from("episode_documents")
@@ -214,7 +261,9 @@ export function EditEpisodeDialog({
 
       toast({
         title: "Sucesso!",
-        description: "Episódio e tags atualizados com sucesso.",
+        description: audioFileChanged
+          ? "Arquivo trocado com sucesso"
+          : "Episódio atualizado com sucesso.",
       });
       onEpisodeUpdate();
       onOpenChange(false);
@@ -233,6 +282,12 @@ export function EditEpisodeDialog({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleNewAudioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setNewAudioFile(e.target.files[0]);
     }
   };
 
@@ -265,15 +320,14 @@ export function EditEpisodeDialog({
       if (fileInput) fileInput.value = "";
 
       toast({
-        title: "Episode uploaded successfully!",
+        title: "Episódio enviado com sucesso!",
         description:
-          "The episode has been uploaded and is ready to be processed.",
+          "O episódio foi carregado e está pronto para ser processado.",
       });
     } catch (error: any) {
       toast({
-        title: "Failed to upload episode.",
-        description:
-          "An error occurred while uploading the episode. Please try again.",
+        title: "Falha ao enviar o episódio.",
+        description: "Ocorreu um erro ao enviar o episódio. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -403,6 +457,37 @@ export function EditEpisodeDialog({
                 selectedTags={selectedTags}
                 onSelectedTagsChange={setSelectedTags}
               />
+            </div>
+
+            {/* Audio File */}
+            <div className="space-y-4 pt-6 border-t">
+              <Label className="font-semibold text-base">
+                Arquivo de Áudio
+              </Label>
+              <div className="p-4 border rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 truncate">
+                    <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm font-medium truncate">
+                      {newAudioFile?.name || episode?.file_name}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => audioFileInputRef.current?.click()}
+                  >
+                    Mudar Áudio
+                  </Button>
+                  <input
+                    type="file"
+                    ref={audioFileInputRef}
+                    onChange={handleNewAudioFileChange}
+                    className="hidden"
+                    accept="audio/mpeg, audio/mp4, audio/x-m4a"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Documentos */}
