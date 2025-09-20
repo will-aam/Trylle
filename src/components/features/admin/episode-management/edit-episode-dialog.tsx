@@ -39,6 +39,8 @@ interface EditEpisodeDialogProps {
   onEpisodeUpdate: () => void;
 }
 
+const MAX_DOCUMENTS_PER_EPISODE = 1;
+
 export function EditEpisodeDialog({
   episode,
   isOpen,
@@ -59,9 +61,12 @@ export function EditEpisodeDialog({
   );
   const [isUploading, setIsUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [pageCount, setPageCount] = useState<string>("");
-  const [referenceCount, setReferenceCount] = useState<string>("");
-  const [fileSize, setFileSize] = useState<number | null>(null);
+
+  // New states for editing document metadata
+  const [editingDoc, setEditingDoc] = useState<EpisodeDocument | null>(null);
+  const [editingPageCount, setEditingPageCount] = useState<string>("");
+  const [editingReferenceCount, setEditingReferenceCount] =
+    useState<string>("");
 
   useEffect(() => {
     if (episode && isOpen) {
@@ -86,13 +91,27 @@ export function EditEpisodeDialog({
             variant: "destructive",
           });
         } else {
-          setDocuments(data || []);
+          const loadedDocuments = data || [];
+          setDocuments(loadedDocuments);
+          if (loadedDocuments.length > 0) {
+            const docToEdit = loadedDocuments[0];
+            setEditingDoc(docToEdit);
+            setEditingPageCount(String(docToEdit.page_count || ""));
+            setEditingReferenceCount(String(docToEdit.reference_count || ""));
+          } else {
+            setEditingDoc(null);
+            setEditingPageCount("");
+            setEditingReferenceCount("");
+          }
         }
       };
       fetchDocuments();
     } else {
       setDocuments([]);
       setSelectedFile(null);
+      setEditingDoc(null);
+      setEditingPageCount("");
+      setEditingReferenceCount("");
     }
   }, [episode, isOpen, supabase, toast]);
 
@@ -176,6 +195,23 @@ export function EditEpisodeDialog({
         if (insertTagsError) throw insertTagsError;
       }
 
+      // Save document metadata if it exists and has been edited
+      if (editingDoc) {
+        const { error: docError } = await supabase
+          .from("episode_documents")
+          .update({
+            page_count: editingPageCount
+              ? parseInt(editingPageCount, 10)
+              : null,
+            reference_count: editingReferenceCount
+              ? parseInt(editingReferenceCount, 10)
+              : null,
+          })
+          .eq("id", editingDoc.id);
+
+        if (docError) throw docError;
+      }
+
       toast({
         title: "Sucesso!",
         description: "Episódio e tags atualizados com sucesso.",
@@ -195,13 +231,8 @@ export function EditEpisodeDialog({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setFileSize(file.size);
-    } else {
-      setSelectedFile(null);
-      setFileSize(null);
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
     }
   };
 
@@ -212,9 +243,6 @@ export function EditEpisodeDialog({
     const formData = new FormData();
     formData.append("file", selectedFile);
     formData.append("episode_id", episode.id);
-    formData.append("page_count", pageCount);
-    formData.append("reference_count", referenceCount);
-    formData.append("file_size", fileSize ? fileSize.toString() : "0");
 
     try {
       const response = await fetch("/api/episode-documents/upload", {
@@ -230,9 +258,6 @@ export function EditEpisodeDialog({
       const newDocument = await response.json();
       setDocuments((prev) => [...prev, newDocument]);
       setSelectedFile(null);
-      setPageCount("");
-      setReferenceCount("");
-      setFileSize(null);
 
       const fileInput = document.getElementById(
         "document-upload"
@@ -240,14 +265,15 @@ export function EditEpisodeDialog({
       if (fileInput) fileInput.value = "";
 
       toast({
-        title: "Documento anexado com sucesso!",
-        description: "O novo documento foi adicionado ao episódio.",
+        title: "Episode uploaded successfully!",
+        description:
+          "The episode has been uploaded and is ready to be processed.",
       });
     } catch (error: any) {
       toast({
-        title: "Falha no upload do documento.",
+        title: "Failed to upload episode.",
         description:
-          "Ocorreu um erro ao anexar o documento. Por favor, tente novamente.",
+          "An error occurred while uploading the episode. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -382,34 +408,78 @@ export function EditEpisodeDialog({
             {/* Documentos */}
             <div className="space-y-4 pt-6 border-t">
               <Label className="font-semibold text-base">
-                Documentos Anexados
+                Documento Anexado
               </Label>
               <div className="space-y-2">
                 {documents.length > 0 ? (
                   documents.map((doc) => (
                     <div
                       key={doc.id}
-                      className="flex items-center justify-between rounded-md border p-2"
+                      className="p-4 border rounded-lg space-y-4"
                     >
-                      <div className="flex items-center gap-2 truncate">
-                        <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <span className="text-sm truncate">
-                          {doc.file_name}
-                        </span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 truncate">
+                          <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-sm font-medium truncate">
+                            {doc.file_name}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteDocument(doc)}
+                          disabled={deletingId === doc.id}
+                          className="flex-shrink-0"
+                        >
+                          {deletingId === doc.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          )}
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteDocument(doc)}
-                        disabled={deletingId === doc.id}
-                        className="flex-shrink-0"
-                      >
-                        {deletingId === doc.id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                        ) : (
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        )}
-                      </Button>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                          <Label htmlFor="editingPageCount">
+                            Nº de Páginas
+                          </Label>
+                          <Input
+                            id="editingPageCount"
+                            type="number"
+                            value={editingPageCount}
+                            onChange={(e) =>
+                              setEditingPageCount(e.target.value)
+                            }
+                            placeholder="Ex: 10"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="editingReferenceCount">
+                            Nº de Referências
+                          </Label>
+                          <Input
+                            id="editingReferenceCount"
+                            type="number"
+                            value={editingReferenceCount}
+                            onChange={(e) =>
+                              setEditingReferenceCount(e.target.value)
+                            }
+                            placeholder="Ex: 5"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Tamanho (MB)</Label>
+                          <Input
+                            type="text"
+                            disabled
+                            value={
+                              doc.file_size
+                                ? (doc.file_size / (1024 * 1024)).toFixed(2)
+                                : "0.00"
+                            }
+                          />
+                        </div>
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -418,63 +488,32 @@ export function EditEpisodeDialog({
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="document-upload"
-                  type="file"
-                  onChange={handleFileChange}
-                  className="flex-grow"
-                  accept=".pdf"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="page_count">Nº de Páginas</Label>
-                  <Input
-                    id="page_count"
-                    type="number"
-                    value={pageCount}
-                    onChange={(e) => setPageCount(e.target.value)}
-                    placeholder="Ex: 10"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reference_count">Nº de Referências</Label>
-                  <Input
-                    id="reference_count"
-                    type="number"
-                    value={referenceCount}
-                    onChange={(e) => setReferenceCount(e.target.value)}
-                    placeholder="Ex: 5"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="file_size">Tamanho (MB)</Label>
-                  <Input
-                    id="file_size"
-                    type="text"
-                    disabled
-                    value={
-                      fileSize ? (fileSize / (1024 * 1024)).toFixed(2) : "0.00"
-                    }
-                  />
-                </div>
-              </div>
 
-              <Button
-                onClick={handleAttachDocument}
-                disabled={!selectedFile || isUploading}
-                className="w-full sm:w-auto"
-              >
-                {isUploading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-                <span className="ml-2">
-                  {isUploading ? "Enviando..." : "Anexar Documento"}
-                </span>
-              </Button>
+              {/* Upload Form - Conditionally Rendered */}
+              {documents.length < MAX_DOCUMENTS_PER_EPISODE && (
+                <div className="flex items-center gap-2 pt-4 border-t">
+                  <Input
+                    id="document-upload"
+                    type="file"
+                    onChange={handleFileChange}
+                    className="flex-grow"
+                    accept=".pdf"
+                  />
+                  <Button
+                    onClick={handleAttachDocument}
+                    disabled={!selectedFile || isUploading}
+                  >
+                    {isUploading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    <span className="ml-2 hidden sm:inline">
+                      {isUploading ? "Enviando..." : "Anexar"}
+                    </span>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </ScrollArea>

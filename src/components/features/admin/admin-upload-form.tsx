@@ -44,6 +44,9 @@ export function UploadForm() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioDuration, setAudioDuration] = useState<number | null>(null); // NOVO ESTADO
   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
+  const [pageCount, setPageCount] = useState<string>("");
+  const [referenceCount, setReferenceCount] = useState<string>("");
+  const [fileSize, setFileSize] = useState<number | null>(null);
 
   const { toast } = useToast();
   const router = useRouter();
@@ -122,6 +125,9 @@ export function UploadForm() {
     setAudioFile(null);
     setAudioDuration(null); // RESET ADICIONADO
     setDocumentFiles([]);
+    setPageCount("");
+    setReferenceCount("");
+    setFileSize(null);
     setSelectedTags([]);
     setSelectedCategory("");
     // A mágica acontece aqui: mudamos a chave, o React recria o formulário
@@ -244,6 +250,11 @@ export function UploadForm() {
                 file_name: file.name,
                 storage_path: storagePath,
                 public_url: publicUrl,
+                page_count: pageCount ? parseInt(pageCount, 10) : null,
+                reference_count: referenceCount
+                  ? parseInt(referenceCount, 10)
+                  : null,
+                file_size: file.size, // Use individual file size
               },
             ]);
           } catch (uploadError: any) {
@@ -406,14 +417,22 @@ export function UploadForm() {
                   type="file"
                   multiple
                   onChange={(e) => {
-                    if (e.target.files) {
-                      setDocumentFiles(Array.from(e.target.files));
+                    const files = e.target.files;
+                    if (files) {
+                      const fileArray = Array.from(files);
+                      setDocumentFiles(fileArray);
+                      // Set file size from the first file for display
+                      if (fileArray.length > 0) {
+                        setFileSize(fileArray[0].size);
+                      } else {
+                        setFileSize(null);
+                      }
                     }
                   }}
                   className="mt-1"
                 />
                 {documentFiles.length > 0 && (
-                  <div className="mt-2 text-sm text-gray-500">
+                  <div className="mt-2 text-sm text-gray-500 space-y-1">
                     <p>{documentFiles.length} arquivo(s) selecionado(s):</p>
                     <ul className="list-disc pl-5">
                       {documentFiles.map((file, index) => (
@@ -423,6 +442,45 @@ export function UploadForm() {
                   </div>
                 )}
               </div>
+
+              {/* Campos de metadados para documentos */}
+              {documentFiles.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t pt-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="page_count">Nº de Páginas</Label>
+                    <Input
+                      id="page_count"
+                      type="number"
+                      value={pageCount}
+                      onChange={(e) => setPageCount(e.target.value)}
+                      placeholder="Ex: 10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reference_count">Nº de Referências</Label>
+                    <Input
+                      id="reference_count"
+                      type="number"
+                      value={referenceCount}
+                      onChange={(e) => setReferenceCount(e.target.value)}
+                      placeholder="Ex: 5"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="file_size">Tamanho do Arquivo</Label>
+                    <Input
+                      id="file_size"
+                      type="text"
+                      disabled
+                      value={
+                        fileSize
+                          ? (fileSize / (1024 * 1024)).toFixed(2)
+                          : "0.00"
+                      }
+                    />
+                  </div>
+                </div>
+              )}
               <div>
                 <Label htmlFor="published-at">Data de Publicação</Label>
                 <Input

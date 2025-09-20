@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
 import { Play, Users, Database, Cloud } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Skeleton } from "../../ui/skeleton";
 import { Progress } from "../../ui/progress";
 
@@ -16,6 +17,15 @@ interface StorageStats {
 interface AdminStatsProps {
   episodeCount: number;
   userCount: number;
+}
+
+interface StatItem {
+  title: string;
+  value?: string;
+  storage?: StorageStats | null;
+  icon: LucideIcon; // ou React.ElementType
+  color: string;
+  isLoading: boolean;
 }
 
 export function AdminStats({ episodeCount, userCount }: AdminStatsProps) {
@@ -49,7 +59,7 @@ export function AdminStats({ episodeCount, userCount }: AdminStatsProps) {
       title: "Total de Episódios",
       value: episodeCount.toString(),
       icon: Play,
-      color: "text-blue-600",
+      color: "stroke-blue-600",
       isLoading: false,
     },
     {
@@ -81,7 +91,7 @@ export function AdminStats({ episodeCount, userCount }: AdminStatsProps) {
         <Card key={stat.title}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-            <stat.icon className={`h-4 w-4 ${stat.color}`} />
+            <stat.icon className={`h-4 w-4 stroke-[2px] ${stat.color}`} />
           </CardHeader>
           <CardContent>
             {stat.isLoading ? (

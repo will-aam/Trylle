@@ -161,9 +161,6 @@ export function EpisodeManager() {
           <h2 className="text-3xl font-bold text-foreground text-balance">
             Gerenciador de Episódios
           </h2>
-          <p className="text-muted-foreground mt-2">
-            Um centro de comando para todo o seu conteúdo de áudio.
-          </p>
         </div>
       </div>
 
