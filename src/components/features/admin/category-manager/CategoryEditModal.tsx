@@ -26,7 +26,9 @@ export function CategoryEditModal({
   category,
   isLoading,
 }: CategoryEditModalProps) {
-  const defaultValues = category ? { name: category.name } : undefined;
+  const defaultValues = {
+    name: category?.name ?? "",
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

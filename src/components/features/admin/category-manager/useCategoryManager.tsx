@@ -83,7 +83,6 @@ export function useCategoryManager() {
   }, [fetchData]);
 
   const sortedCategories = useMemo(() => {
-    // A ordenação já é feita no backend, mas podemos manter uma ordenação no cliente como fallback
     return [...categories].sort((a, b) => {
       if (sortType === "name") {
         return sortOrder === "asc"
