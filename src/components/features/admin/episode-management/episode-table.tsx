@@ -79,63 +79,113 @@ export function EpisodeTable({
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
+  const columns = [
+    {
+      id: "thumbnail",
+      header: "",
+      width: "w-12",
+      cell: () => <div className="w-12"></div>,
+    },
+    {
+      id: "status",
+      header: "Status",
+      width: "min-w-[100px] flex-1",
+      cell: (episode: Episode) => getStatusBadge(episode.status),
+    },
+    {
+      id: "title",
+      header: "Título",
+      width: "min-w-[250px] flex-1",
+      cell: (episode: Episode) => (
+        <div className="font-medium truncate max-w-xs">{episode.title}</div>
+      ),
+    },
+    {
+      id: "duration",
+      header: "Duração",
+      width: "min-w-[100px] flex-1",
+      className: "hidden md:flex",
+      cell: (episode: Episode) => (
+        <>
+          {episode.duration_in_seconds
+            ? formatTime(episode.duration_in_seconds)
+            : "--:--"}
+        </>
+      ),
+    },
+    {
+      id: "category",
+      header: "Categoria",
+      width: "min-w-[150px] flex-1",
+      className: "hidden md:flex",
+      cell: (episode: Episode) => <>{episode.categories?.name || "N/A"}</>,
+    },
+    {
+      id: "published_at",
+      header: "Data",
+      width: "min-w-[150px] flex-1",
+      className: "hidden xl:flex",
+      isSortable: true,
+      cell: (episode: Episode) => <>{formatDate(episode.published_at)}</>,
+    },
+    {
+      id: "view_count",
+      header: "Visualizações",
+      width: "min-w-[120px] flex-1",
+      className: "hidden md:flex",
+      isSortable: true,
+      cell: (episode: Episode) => <>{episode.view_count}</>,
+    },
+    {
+      id: "actions",
+      header: "Ações",
+      width: "w-24",
+      cell: (episode: Episode) => (
+        <EpisodeActions episode={episode} onEpisodeUpdate={onEpisodeUpdate} />
+      ),
+    },
+  ];
 
   return (
     <Card>
       <CardContent className="p-0">
-        <div
-          ref={parentRef}
-          className="overflow-auto"
-          style={{ height: "600px" }}
-        >
-          <table className="w-full" style={{ tableLayout: "fixed" }}>
-            <thead>
-              <tr className="border-b border-border">
-                <th className="p-4 w-12"></th>
-                <th className="text-left p-4 font-medium text-muted-foreground">
-                  Status
-                </th>
-                <th className="text-left p-4 font-medium text-muted-foreground">
-                  Título
-                </th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
-                  Duração
-                </th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
-                  Categoria
-                </th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">
-                  <Button
-                    variant="ghost"
-                    onClick={() => onSort("published_at")}
-                    className={`px-0 hover:bg-transparent ${
-                      sortColumn === "published_at" ? "text-primary" : ""
-                    }`}
+        <div ref={parentRef} className="overflow-auto max-h-[50vh]">
+          <div style={{ height: `${rowVirtualizer.getTotalSize()}px` }}>
+            <div className="flex items-center border-b border-border sticky top-0 bg-card z-10">
+              {columns.map((column) =>
+                column.isSortable ? (
+                  <div
+                    key={column.id}
+                    className={`py-2 px-4 font-medium text-muted-foreground flex items-center ${
+                      column.width
+                    } ${column.className || ""}`}
                   >
-                    Data
-                    <span className="ml-2">
-                      {renderSortIcon("published_at")}
-                    </span>
-                  </Button>
-                </th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
-                  <Button
-                    variant="ghost"
-                    onClick={() => onSort("view_count")}
-                    className={`px-0 hover:bg-transparent ${
-                      sortColumn === "view_count" ? "text-primary" : ""
-                    }`}
+                    <Button
+                      variant="ghost"
+                      onClick={() => onSort(column.id as keyof Episode)}
+                      className={`px-0 hover:bg-transparent ${
+                        sortColumn === column.id ? "text-primary" : ""
+                      }`}
+                    >
+                      {column.header}
+                      <span className="ml-0.1">
+                        {renderSortIcon(column.id as keyof Episode)}
+                      </span>
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    key={column.id}
+                    className={`py-2 px-4 font-medium text-muted-foreground ${
+                      column.width
+                    } ${column.className || ""}`}
                   >
-                    Visualizações
-                    <span className="ml-2">{renderSortIcon("view_count")}</span>
-                  </Button>
-                </th>
-                <th className="text-left p-4 font-medium text-muted-foreground">
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody
+                    {column.header}
+                  </div>
+                )
+              )}
+            </div>
+            <div
               style={{
                 height: `${rowVirtualizer.getTotalSize()}px`,
                 position: "relative",
@@ -144,7 +194,7 @@ export function EpisodeTable({
               {rowVirtualizer.getVirtualItems().map((virtualItem) => {
                 const episode = episodes[virtualItem.index];
                 return (
-                  <tr
+                  <div
                     key={episode.id}
                     style={{
                       position: "absolute",
@@ -154,40 +204,23 @@ export function EpisodeTable({
                       height: `${virtualItem.size}px`,
                       transform: `translateY(${virtualItem.start}px)`,
                     }}
-                    className="border-b border-border hover:bg-muted/50"
+                    className="flex items-center border-b border-border hover:bg-muted/50"
                   >
-                    <td className="p-4"></td>
-                    <td className="p-4">{getStatusBadge(episode.status)}</td>
-                    <td className="p-4">
-                      <div className="font-medium truncate max-w-xs">
-                        {episode.title}
+                    {columns.map((column) => (
+                      <div
+                        key={column.id}
+                        className={`py-2 px-4 flex items-center ${
+                          column.width
+                        } ${column.className || ""}`}
+                      >
+                        {column.cell(episode)}
                       </div>
-                    </td>
-                    <td className="p-4 hidden md:table-cell">
-                      {episode.duration_in_seconds
-                        ? formatTime(episode.duration_in_seconds)
-                        : "--:--"}
-                    </td>
-                    <td className="p-4 hidden md:table-cell">
-                      {episode.categories?.name || "N/A"}
-                    </td>
-                    <td className="p-4 text-sm hidden xl:table-cell">
-                      {formatDate(episode.published_at)}
-                    </td>
-                    <td className="p-4 hidden md:table-cell">
-                      {episode.view_count}
-                    </td>
-                    <td className="p-4">
-                      <EpisodeActions
-                        episode={episode}
-                        onEpisodeUpdate={onEpisodeUpdate}
-                      />
-                    </td>
-                  </tr>
+                    ))}
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
