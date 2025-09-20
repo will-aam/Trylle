@@ -216,10 +216,10 @@ export function EpisodeActions({
 
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              episode and all its audio and document files.
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente o
+              episódio e todos os seus arquivos de áudio e documentos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
