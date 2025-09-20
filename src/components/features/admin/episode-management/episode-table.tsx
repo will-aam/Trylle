@@ -49,27 +49,26 @@ export function EpisodeTable({
   const getStatusBadge = (status: Episode["status"]) => {
     switch (status) {
       case "published":
-      case "publicado":
         return (
           <Badge variant="default" className="bg-green-600 hover:bg-green-700">
-            Publicado
+            Published
           </Badge>
         );
       case "draft":
-        return <Badge variant="secondary">Rascunho</Badge>;
+        return <Badge variant="secondary">Draft</Badge>;
       case "scheduled":
         return (
-          <Badge variant="outline" className="border-blue-500 text-blue-500">
-            Agendado
+          <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
+            Scheduled
           </Badge>
         );
       case "archived":
         return (
           <Badge
-            variant="destructive"
-            className="bg-gray-500 hover:bg-gray-600"
+            variant="default"
+            className="bg-yellow-500 hover:bg-yellow-600 text-black"
           >
-            Arquivado
+            Archived
           </Badge>
         );
       default:
@@ -101,7 +100,7 @@ export function EpisodeTable({
                     onClick={() => onSort("title")}
                     className="px-0 hover:bg-transparent"
                   >
-                    Título
+                    Title
                     <span className="ml-2">{renderSortIcon("title")}</span>
                   </Button>
                 </th>
@@ -111,14 +110,14 @@ export function EpisodeTable({
                     onClick={() => onSort("duration_in_seconds")}
                     className="px-0 hover:bg-transparent"
                   >
-                    Duração
+                    Duration
                     <span className="ml-2">
                       {renderSortIcon("duration_in_seconds")}
                     </span>
                   </Button>
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
-                  Categoria
+                  Category
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">
                   Tags
@@ -129,14 +128,14 @@ export function EpisodeTable({
                     onClick={() => onSort("published_at")}
                     className="px-0 hover:bg-transparent"
                   >
-                    Data
+                    Date
                     <span className="ml-2">
                       {renderSortIcon("published_at")}
                     </span>
                   </Button>
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground">
-                  Ações
+                  Actions
                 </th>
               </tr>
             </thead>

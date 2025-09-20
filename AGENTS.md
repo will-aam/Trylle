@@ -23,7 +23,7 @@ Estes comandos adicionam funcionalidades específicas ao projeto.
    _O que faz:_ Instala a biblioteca principal do Supabase para comunicação com o banco de dados (buscar, inserir, deletar dados, etc.).
 
 2. **`pnpm install @supabase/auth-helpers-nextjs @supabase/auth-ui-react`**  
-   _O que faz:_ Instala pacotes auxiliares do Supabase para facilitar a autenticação (login, cadastro) em Next.js.
+   _O que faz:_ Instala pacotes auxiliares do Supabase para facilitar a autenticação (login, cadastro) em Next.js. **(antigo não usar)**
 
 3. **`pnpm install @supabase/auth-ui-shared`**  
    _O que faz:_ Adiciona a biblioteca com temas visuais (`ThemeSupa`) para o componente de autenticação do Supabase.

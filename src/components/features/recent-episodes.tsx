@@ -1,32 +1,14 @@
 import { EpisodeCard } from "./episode-card";
 import { Episode } from "@/src/lib/types";
 
-const mockRecentEpisodes: Episode[] = [
-  {
-    id: "4",
-    title: "Blockchain e Criptomoedas Explicadas",
-    description: "Entenda a tecnologia por trás das moedas digitais",
-    imageUrl: "/Whisk_dbc581f98f.jpg?height=200&width=300&text=Episódio+4",
-    categories: { name: "Tecnologia" },
-    audio_url: "",
-    file_name: "",
-    category_id: null,
-    subcategory_id: null,
-    published_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    status: "published",
-    tags: [],
-    duration_in_seconds: null, // Adicione esta linha
-  },
-  // (faça o mesmo para os outros objetos no array)
-  // ...
-];
+interface RecentEpisodesProps {
+  episodes: Episode[];
+}
 
-export function RecentEpisodes() {
+export function RecentEpisodes({ episodes }: RecentEpisodesProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {mockRecentEpisodes.map((episode) => (
+      {episodes.map((episode) => (
         <EpisodeCard key={episode.id} episode={episode} />
       ))}
     </div>

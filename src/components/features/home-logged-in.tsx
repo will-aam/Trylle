@@ -1,29 +1,31 @@
 import { FeaturedEpisodes } from "@/src/components/features/featured-episodes";
 import { RecentEpisodes } from "@/src/components/features/recent-episodes";
-import { CategoryCarousel } from "./category-carousel"; // 1. Importa o carrossel
+import { CategoryCarousel } from "./category-carousel";
+import { Episode } from "@/src/lib/types";
 
-export function HomeLoggedIn() {
+interface HomeLoggedInProps {
+  publishedEpisodes: Episode[];
+}
+
+export function HomeLoggedIn({ publishedEpisodes }: HomeLoggedInProps) {
   return (
     <div className="space-y-12">
       <section>
         <h2 className="text-2xl font-bold tracking-tight mb-4">
-          Tocado recentemente
+          Recently Played
         </h2>
-        <RecentEpisodes />
+        <RecentEpisodes episodes={publishedEpisodes} />
       </section>
 
-      {/* 2. Adiciona a nova seção de categorias aqui */}
       <section>
         <h2 className="text-2xl font-bold tracking-tight mb-4">
-          Navegar por Categorias
+          Browse Categories
         </h2>
         <CategoryCarousel />
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold tracking-tight mb-4">
-          Feito para Você
-        </h2>
+        <h2 className="text-2xl font-bold tracking-tight mb-4">Made for You</h2>
         <FeaturedEpisodes />
       </section>
     </div>

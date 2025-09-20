@@ -135,8 +135,7 @@ export function UploadForm() {
   };
 
   // FUNÇÃO MODIFICADA
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (status: "draft" | "scheduled" | "published") => {
     if (!audioFile || !formData.title.trim()) {
       toast({
         title: "Campos obrigatórios",
@@ -190,6 +189,7 @@ export function UploadForm() {
             subcategory_id: formData.subcategoryId || null,
             published_at: new Date(formData.publishedAt).toISOString(),
             duration_in_seconds: audioDuration, // DADO ADICIONADO
+            status: status,
           },
         ])
         .select()
@@ -295,11 +295,7 @@ export function UploadForm() {
 
   return (
     // 3. Aplicando a chave ao formulário
-    <form
-      onSubmit={handleSubmit}
-      key={formKey}
-      className="h-full flex flex-col"
-    >
+    <form key={formKey} className="h-full flex flex-col">
       <Card className="flex-1 flex flex-col overflow-hidden">
         <CardHeader className="border-b">
           <CardTitle className="flex items-center gap-2">
@@ -499,19 +495,36 @@ export function UploadForm() {
         <CardFooter className="border-t pt-6">
           <div className="w-full md:w-auto ml-auto flex flex-col md:flex-row gap-2">
             <Button
-              type="submit"
+              type="button"
+              variant="outline"
+              onClick={() => handleSubmit("draft")}
+              disabled={uploadStatus !== "idle"}
+            >
+              Criar rascunho
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => handleSubmit("scheduled")}
+              disabled={uploadStatus !== "idle"}
+            >
+              Agendar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => handleSubmit("published")}
               disabled={uploadStatus !== "idle"}
               className={cn({
                 "bg-green-600 hover:bg-green-700": uploadStatus === "success",
               })}
             >
-              {uploadStatus === "uploading" && "Enviando..."}
+              {uploadStatus === "uploading" && "Processing..."}
               {uploadStatus === "success" && (
                 <>
-                  <CheckCircle className="mr-2 h-4 w-4" /> Enviado com Sucesso!
+                  <CheckCircle className="mr-2 h-4 w-4" /> Success!
                 </>
               )}
-              {uploadStatus === "idle" && "Enviar Episódio"}
+              {uploadStatus === "idle" && "Publicar"}
             </Button>
           </div>
         </CardFooter>

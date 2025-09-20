@@ -5,82 +5,31 @@ import { ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
+import { Episode } from "@/src/lib/types";
 
-interface Episode {
-  id: number;
-  title: string;
-  category: string;
-  date: string;
-  time: string;
-  description: string;
+interface UpcomingEpisodesCarouselProps {
+  episodes: Episode[];
 }
 
-const upcomingEpisodes: Episode[] = [
-  {
-    id: 1,
-    title: "Ep. 1 - Biotipo",
-    category: "Saúde",
-    date: "15 Jan",
-    time: "14:00",
-    description:
-      "Descubra como identificar seu biotipo e otimizar sua alimentação",
-  },
-  {
-    id: 2,
-    title: "Ep. 2 - Mindfulness",
-    category: "Bem-estar",
-    date: "16 Jan",
-    time: "16:00",
-    description: "Técnicas de mindfulness para reduzir o estresse do dia a dia",
-  },
-  {
-    id: 3,
-    title: "Ep. 3 - Investimentos",
-    category: "Finanças",
-    date: "17 Jan",
-    time: "10:00",
-    description: "Primeiros passos para começar a investir com segurança",
-  },
-  {
-    id: 4,
-    title: "Ep. 4 - Produtividade",
-    category: "Carreira",
-    date: "18 Jan",
-    time: "15:00",
-    description: "Métodos comprovados para aumentar sua produtividade",
-  },
-  {
-    id: 5,
-    title: "Ep. 5 - Relacionamentos",
-    category: "Psicologia",
-    date: "19 Jan",
-    time: "17:00",
-    description: "Como construir relacionamentos mais saudáveis e duradouros",
-  },
-  {
-    id: 6,
-    title: "Ep. 6 - Tecnologia",
-    category: "Inovação",
-    date: "20 Jan",
-    time: "11:00",
-    description: "As últimas tendências em tecnologia que vão mudar o mundo",
-  },
-];
-
-export function UpcomingEpisodesCarousel() {
+export function UpcomingEpisodesCarousel({
+  episodes: upcomingEpisodes,
+}: UpcomingEpisodesCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
-  // Auto-play functionality
   useEffect(() => {
-    if (!isAutoPlaying) return;
+    if (!isAutoPlaying || upcomingEpisodes.length === 0) return;
 
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % upcomingEpisodes.length);
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [isAutoPlaying]);
+  }, [isAutoPlaying, upcomingEpisodes.length]);
+
+  if (upcomingEpisodes.length === 0) {
+    return null;
+  }
 
   const goToPrevious = () => {
     setCurrentIndex((prev) =>
@@ -107,16 +56,31 @@ export function UpcomingEpisodesCarousel() {
     return episodes;
   };
 
+  const formatPublishedAt = (dateString: string) => {
+    const date = new Date(dateString);
+    const day = date.toLocaleDateString("en-US", { day: "2-digit" });
+    const month = date.toLocaleDateString("en-US", { month: "short" });
+    const time = date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return {
+      date: `${day} ${month}`,
+      time: time,
+    };
+  };
+
   return (
     <section className="py-16 md:py-24 bg-muted/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Próximos Episódios
+            Upcoming Episodes
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Não perca os próximos lançamentos. Episódios cuidadosamente
-            preparados com conteúdo de qualidade.
+            Don't miss the next releases. Episodes carefully prepared with
+            quality content.
           </p>
         </div>
 
@@ -127,6 +91,7 @@ export function UpcomingEpisodesCarousel() {
               {getVisibleEpisodes().map((episode, idx) => {
                 const isCenter = episode.position === 0;
                 const isVisible = Math.abs(episode.position) <= 2;
+                const { date, time } = formatPublishedAt(episode.published_at);
 
                 return (
                   <Card
@@ -145,7 +110,7 @@ export function UpcomingEpisodesCarousel() {
                     <CardContent className="p-6 h-full flex flex-col justify-between">
                       <div>
                         <Badge variant="secondary" className="mb-3">
-                          {episode.category}
+                          {episode.categories?.name || "No Category"}
                         </Badge>
                         <h3 className="font-semibold text-lg mb-2 line-clamp-2">
                           {episode.title}
@@ -157,11 +122,11 @@ export function UpcomingEpisodesCarousel() {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
-                          {episode.date}
+                          {date}
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="w-4 h-4" />
-                          {episode.time}
+                          {time}
                         </div>
                       </div>
                     </CardContent>
@@ -178,7 +143,8 @@ export function UpcomingEpisodesCarousel() {
                 <CardContent className="p-6 h-full flex flex-col justify-between">
                   <div>
                     <Badge variant="secondary" className="mb-3">
-                      {upcomingEpisodes[currentIndex].category}
+                      {upcomingEpisodes[currentIndex].categories?.name ||
+                        "No Category"}
                     </Badge>
                     <h3 className="font-semibold text-lg mb-2">
                       {upcomingEpisodes[currentIndex].title}
@@ -190,11 +156,19 @@ export function UpcomingEpisodesCarousel() {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
-                      {upcomingEpisodes[currentIndex].date}
+                      {
+                        formatPublishedAt(
+                          upcomingEpisodes[currentIndex].published_at
+                        ).date
+                      }
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
-                      {upcomingEpisodes[currentIndex].time}
+                      {
+                        formatPublishedAt(
+                          upcomingEpisodes[currentIndex].published_at
+                        ).time
+                      }
                     </div>
                   </div>
                 </CardContent>

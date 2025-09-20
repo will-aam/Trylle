@@ -71,7 +71,7 @@ export function EpisodeActions({
       });
 
       if (!audioDeleteResponse.ok) {
-        console.warn(`Falha ao deletar o arquivo de áudio: ${audioKey}`);
+        console.warn(`Failed to delete audio file: ${audioKey}`);
       }
 
       // 3. CORREÇÃO FINAL: Buscar na tabela correta "episode_documents"
@@ -90,7 +90,7 @@ export function EpisodeActions({
               body: JSON.stringify({ fileKey: doc.storage_path }),
             });
             if (!docDeleteResponse.ok) {
-              console.warn(`Falha ao deletar o documento: ${doc.storage_path}`);
+              console.warn(`Failed to delete document: ${doc.storage_path}`);
             }
           }
         }
@@ -107,48 +107,42 @@ export function EpisodeActions({
       }
 
       toast({
-        title: "Episódio excluído",
-        description: "O episódio e todos os seus arquivos foram removidos.",
+        title: "Episode deleted",
+        description: "The episode and all its files have been removed.",
       });
 
       onEpisodeUpdate();
     } catch (error: any) {
       toast({
-        title: "Erro ao excluir",
+        title: "Error deleting",
         description:
           error.message ||
-          "Não foi possível excluir o episódio. Verifique o console para mais detalhes.",
+          "Could not delete the episode. Check the console for more details.",
         variant: "destructive",
       });
     }
   };
 
-  const handleArchive = async () => {
-    if (episode.status === "draft") {
-      toast({
-        title: "Sem alterações",
-        description: "Este episódio já é um rascunho.",
-      });
-      return;
-    }
-
+  const handleStatusChange = async (
+    status: "draft" | "scheduled" | "published"
+  ) => {
     const { error } = await supabase
       .from("episodes")
-      .update({ status: "draft" })
+      .update({ status: status })
       .eq("id", episode.id);
 
     if (error) {
       toast({
-        title: "Erro ao arquivar",
+        title: `Error updating status`,
         description: error.message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Episódio arquivado",
-        description: `"${episode.title}" foi movido para rascunhos.`,
+        title: "Episode status updated",
+        description: `The episode is now ${status}.`,
       });
-      onEpisodeUpdate(); // Atualiza a lista de episódios
+      onEpisodeUpdate();
     }
   };
 
@@ -164,37 +158,57 @@ export function EpisodeActions({
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={handlePlay}>
               <Play className="mr-2 h-4 w-4" />
-              Tocar Episódio
+              Play Episode
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setIsEditDialogOpen(true)}>
               <Edit className="mr-2 h-4 w-4" />
-              Editar
+              Edit
             </DropdownMenuItem>
-            {/* ITEM ADICIONADO - ESTÁTICO */}
-            <DropdownMenuItem
-              onSelect={(e) => e.preventDefault()}
-              className="text-muted-foreground focus:text-muted-foreground"
-            >
-              <Send className="mr-2 h-4 w-4" />
-              Publicar
-            </DropdownMenuItem>
-            {/* ITEM ADICIONADO - ESTÁTICO */}
-            <DropdownMenuItem
-              onSelect={(e) => e.preventDefault()}
-              className="text-muted-foreground focus:text-muted-foreground"
-            >
-              <Clock className="mr-2 h-4 w-4" />
-              Agendar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleArchive}>
-              <Archive className="mr-2 h-4 w-4" />
-              Arquivar
-            </DropdownMenuItem>
+
+            {episode.status === "draft" && (
+              <>
+                <DropdownMenuItem
+                  onClick={() => handleStatusChange("published")}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Publish
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleStatusChange("scheduled")}
+                >
+                  <Clock className="mr-2 h-4 w-4" />
+                  Schedule
+                </DropdownMenuItem>
+              </>
+            )}
+
+            {episode.status === "published" && (
+              <DropdownMenuItem onClick={() => handleStatusChange("draft")}>
+                <Archive className="mr-2 h-4 w-4" />
+                Convert to Draft
+              </DropdownMenuItem>
+            )}
+
+            {episode.status === "scheduled" && (
+              <>
+                <DropdownMenuItem
+                  onClick={() => handleStatusChange("published")}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Publicar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleStatusChange("draft")}>
+                  <Clock className="mr-2 h-4 w-4" />
+                  Cancel Schedule
+                </DropdownMenuItem>
+              </>
+            )}
+
             <DropdownMenuSeparator />
             <AlertDialogTrigger asChild>
               <DropdownMenuItem className="text-red-600">
                 <Trash2 className="mr-2 h-4 w-4" />
-                Excluir
+                Delete
               </DropdownMenuItem>
             </AlertDialogTrigger>
           </DropdownMenuContent>
@@ -202,16 +216,16 @@ export function EpisodeActions({
 
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              Essa ação não pode ser desfeita. Isso excluirá permanentemente o
-              episódio e todos os seus arquivos de áudio e documentos.
+              This action cannot be undone. This will permanently delete the
+              episode and all its audio and document files.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete}>
-              Continuar
+              Continue
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
