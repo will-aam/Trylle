@@ -206,13 +206,13 @@ export function EpisodeActions({
 
             <DropdownMenuItem onClick={handleAudioDownload}>
               <Download className="mr-2 h-4 w-4" />
-              Download Audio
+              Download do Audio
             </DropdownMenuItem>
 
             <DropdownMenuSub>
               <DropdownMenuSubTrigger onMouseEnter={fetchDocuments}>
                 <FileText className="mr-2 h-4 w-4" />
-                Download Document
+                Download do documento
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 {documents.length > 0 ? (
