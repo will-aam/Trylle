@@ -2,12 +2,13 @@
 
 import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
-// import { Checkbox } from "@/src/components/ui/checkbox";
 import { EpisodeActions } from "./episode-actions";
 import { Episode, SortDirection } from "@/src/lib/types";
 import { formatTime } from "@/src/lib/utils";
 import { ChevronsUpDown, ArrowDown, ArrowUp } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useRef } from "react";
 
 interface EpisodeTableProps {
   episodes: Episode[];
@@ -26,6 +27,15 @@ export function EpisodeTable({
   sortColumn,
   sortDirection,
 }: EpisodeTableProps) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: episodes.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 65,
+    overscan: 5,
+  });
+
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("pt-BR", {
@@ -73,8 +83,12 @@ export function EpisodeTable({
   return (
     <Card>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div
+          ref={parentRef}
+          className="overflow-auto"
+          style={{ height: "600px" }}
+        >
+          <table className="w-full" style={{ tableLayout: "fixed" }}>
             <thead>
               <tr className="border-b border-border">
                 <th className="p-4 w-12"></th>
@@ -121,41 +135,57 @@ export function EpisodeTable({
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {episodes.map((episode) => (
-                <tr
-                  key={episode.id}
-                  className="border-b border-border hover:bg-muted/50"
-                >
-                  <td className="p-4"></td>
-                  <td className="p-4">{getStatusBadge(episode.status)}</td>
-                  <td className="p-4">
-                    <div className="font-medium truncate max-w-xs">
-                      {episode.title}
-                    </div>
-                  </td>
-                  <td className="p-4 hidden md:table-cell">
-                    {episode.duration_in_seconds
-                      ? formatTime(episode.duration_in_seconds)
-                      : "--:--"}
-                  </td>
-                  <td className="p-4 hidden md:table-cell">
-                    {episode.categories?.name || "N/A"}
-                  </td>
-                  <td className="p-4 text-sm hidden xl:table-cell">
-                    {formatDate(episode.published_at)}
-                  </td>
-                  <td className="p-4 hidden md:table-cell">
-                    {episode.view_count}
-                  </td>
-                  <td className="p-4">
-                    <EpisodeActions
-                      episode={episode}
-                      onEpisodeUpdate={onEpisodeUpdate}
-                    />
-                  </td>
-                </tr>
-              ))}
+            <tbody
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                position: "relative",
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                const episode = episodes[virtualItem.index];
+                return (
+                  <tr
+                    key={episode.id}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: `${virtualItem.size}px`,
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                    className="border-b border-border hover:bg-muted/50"
+                  >
+                    <td className="p-4"></td>
+                    <td className="p-4">{getStatusBadge(episode.status)}</td>
+                    <td className="p-4">
+                      <div className="font-medium truncate max-w-xs">
+                        {episode.title}
+                      </div>
+                    </td>
+                    <td className="p-4 hidden md:table-cell">
+                      {episode.duration_in_seconds
+                        ? formatTime(episode.duration_in_seconds)
+                        : "--:--"}
+                    </td>
+                    <td className="p-4 hidden md:table-cell">
+                      {episode.categories?.name || "N/A"}
+                    </td>
+                    <td className="p-4 text-sm hidden xl:table-cell">
+                      {formatDate(episode.published_at)}
+                    </td>
+                    <td className="p-4 hidden md:table-cell">
+                      {episode.view_count}
+                    </td>
+                    <td className="p-4">
+                      <EpisodeActions
+                        episode={episode}
+                        onEpisodeUpdate={onEpisodeUpdate}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -65,3 +65,5 @@ pnpm adicionar @tiptap/core @tiptap/react
 pnpm install @hookform/resolvers
 
 pnpm install @tanstack/react-table
+
+@tanstack/react-virtual
