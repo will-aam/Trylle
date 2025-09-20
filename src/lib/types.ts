@@ -7,7 +7,7 @@ export type Episode = {
   file_name: string;
   category_id: string | null;
   subcategory_id: string | null;
-  status: "draft" | "scheduled" | "published" | "archived";
+  status: "draft" | "scheduled" | "published";
   tags: any[]; // Usando 'any[]' para acomodar a estrutura aninhada por enquanto
   published_at: string;
   created_at: string;

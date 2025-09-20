@@ -1,5 +1,5 @@
 -- Creates the ENUM type for the status
-CREATE TYPE episode_status AS ENUM ('draft', 'scheduled', 'published', 'archived');
+CREATE TYPE episode_status AS ENUM ('draft', 'scheduled', 'published');
 
 -- Adds the new column to the episodes table
 ALTER TABLE episodes

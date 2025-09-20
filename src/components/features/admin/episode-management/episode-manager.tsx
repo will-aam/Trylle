@@ -137,7 +137,9 @@ export function EpisodeManager() {
   };
 
   const hasActiveFilters =
-    Boolean(searchTerm) || statusFilter.length > 0 || categoryFilter.length > 0;
+    Boolean(debouncedSearchTerm) ||
+    statusFilter.length > 0 ||
+    categoryFilter.length > 0;
 
   if (loading && episodes.length === 0) {
     return (

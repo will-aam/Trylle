@@ -29,7 +29,6 @@ const statusOptions = [
   { value: "published", label: "Publicado" },
   { value: "draft", label: "Rascunho" },
   { value: "scheduled", label: "Agendado" },
-  { value: "archived", label: "Arquivado" },
 ];
 
 export function EpisodeFilters({

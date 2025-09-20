@@ -236,13 +236,13 @@ export function EpisodeActions({
                   onClick={() => handleStatusChange("published")}
                 >
                   <Send className="mr-2 h-4 w-4" />
-                  Publish
+                  Publicar
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleStatusChange("scheduled")}
                 >
                   <Clock className="mr-2 h-4 w-4" />
-                  Schedule
+                  Agendar
                 </DropdownMenuItem>
               </>
             )}
@@ -250,7 +250,7 @@ export function EpisodeActions({
             {episode.status === "published" && (
               <DropdownMenuItem onClick={() => handleStatusChange("draft")}>
                 <Archive className="mr-2 h-4 w-4" />
-                Convert to Draft
+                Converter para rascunho
               </DropdownMenuItem>
             )}
 
@@ -264,7 +264,7 @@ export function EpisodeActions({
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleStatusChange("draft")}>
                   <Clock className="mr-2 h-4 w-4" />
-                  Cancel Schedule
+                  Cancelar agendamento
                 </DropdownMenuItem>
               </>
             )}
@@ -273,7 +273,7 @@ export function EpisodeActions({
             <AlertDialogTrigger asChild>
               <DropdownMenuItem className="text-red-600">
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                Deletar
               </DropdownMenuItem>
             </AlertDialogTrigger>
           </DropdownMenuContent>
