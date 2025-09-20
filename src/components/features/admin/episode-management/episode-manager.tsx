@@ -10,8 +10,7 @@ import { createClient } from "@/src/lib/supabase-client";
 import { Episode, Category, SortDirection } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";
 import { EpisodeTablePagination } from "./episode-table-pagination";
-
-const ITEMS_PER_PAGE = 5;
+import { Skeleton } from "@/src/components/ui/skeleton";
 
 export function EpisodeManager() {
   const supabase = createClient();
@@ -26,6 +25,7 @@ export function EpisodeManager() {
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortColumn, setSortColumn] = useState<keyof Episode | "">(
     "published_at"
   );
@@ -53,8 +53,8 @@ export function EpisodeManager() {
   const fetchEpisodesAndCategories = useCallback(async () => {
     setLoading(true);
     try {
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
 
       let episodeQuery = supabase
         .from("episodes")
@@ -112,6 +112,7 @@ export function EpisodeManager() {
     categoryFilter,
     sortColumn,
     sortDirection,
+    itemsPerPage,
   ]);
 
   useEffect(() => {
@@ -126,6 +127,7 @@ export function EpisodeManager() {
     categoryFilter,
     sortColumn,
     sortDirection,
+    itemsPerPage,
   ]);
 
   const clearFilters = () => {
@@ -149,8 +151,20 @@ export function EpisodeManager() {
             <h2 className="text-3xl font-bold text-foreground text-balance">
               Gerenciador de Episódios
             </h2>
-            <p className="text-muted-foreground mt-2">Carregando dados...</p>
+            <p className="text-muted-foreground mt-2">
+              Carregando dados, por favor aguarde...
+            </p>
           </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-40 w-full" />
         </div>
       </div>
     );
@@ -199,8 +213,9 @@ export function EpisodeManager() {
           <EpisodeTablePagination
             currentPage={currentPage}
             totalCount={totalEpisodes}
-            itemsPerPage={ITEMS_PER_PAGE}
+            itemsPerPage={itemsPerPage}
             onPageChange={setCurrentPage}
+            setItemsPerPage={setItemsPerPage}
           />
         </>
       ) : (
