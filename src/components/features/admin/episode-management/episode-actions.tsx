@@ -6,6 +6,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/src/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -27,11 +30,13 @@ import {
   Trash2,
   Send,
   Clock,
+  Download,
+  FileText,
 } from "lucide-react";
 import { useState } from "react";
 import { usePlayer } from "@/src/hooks/use-player";
 import { useToast } from "@/src/hooks/use-toast";
-import { Episode } from "@/src/lib/types";
+import { Episode, EpisodeDocument } from "@/src/lib/types";
 import { EditEpisodeDialog } from "./edit-episode-dialog";
 import { createClient } from "@/src/lib/supabase-client";
 
@@ -48,6 +53,31 @@ export function EpisodeActions({
   const { setEpisode } = usePlayer();
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [documents, setDocuments] = useState<EpisodeDocument[]>([]);
+  const [documentsFetched, setDocumentsFetched] = useState(false);
+
+  const fetchDocuments = async () => {
+    if (documentsFetched) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("episode_documents")
+        .select("*")
+        .eq("episode_id", episode.id);
+
+      if (error) {
+        throw error;
+      }
+      setDocuments(data || []);
+      setDocumentsFetched(true);
+    } catch (error: any) {
+      toast({
+        title: "Error fetching documents",
+        description: error.message || "Could not fetch episode documents.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handlePlay = () => {
     setEpisode(episode);
@@ -55,6 +85,15 @@ export function EpisodeActions({
       title: "Playback started",
       description: episode.title,
     });
+  };
+
+  const handleAudioDownload = () => {
+    const link = document.createElement("a");
+    link.href = episode.audio_url;
+    link.download = episode.title;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleDelete = async () => {
@@ -164,6 +203,32 @@ export function EpisodeActions({
               <Edit className="mr-2 h-4 w-4" />
               Edit
             </DropdownMenuItem>
+
+            <DropdownMenuItem onClick={handleAudioDownload}>
+              <Download className="mr-2 h-4 w-4" />
+              Download Audio
+            </DropdownMenuItem>
+
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger onMouseEnter={fetchDocuments}>
+                <FileText className="mr-2 h-4 w-4" />
+                Download Document
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                {documents.length > 0 ? (
+                  documents.map((doc) => (
+                    <DropdownMenuItem
+                      key={doc.id}
+                      onClick={() => window.open(doc.public_url, "_blank")}
+                    >
+                      {doc.file_name}
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem disabled>No documents</DropdownMenuItem>
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
 
             {episode.status === "draft" && (
               <>
