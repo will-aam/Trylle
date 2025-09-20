@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { createClient } from "@/src/lib/supabase-client";
 import { Category, Subcategory } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";
+import { categoryService } from "@/src/services/categoryService"; // Importe o serviço
 
 export function useCategoryManager() {
-  const supabase = createClient();
   const { toast } = useToast();
   const isInitialMount = useRef(true);
 
+  // ... (mantenha todos os useState daqui)
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -35,62 +35,35 @@ export function useCategoryManager() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const from = (currentPage - 1) * itemsPerPage;
-    const to = from + itemsPerPage - 1;
-
-    let query = supabase
-      .from("categories")
-      .select("*, episodes(count)", { count: "exact" });
-
-    if (debouncedSearchTerm) {
-      query = query.ilike("name", `%${debouncedSearchTerm}%`);
-    }
-
-    // A CORREÇÃO ESTÁ AQUI:
-    // Voltamos a usar a opção `foreignTable` que é a forma mais robusta
-    // de ordenar por uma contagem de uma tabela relacionada.
-    if (sortType === "name") {
-      query = query.order("name", { ascending: sortOrder === "asc" });
-    } else {
-      query = query.order("count", {
-        foreignTable: "episodes",
-        ascending: sortOrder === "asc",
+    try {
+      const { data, count } = await categoryService.fetchCategories({
+        currentPage,
+        itemsPerPage,
+        debouncedSearchTerm,
+        sortType,
+        sortOrder,
       });
-    }
-
-    const {
-      data: catData,
-      error: catError,
-      count: catCount,
-    } = await query.range(from, to);
-
-    if (catError) {
-      console.error("Error fetching data:", catError);
+      setCategories(data);
+      setTotalCount(count);
+    } catch (error: any) {
       toast({
         title: "Erro ao buscar dados",
-        description:
-          catError.message || "Não foi possível carregar a taxonomia.",
+        description: error.message,
         variant: "destructive",
       });
-    } else {
-      const categoriesWithCount = (catData || []).map((c) => ({
-        ...c,
-        episode_count: c.episodes[0]?.count || 0,
-      }));
-      setCategories(categoriesWithCount);
-      setTotalCount(catCount || 0);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [
-    supabase,
-    toast,
     currentPage,
     itemsPerPage,
     debouncedSearchTerm,
     sortType,
     sortOrder,
+    toast,
   ]);
 
+  // ... (mantenha os useEffect e o useMemo)
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(categorySearchTerm);
@@ -111,7 +84,7 @@ export function useCategoryManager() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData, currentPage]);
+  }, [fetchData]);
 
   const sortedCategories = useMemo(() => {
     return [...categories].sort((a, b) => {
@@ -129,55 +102,35 @@ export function useCategoryManager() {
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
-    const { data, error } = await supabase
-      .from("categories")
-      .insert([{ name: newCategoryName.trim() }])
-      .select()
-      .single();
-
-    if (error) {
-      toast({
-        title: "Erro ao criar categoria",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
+    try {
+      const data = await categoryService.addCategory(newCategoryName);
       setCategories(
         [...categories, data].sort((a, b) => a.name.localeCompare(b.name))
       );
       setNewCategoryName("");
       toast({ title: "Sucesso!", description: "Categoria criada." });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao criar categoria",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
-    const { error: subError } = await supabase
-      .from("subcategories")
-      .delete()
-      .eq("category_id", categoryId);
-    if (subError) {
-      toast({
-        title: "Erro ao excluir subcategorias",
-        description: subError.message,
-        variant: "destructive",
-      });
-      return;
-    }
-    const { error: catError } = await supabase
-      .from("categories")
-      .delete()
-      .eq("id", categoryId);
-    if (catError) {
-      toast({
-        title: "Erro ao excluir categoria",
-        description: catError.message,
-        variant: "destructive",
-      });
-    } else {
-      fetchData();
+    try {
+      await categoryService.deleteCategory(categoryId);
+      fetchData(); // Re-fetch para atualizar a lista
       toast({
         title: "Sucesso!",
         description: "Categoria e suas subcategorias foram excluídas.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message,
+        variant: "destructive",
       });
     }
   };
@@ -198,15 +151,24 @@ export function useCategoryManager() {
       };
       setCategories(updatedCategories);
 
-      const { data: subData, error: subError } = await supabase
-        .from("subcategories")
-        .select("*, episodes!inner(count)")
-        .eq("category_id", categoryId);
-
-      if (subError) {
+      try {
+        const subData = await categoryService.fetchSubcategories(categoryId);
+        setCategories((prevCategories) => {
+          const newCategories = [...prevCategories];
+          const catIndex = newCategories.findIndex((c) => c.id === categoryId);
+          if (catIndex !== -1) {
+            newCategories[catIndex] = {
+              ...newCategories[catIndex],
+              subcategories: subData,
+              subcategoriesLoading: false,
+            };
+          }
+          return newCategories;
+        });
+      } catch (error: any) {
         toast({
           title: "Erro ao carregar subcategorias",
-          description: subError.message,
+          description: error.message,
           variant: "destructive",
         });
         const errorCategories = [...categories];
@@ -215,24 +177,6 @@ export function useCategoryManager() {
           subcategoriesLoading: false,
         };
         setCategories(errorCategories);
-      } else {
-        const subcategoriesWithCount = (subData || []).map((s) => ({
-          ...s,
-          episode_count: s.episodes[0].count,
-        }));
-
-        setCategories((prevCategories) => {
-          const newCategories = [...prevCategories];
-          const catIndex = newCategories.findIndex((c) => c.id === categoryId);
-          if (catIndex !== -1) {
-            newCategories[catIndex] = {
-              ...newCategories[catIndex],
-              subcategories: subcategoriesWithCount,
-              subcategoriesLoading: false,
-            };
-          }
-          return newCategories;
-        });
       }
     }
   };
@@ -240,20 +184,11 @@ export function useCategoryManager() {
   const handleAddSubcategory = async (categoryId: string) => {
     const subcategoryName = newSubcategoryNames[categoryId];
     if (!subcategoryName || !subcategoryName.trim()) return;
-    const { data, error } = await supabase
-      .from("subcategories")
-      .insert([{ name: subcategoryName.trim(), category_id: categoryId }])
-      .select("*, episodes!inner(count)")
-      .single();
-
-    if (error) {
-      toast({
-        title: "Erro ao criar subcategoria",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      const newSubcategory = { ...data, episode_count: data.episodes[0].count };
+    try {
+      const newSubcategory = await categoryService.addSubcategory(
+        subcategoryName,
+        categoryId
+      );
       setCategories((prevCategories) =>
         prevCategories.map((c) =>
           c.id === categoryId
@@ -270,6 +205,12 @@ export function useCategoryManager() {
       );
       setNewSubcategoryNames({ ...newSubcategoryNames, [categoryId]: "" });
       toast({ title: "Sucesso!", description: "Subcategoria criada." });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao criar subcategoria",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -277,24 +218,11 @@ export function useCategoryManager() {
     subcategoryId: string,
     newName: string
   ) => {
-    const { data, error } = await supabase
-      .from("subcategories")
-      .update({ name: newName })
-      .eq("id", subcategoryId)
-      .select("*, episodes!inner(count)")
-      .single();
-
-    if (error) {
-      toast({
-        title: "Erro ao atualizar subcategoria",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      const updatedSubcategory = {
-        ...data,
-        episode_count: data.episodes[0].count,
-      };
+    try {
+      const updatedSubcategory = await categoryService.updateSubcategory(
+        subcategoryId,
+        newName
+      );
       setCategories((prevCategories) =>
         prevCategories.map((c) =>
           c.id === updatedSubcategory.category_id
@@ -309,6 +237,12 @@ export function useCategoryManager() {
       );
       toast({ title: "Sucesso!", description: "Subcategoria atualizada." });
       handleCloseModal();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar subcategoria",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -317,19 +251,8 @@ export function useCategoryManager() {
       .flatMap((c) => c.subcategories || [])
       .find((s) => s.id === subcategoryId);
     if (!subcategoryToDelete) return;
-
-    const { error } = await supabase
-      .from("subcategories")
-      .delete()
-      .eq("id", subcategoryId);
-
-    if (error) {
-      toast({
-        title: "Erro ao excluir subcategoria",
-        description: "Verifique se não há episódios associados a ela.",
-        variant: "destructive",
-      });
-    } else {
+    try {
+      await categoryService.deleteSubcategory(subcategoryId);
       setCategories((prevCategories) =>
         prevCategories.map((c) =>
           c.id === subcategoryToDelete.category_id
@@ -344,17 +267,13 @@ export function useCategoryManager() {
       );
       toast({ title: "Sucesso!", description: "Subcategoria excluída." });
       handleCloseModal();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir subcategoria",
+        description: error.message,
+        variant: "destructive",
+      });
     }
-  };
-
-  const handleOpenModal = (subcategory: Subcategory) => {
-    setSelectedSubcategory(subcategory);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setSelectedSubcategory(null);
-    setIsModalOpen(false);
   };
 
   const handleUpdateCategory = async () => {
@@ -373,19 +292,11 @@ export function useCategoryManager() {
       cancelEditing();
       return;
     }
-    const { data, error } = await supabase
-      .from("categories")
-      .update({ name: trimmedName })
-      .eq("id", editingCategoryId)
-      .select()
-      .single();
-    if (error) {
-      toast({
-        title: "Erro ao atualizar categoria",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
+    try {
+      const data = await categoryService.updateCategory(
+        editingCategoryId,
+        trimmedName
+      );
       setCategories(
         categories.map((c) =>
           c.id === editingCategoryId ? { ...c, ...data } : c
@@ -396,7 +307,24 @@ export function useCategoryManager() {
         description: "Categoria atualizada com sucesso!",
       });
       cancelEditing();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar categoria",
+        description: error.message,
+        variant: "destructive",
+      });
     }
+  };
+
+  // ... (mantenha o restante das funções auxiliares: handleOpenModal, handleCloseModal, startEditing, cancelEditing, handlePageChange)
+  const handleOpenModal = (subcategory: Subcategory) => {
+    setSelectedSubcategory(subcategory);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedSubcategory(null);
+    setIsModalOpen(false);
   };
 
   const startEditing = (category: Category) => {
