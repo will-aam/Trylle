@@ -94,18 +94,6 @@ export function EpisodeTable({
                   Duração
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
-                  <Button
-                    variant="ghost"
-                    onClick={() => onSort("view_count")}
-                    className={`px-0 hover:bg-transparent ${
-                      sortColumn === "view_count" ? "text-primary" : ""
-                    }`}
-                  >
-                    Visualizações
-                    <span className="ml-2">{renderSortIcon("view_count")}</span>
-                  </Button>
-                </th>
-                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
                   Categoria
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground hidden xl:table-cell">
@@ -120,6 +108,18 @@ export function EpisodeTable({
                     <span className="ml-2">
                       {renderSortIcon("published_at")}
                     </span>
+                  </Button>
+                </th>
+                <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
+                  <Button
+                    variant="ghost"
+                    onClick={() => onSort("view_count")}
+                    className={`px-0 hover:bg-transparent ${
+                      sortColumn === "view_count" ? "text-primary" : ""
+                    }`}
+                  >
+                    Visualizações
+                    <span className="ml-2">{renderSortIcon("view_count")}</span>
                   </Button>
                 </th>
                 <th className="text-left p-4 font-medium text-muted-foreground">
@@ -146,13 +146,13 @@ export function EpisodeTable({
                       : "--:--"}
                   </td>
                   <td className="p-4 hidden md:table-cell">
-                    {episode.view_count}
-                  </td>
-                  <td className="p-4 hidden md:table-cell">
                     {episode.categories?.name || "N/A"}
                   </td>
                   <td className="p-4 text-sm hidden xl:table-cell">
                     {formatDate(episode.published_at)}
+                  </td>
+                  <td className="p-4 hidden md:table-cell">
+                    {episode.view_count}
                   </td>
                   <td className="p-4">
                     <EpisodeActions
