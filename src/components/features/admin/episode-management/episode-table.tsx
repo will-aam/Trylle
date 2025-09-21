@@ -7,6 +7,7 @@ import { Episode, SortDirection } from "@/src/lib/types";
 import { formatTime } from "@/src/lib/utils";
 import { ChevronsUpDown, ArrowDown, ArrowUp } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
+import { Checkbox } from "@/src/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -23,6 +24,9 @@ interface EpisodeTableProps {
   onSort: (column: keyof Episode) => void;
   sortColumn: keyof Episode | "";
   sortDirection: SortDirection;
+  selectedEpisodes: string[];
+  onSelectEpisode: (episodeId: string) => void;
+  onSelectAll: (isSelected: boolean) => void;
 }
 
 export function EpisodeTable({
@@ -32,6 +36,9 @@ export function EpisodeTable({
   onSort,
   sortColumn,
   sortDirection,
+  selectedEpisodes,
+  onSelectEpisode,
+  onSelectAll,
 }: EpisodeTableProps) {
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
@@ -84,7 +91,16 @@ export function EpisodeTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12"></TableHead>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={
+                      selectedEpisodes.length === episodes.length &&
+                      episodes.length > 0
+                    }
+                    onCheckedChange={(checked) => onSelectAll(!!checked)}
+                    aria-label="Selecionar todos"
+                  />
+                </TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="min-w-[250px]">
                   <Button
@@ -125,8 +141,19 @@ export function EpisodeTable({
             </TableHeader>
             <TableBody>
               {episodes.map((episode) => (
-                <TableRow key={episode.id}>
-                  <TableCell></TableCell>
+                <TableRow
+                  key={episode.id}
+                  data-state={
+                    selectedEpisodes.includes(episode.id) && "selected"
+                  }
+                >
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedEpisodes.includes(episode.id)}
+                      onCheckedChange={() => onSelectEpisode(episode.id)}
+                      aria-label={`Selecionar episódio ${episode.title}`}
+                    />
+                  </TableCell>
                   <TableCell>{getStatusBadge(episode.status)}</TableCell>
                   <TableCell>
                     <div className="font-medium truncate max-w-xs">

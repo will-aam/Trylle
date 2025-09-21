@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { EpisodeStats } from "./episode-stats";
 import { EpisodeTable } from "./episode-table";
 import { EpisodeFilters } from "./episode-filters";
+import { EpisodeBulkActions } from "./episode-bulk-actions";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { ListMusic } from "lucide-react";
 import { createClient } from "@/src/lib/supabase-client";
@@ -17,6 +18,7 @@ export function EpisodeManager() {
   const { toast } = useToast();
 
   const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [selectedEpisodes, setSelectedEpisodes] = useState<string[]>([]);
   const [totalEpisodes, setTotalEpisodes] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,57 @@ export function EpisodeManager() {
     "published_at"
   );
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  const handleSelectEpisode = (episodeId: string) => {
+    setSelectedEpisodes((prev) =>
+      prev.includes(episodeId)
+        ? prev.filter((id) => id !== episodeId)
+        : [...prev, episodeId]
+    );
+  };
+
+  const handleSelectAll = (isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedEpisodes(episodes.map((e) => e.id));
+    } else {
+      setSelectedEpisodes([]);
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedEpisodes([]);
+  };
+
+  const handleBulkUpdateStatus = async (newStatus: "published" | "draft") => {
+    if (selectedEpisodes.length === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from("episodes")
+        .update({ status: newStatus })
+        .in("id", selectedEpisodes);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso!",
+        description: `Episódios atualizados para ${
+          newStatus === "published" ? "publicado" : "rascunho"
+        }.`,
+        variant: "default",
+      });
+      setSelectedEpisodes([]);
+      fetchEpisodesAndCategories();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar episódios",
+        description:
+          "Não foi possível atualizar os episódios selecionados. Tente novamente.",
+        variant: "destructive",
+      });
+      console.error("Error updating episodes:", error);
+    }
+  };
 
   const handleSort = (column: keyof Episode) => {
     if (sortColumn === column) {
@@ -182,17 +235,26 @@ export function EpisodeManager() {
 
       <EpisodeStats episodes={episodes} />
 
-      <EpisodeFilters
-        categories={categories}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        categoryFilter={categoryFilter}
-        setCategoryFilter={setCategoryFilter}
-        onClearFilters={clearFilters}
-        hasActiveFilters={hasActiveFilters}
-      />
+      {selectedEpisodes.length > 0 ? (
+        <EpisodeBulkActions
+          selectedCount={selectedEpisodes.length}
+          onPublish={() => handleBulkUpdateStatus("published")}
+          onMoveToDraft={() => handleBulkUpdateStatus("draft")}
+          onClearSelection={clearSelection}
+        />
+      ) : (
+        <EpisodeFilters
+          categories={categories}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          categoryFilter={categoryFilter}
+          setCategoryFilter={setCategoryFilter}
+          onClearFilters={clearFilters}
+          hasActiveFilters={hasActiveFilters}
+        />
+      )}
 
       {hasActiveFilters && (
         <div className="text-sm text-muted-foreground">
@@ -209,6 +271,9 @@ export function EpisodeManager() {
             onSort={handleSort}
             sortColumn={sortColumn}
             sortDirection={sortDirection}
+            selectedEpisodes={selectedEpisodes}
+            onSelectEpisode={handleSelectEpisode}
+            onSelectAll={handleSelectAll}
           />
           <EpisodeTablePagination
             currentPage={currentPage}
