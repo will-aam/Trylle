@@ -9,19 +9,19 @@ import { Card, CardContent } from "@/src/components/ui/card";
 import { ListMusic } from "lucide-react";
 import { createClient } from "@/src/lib/supabase-client";
 import { Episode, Category, SortDirection } from "@/src/lib/types";
-import { useToast } from "@/src/hooks/use-toast";
+import { toast } from "sonner";
 import { EpisodeTablePagination } from "./episode-table-pagination";
 import { Skeleton } from "@/src/components/ui/skeleton";
 
 export function EpisodeManager() {
   const supabase = createClient();
-  const { toast } = useToast();
 
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [selectedEpisodes, setSelectedEpisodes] = useState<string[]>([]);
   const [totalEpisodes, setTotalEpisodes] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -41,9 +41,31 @@ export function EpisodeManager() {
     );
   };
 
-  const handleSelectAll = (isSelected: boolean) => {
+  const handleSelectAll = async (isSelected: boolean) => {
     if (isSelected) {
-      setSelectedEpisodes(episodes.map((e) => e.id));
+      try {
+        let query = supabase.from("episodes").select("id");
+
+        if (debouncedSearchTerm) {
+          query = query.ilike("title", `%${debouncedSearchTerm}%`);
+        }
+        if (statusFilter.length > 0) {
+          query = query.in("status", statusFilter);
+        }
+        if (categoryFilter.length > 0) {
+          query = query.in("category_id", categoryFilter);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        setSelectedEpisodes(data.map((e) => e.id));
+      } catch (error) {
+        toast.error("Erro ao selecionar todos", {
+          description:
+            "Não foi possível buscar todos os episódios. Tente novamente.",
+        });
+      }
     } else {
       setSelectedEpisodes([]);
     }
@@ -56,6 +78,11 @@ export function EpisodeManager() {
   const handleBulkUpdateStatus = async (newStatus: "published" | "draft") => {
     if (selectedEpisodes.length === 0) return;
 
+    setIsBulkUpdating(true);
+    const toastId = toast.loading("Atualizando episódios...", {
+      description: `Modificando ${selectedEpisodes.length} item(s). Por favor, aguarde.`,
+    });
+
     try {
       const { error } = await supabase
         .from("episodes")
@@ -64,23 +91,21 @@ export function EpisodeManager() {
 
       if (error) throw error;
 
-      toast({
-        title: "Sucesso!",
-        description: `Episódios atualizados para ${
-          newStatus === "published" ? "publicado" : "rascunho"
-        }.`,
-        variant: "default",
+      toast.success("Sucesso!", {
+        id: toastId,
+        description: `${selectedEpisodes.length} episódios foram atualizados.`,
       });
+
       setSelectedEpisodes([]);
-      fetchEpisodesAndCategories();
+      fetchEpisodesAndCategories(); // Recarrega a lista
     } catch (error: any) {
-      toast({
-        title: "Erro ao atualizar episódios",
-        description:
-          "Não foi possível atualizar os episódios selecionados. Tente novamente.",
-        variant: "destructive",
+      toast.error("Erro ao atualizar", {
+        id: toastId,
+        description: error.message || "Ocorreu um erro inesperado.",
       });
       console.error("Error updating episodes:", error);
+    } finally {
+      setIsBulkUpdating(false);
     }
   };
 
@@ -147,10 +172,8 @@ export function EpisodeManager() {
       setTotalEpisodes(count || 0);
       setCategories(categoriesData as Category[]);
     } catch (error: any) {
-      toast({
-        title: "Erro ao carregar dados",
+      toast.error("Erro ao carregar dados", {
         description: "Não foi possível buscar os episódios. Tente novamente.",
-        variant: "destructive",
       });
       console.error("Error fetching data:", error);
     } finally {
@@ -238,6 +261,7 @@ export function EpisodeManager() {
       {selectedEpisodes.length > 0 ? (
         <EpisodeBulkActions
           selectedCount={selectedEpisodes.length}
+          isLoading={isBulkUpdating}
           onPublish={() => handleBulkUpdateStatus("published")}
           onMoveToDraft={() => handleBulkUpdateStatus("draft")}
           onClearSelection={clearSelection}
