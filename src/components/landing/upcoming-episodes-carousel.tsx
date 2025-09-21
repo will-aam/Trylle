@@ -97,7 +97,7 @@ export function UpcomingEpisodesCarousel({
                   <Card
                     key={`${episode.id}-${idx}`}
                     className={`
-                      transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] transform-gpu
+                      transition-all duration-700 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; transform-gpu
                       ${
                         isCenter
                           ? "scale-110 z-10 shadow-xl border-primary/20"
