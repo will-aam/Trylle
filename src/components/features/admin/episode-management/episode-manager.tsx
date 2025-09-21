@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { EpisodeStats } from "./episode-stats";
 import { EpisodeTable } from "./episode-table";
 import { EpisodeFilters } from "./episode-filters";
@@ -18,7 +18,7 @@ export function EpisodeManager() {
 
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [selectedEpisodes, setSelectedEpisodes] = useState<string[]>([]);
-  const [totalEpisodes, setTotalEpisodes] = useState(0);
+  const [totalEpisodes, setTotalEpisodes] = useState(0); // Total based on filters
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
@@ -32,6 +32,12 @@ export function EpisodeManager() {
     "published_at"
   );
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [statusCounts, setStatusCounts] = useState({
+    // Global counts, not based on filters
+    published: 0,
+    draft: 0,
+    scheduled: 0,
+  });
 
   const handleSelectEpisode = (episodeId: string) => {
     setSelectedEpisodes((prev) =>
@@ -75,6 +81,109 @@ export function EpisodeManager() {
     setSelectedEpisodes([]);
   };
 
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+
+      // Query 1: Paginated and filtered episodes for the table
+      let paginatedEpisodesQuery = supabase
+        .from("episodes")
+        .select(`*, categories (name), tags:episode_tags (tags (id, name))`, {
+          count: "exact",
+        });
+
+      if (debouncedSearchTerm) {
+        paginatedEpisodesQuery = paginatedEpisodesQuery.ilike(
+          "title",
+          `%${debouncedSearchTerm}%`
+        );
+      }
+      if (statusFilter.length > 0) {
+        paginatedEpisodesQuery = paginatedEpisodesQuery.in(
+          "status",
+          statusFilter
+        );
+      }
+      if (categoryFilter.length > 0) {
+        paginatedEpisodesQuery = paginatedEpisodesQuery.in(
+          "category_id",
+          categoryFilter
+        );
+      }
+
+      const finalPaginatedQuery = paginatedEpisodesQuery
+        .order(sortColumn || "published_at", {
+          ascending: sortDirection === "asc",
+        })
+        .range(from, to);
+
+      // Query 2: All episodes statuses for the global stats cards (NO FILTERS)
+      const totalStatusCountQuery = supabase.from("episodes").select("status");
+
+      // Query 3: All categories for the filter dropdown
+      const categoriesQuery = supabase.from("categories").select("*");
+
+      // Execute queries in parallel
+      const [paginatedResult, totalStatusCountResult, categoriesResult] =
+        await Promise.all([
+          finalPaginatedQuery,
+          totalStatusCountQuery,
+          categoriesQuery,
+        ]);
+
+      // Process paginated episodes result
+      const {
+        data: episodesData,
+        error: episodesError,
+        count,
+      } = paginatedResult;
+      if (episodesError) throw episodesError;
+      setEpisodes(episodesData as any[]);
+      setTotalEpisodes(count || 0);
+
+      // Process global status counts result
+      const { data: allStatuses, error: totalStatusCountError } =
+        totalStatusCountResult;
+      if (totalStatusCountError) throw totalStatusCountError;
+
+      const counts = { published: 0, draft: 0, scheduled: 0 };
+      allStatuses.forEach((ep) => {
+        if (ep.status === "published") {
+          counts.published++;
+        } else if (ep.status === "draft") {
+          counts.draft++;
+        } else if (ep.status === "scheduled") {
+          counts.scheduled++;
+        }
+      });
+      setStatusCounts(counts);
+
+      // Process categories result
+      const { data: categoriesData, error: categoriesError } = categoriesResult;
+      if (categoriesError) throw categoriesError;
+      setCategories(categoriesData as Category[]);
+    } catch (error: any) {
+      toast.error("Erro ao carregar dados", {
+        description:
+          error.message || "Não foi possível buscar os dados. Tente novamente.",
+      });
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    supabase,
+    currentPage,
+    itemsPerPage,
+    debouncedSearchTerm,
+    statusFilter,
+    categoryFilter,
+    sortColumn,
+    sortDirection,
+  ]);
+
   const handleBulkUpdateStatus = async (newStatus: "published" | "draft") => {
     if (selectedEpisodes.length === 0) return;
 
@@ -97,7 +206,7 @@ export function EpisodeManager() {
       });
 
       setSelectedEpisodes([]);
-      fetchEpisodesAndCategories(); // Recarrega a lista
+      fetchData(); // Recarrega a lista
     } catch (error: any) {
       toast.error("Erro ao atualizar", {
         id: toastId,
@@ -128,72 +237,9 @@ export function EpisodeManager() {
     };
   }, [searchTerm]);
 
-  const fetchEpisodesAndCategories = useCallback(async () => {
-    setLoading(true);
-    try {
-      const from = (currentPage - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
-
-      let episodeQuery = supabase
-        .from("episodes")
-        .select(`*, categories (name), tags:episode_tags (tags (id, name))`, {
-          count: "exact",
-        });
-
-      if (debouncedSearchTerm) {
-        episodeQuery = episodeQuery.ilike("title", `%${debouncedSearchTerm}%`);
-      }
-      if (statusFilter.length > 0) {
-        episodeQuery = episodeQuery.in("status", statusFilter);
-      }
-      if (categoryFilter.length > 0) {
-        episodeQuery = episodeQuery.in("category_id", categoryFilter);
-      }
-
-      const {
-        data: episodesData,
-        error: episodesError,
-        count,
-      } = await episodeQuery
-        .order(sortColumn || "published_at", {
-          ascending: sortDirection === "asc",
-        })
-        .range(from, to);
-
-      if (episodesError) throw episodesError;
-
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from("categories")
-        .select("*");
-
-      if (categoriesError) throw categoriesError;
-
-      setEpisodes(episodesData as any[]);
-      setTotalEpisodes(count || 0);
-      setCategories(categoriesData as Category[]);
-    } catch (error: any) {
-      toast.error("Erro ao carregar dados", {
-        description: "Não foi possível buscar os episódios. Tente novamente.",
-      });
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    supabase,
-    toast,
-    currentPage,
-    debouncedSearchTerm,
-    statusFilter,
-    categoryFilter,
-    sortColumn,
-    sortDirection,
-    itemsPerPage,
-  ]);
-
   useEffect(() => {
-    fetchEpisodesAndCategories();
-  }, [fetchEpisodesAndCategories]);
+    fetchData();
+  }, [fetchData]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -256,7 +302,12 @@ export function EpisodeManager() {
         </div>
       </div>
 
-      <EpisodeStats episodes={episodes} />
+      <EpisodeStats
+        totalCount={totalEpisodes}
+        publishedCount={statusCounts.published}
+        draftCount={statusCounts.draft}
+        scheduledCount={statusCounts.scheduled}
+      />
 
       {selectedEpisodes.length > 0 ? (
         <EpisodeBulkActions
@@ -291,7 +342,7 @@ export function EpisodeManager() {
           <EpisodeTable
             episodes={episodes}
             setEpisodes={setEpisodes}
-            onEpisodeUpdate={fetchEpisodesAndCategories}
+            onEpisodeUpdate={fetchData}
             onSort={handleSort}
             sortColumn={sortColumn}
             sortDirection={sortDirection}

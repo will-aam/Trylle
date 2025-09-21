@@ -5,27 +5,20 @@ import {
   CardTitle,
 } from "@/src/components/ui/card";
 import { ListMusic, CheckCircle, Clock, Archive } from "lucide-react";
-// CORREÇÃO: Importa o tipo Episode do local centralizado
-import { Episode } from "@/src/lib/types";
 
 interface EpisodeStatsProps {
-  episodes: Episode[];
+  totalCount: number; // This remains the count based on active filters
+  publishedCount: number; // This is the GLOBAL count of all published episodes
+  draftCount: number; // This is the GLOBAL count of all draft episodes
+  scheduledCount: number; // This is the GLOBAL count of all scheduled episodes
 }
 
-export function EpisodeStats({ episodes }: EpisodeStatsProps) {
-  const totalEpisodes = episodes.length;
-
-  // Lógica de contagem ajustada para aceitar 'publicado' ou 'published'
-  const publishedCount = episodes.filter(
-    (ep) => ep.status === "published" || ep.status === "publicado"
-  ).length;
-
-  const draftCount = episodes.filter((ep) => ep.status === "draft").length;
-
-  const scheduledCount = episodes.filter(
-    (ep) => ep.status === "scheduled"
-  ).length;
-
+export function EpisodeStats({
+  totalCount,
+  publishedCount,
+  draftCount,
+  scheduledCount,
+}: EpisodeStatsProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -36,8 +29,10 @@ export function EpisodeStats({ episodes }: EpisodeStatsProps) {
           <ListMusic className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{totalEpisodes}</div>
-          <p className="text-xs text-muted-foreground">Episódios no sistema</p>
+          <div className="text-2xl font-bold">{totalCount}</div>
+          <p className="text-xs text-muted-foreground">
+            Episódios correspondentes aos filtros
+          </p>
         </CardContent>
       </Card>
 
@@ -49,7 +44,7 @@ export function EpisodeStats({ episodes }: EpisodeStatsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{publishedCount}</div>
           <p className="text-xs text-muted-foreground">
-            Visíveis para o público
+            Total de publicados no sistema
           </p>
         </CardContent>
       </Card>
@@ -61,7 +56,9 @@ export function EpisodeStats({ episodes }: EpisodeStatsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{draftCount}</div>
-          <p className="text-xs text-muted-foreground">Aguardando publicação</p>
+          <p className="text-xs text-muted-foreground">
+            Total de rascunhos no sistema
+          </p>
         </CardContent>
       </Card>
 
@@ -72,7 +69,9 @@ export function EpisodeStats({ episodes }: EpisodeStatsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{scheduledCount}</div>
-          <p className="text-xs text-muted-foreground">Publicação futura</p>
+          <p className="text-xs text-muted-foreground">
+            Total de agendados no sistema
+          </p>
         </CardContent>
       </Card>
     </div>
