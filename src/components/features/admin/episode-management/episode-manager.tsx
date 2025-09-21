@@ -7,18 +7,22 @@ import { EpisodeFilters } from "./episode-filters";
 import { EpisodeBulkActions } from "./episode-bulk-actions";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { ListMusic } from "lucide-react";
-import { createClient } from "@/src/lib/supabase-client";
+import {
+  getEpisodes,
+  getCategories,
+  getEpisodeStatusCounts,
+  getAllEpisodeIds,
+  updateEpisodeStatus,
+} from "@/src/services/adminService";
 import { Episode, Category, SortDirection } from "@/src/lib/types";
 import { toast } from "sonner";
 import { EpisodeTablePagination } from "./episode-table-pagination";
 import { Skeleton } from "@/src/components/ui/skeleton";
 
 export function EpisodeManager() {
-  const supabase = createClient();
-
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [selectedEpisodes, setSelectedEpisodes] = useState<string[]>([]);
-  const [totalEpisodes, setTotalEpisodes] = useState(0); // Total based on filters
+  const [totalEpisodes, setTotalEpisodes] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
@@ -33,7 +37,6 @@ export function EpisodeManager() {
   );
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [statusCounts, setStatusCounts] = useState({
-    // Global counts, not based on filters
     published: 0,
     draft: 0,
     scheduled: 0,
@@ -50,22 +53,12 @@ export function EpisodeManager() {
   const handleSelectAll = async (isSelected: boolean) => {
     if (isSelected) {
       try {
-        let query = supabase.from("episodes").select("id");
-
-        if (debouncedSearchTerm) {
-          query = query.ilike("title", `%${debouncedSearchTerm}%`);
-        }
-        if (statusFilter.length > 0) {
-          query = query.in("status", statusFilter);
-        }
-        if (categoryFilter.length > 0) {
-          query = query.in("category_id", categoryFilter);
-        }
-
-        const { data, error } = await query;
-        if (error) throw error;
-
-        setSelectedEpisodes(data.map((e) => e.id));
+        const ids = await getAllEpisodeIds({
+          searchTerm: debouncedSearchTerm,
+          statusFilter,
+          categoryFilter,
+        });
+        setSelectedEpisodes(ids);
       } catch (error) {
         toast.error("Erro ao selecionar todos", {
           description:
@@ -84,86 +77,25 @@ export function EpisodeManager() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const from = (currentPage - 1) * itemsPerPage;
-      const to = from + itemsPerPage - 1;
-
-      // Query 1: Paginated and filtered episodes for the table
-      let paginatedEpisodesQuery = supabase
-        .from("episodes")
-        .select(`*, categories (name), tags:episode_tags (tags (id, name))`, {
-          count: "exact",
-        });
-
-      if (debouncedSearchTerm) {
-        paginatedEpisodesQuery = paginatedEpisodesQuery.ilike(
-          "title",
-          `%${debouncedSearchTerm}%`
-        );
-      }
-      if (statusFilter.length > 0) {
-        paginatedEpisodesQuery = paginatedEpisodesQuery.in(
-          "status",
-          statusFilter
-        );
-      }
-      if (categoryFilter.length > 0) {
-        paginatedEpisodesQuery = paginatedEpisodesQuery.in(
-          "category_id",
-          categoryFilter
-        );
-      }
-
-      const finalPaginatedQuery = paginatedEpisodesQuery
-        .order(sortColumn || "published_at", {
-          ascending: sortDirection === "asc",
-        })
-        .range(from, to);
-
-      // Query 2: All episodes statuses for the global stats cards (NO FILTERS)
-      const totalStatusCountQuery = supabase.from("episodes").select("status");
-
-      // Query 3: All categories for the filter dropdown
-      const categoriesQuery = supabase.from("categories").select("*");
-
-      // Execute queries in parallel
-      const [paginatedResult, totalStatusCountResult, categoriesResult] =
+      const [episodesResult, statusCountsResult, categoriesResult] =
         await Promise.all([
-          finalPaginatedQuery,
-          totalStatusCountQuery,
-          categoriesQuery,
+          getEpisodes({
+            currentPage,
+            itemsPerPage,
+            searchTerm: debouncedSearchTerm,
+            statusFilter,
+            categoryFilter,
+            sortColumn,
+            sortDirection,
+          }),
+          getEpisodeStatusCounts(),
+          getCategories(),
         ]);
 
-      // Process paginated episodes result
-      const {
-        data: episodesData,
-        error: episodesError,
-        count,
-      } = paginatedResult;
-      if (episodesError) throw episodesError;
-      setEpisodes(episodesData as any[]);
-      setTotalEpisodes(count || 0);
-
-      // Process global status counts result
-      const { data: allStatuses, error: totalStatusCountError } =
-        totalStatusCountResult;
-      if (totalStatusCountError) throw totalStatusCountError;
-
-      const counts = { published: 0, draft: 0, scheduled: 0 };
-      allStatuses.forEach((ep) => {
-        if (ep.status === "published") {
-          counts.published++;
-        } else if (ep.status === "draft") {
-          counts.draft++;
-        } else if (ep.status === "scheduled") {
-          counts.scheduled++;
-        }
-      });
-      setStatusCounts(counts);
-
-      // Process categories result
-      const { data: categoriesData, error: categoriesError } = categoriesResult;
-      if (categoriesError) throw categoriesError;
-      setCategories(categoriesData as Category[]);
+      setEpisodes(episodesResult.data);
+      setTotalEpisodes(episodesResult.count || 0);
+      setStatusCounts(statusCountsResult);
+      setCategories(categoriesResult);
     } catch (error: any) {
       toast.error("Erro ao carregar dados", {
         description:
@@ -174,7 +106,6 @@ export function EpisodeManager() {
       setLoading(false);
     }
   }, [
-    supabase,
     currentPage,
     itemsPerPage,
     debouncedSearchTerm,
@@ -193,12 +124,7 @@ export function EpisodeManager() {
     });
 
     try {
-      const { error } = await supabase
-        .from("episodes")
-        .update({ status: newStatus })
-        .in("id", selectedEpisodes);
-
-      if (error) throw error;
+      await updateEpisodeStatus(selectedEpisodes, newStatus);
 
       toast.success("Sucesso!", {
         id: toastId,
@@ -206,7 +132,7 @@ export function EpisodeManager() {
       });
 
       setSelectedEpisodes([]);
-      fetchData(); // Recarrega a lista
+      fetchData();
     } catch (error: any) {
       toast.error("Erro ao atualizar", {
         id: toastId,
