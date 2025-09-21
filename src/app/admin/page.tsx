@@ -11,29 +11,19 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/src/components/ui/tabs";
-import { createClient } from "@/src/lib/supabase-client";
-import { getUserCount } from "./actions";
-
-async function getStats() {
-  const supabase = createClient();
-  const { count: episodeCount, error: episodeError } = await supabase
-    .from("episodes")
-    .select("*", { count: "exact", head: true });
-
-  if (episodeError) {
-    console.error("Error fetching episode count:", episodeError);
-  }
-
-  const userCount = await getUserCount();
-
-  return {
-    episodeCount: episodeCount ?? 0,
-    userCount: userCount ?? 0,
-  };
-}
+import { getDashboardStats } from "@/src/services/adminService";
 
 export default async function AdminPage() {
-  const { episodeCount, userCount } = await getStats();
+  const { data: stats, error } = await getDashboardStats();
+
+  if (error) {
+    // TODO: Melhorar o tratamento de erro, talvez com um componente de UI
+    return (
+      <div className="container mx-auto px-4 py-8 text-red-500">
+        <p>Erro ao carregar as estatísticas do painel: {error}</p>
+      </div>
+    );
+  }
   return (
     <div className="container mx-auto px-4 py-8">
       <Suspense
@@ -41,7 +31,10 @@ export default async function AdminPage() {
           <div className="animate-pulse bg-muted h-32 rounded-lg mb-8" />
         }
       >
-        <AdminStats episodeCount={episodeCount} userCount={userCount} />
+        <AdminStats
+          episodeCount={stats?.episodeCount ?? 0}
+          userCount={stats?.userCount ?? 0}
+        />
       </Suspense>
 
       <Tabs defaultValue="upload" className="space-y-6">
