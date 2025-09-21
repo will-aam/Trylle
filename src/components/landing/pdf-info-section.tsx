@@ -1,6 +1,6 @@
-import { Button } from "@/src/components/ui/button"
-import { Card, CardContent } from "@/src/components/ui/card"
-import { FileText, Download, ExternalLink, Shield, Zap } from "lucide-react"
+import { Button } from "@/src/components/ui/button";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { FileText, Download, ExternalLink, Shield, Zap } from "lucide-react";
 
 export function PdfInfoSection() {
   return (
@@ -8,8 +8,12 @@ export function PdfInfoSection() {
       <div className="container mx-auto px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Muito mais que só podcasts</h2>
-            <p className="text-xl text-muted-foreground">Conteúdo confiável com documentação completa</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Muito mais que só podcasts
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              Conteúdo confiável com documentação completa
+            </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
@@ -21,10 +25,12 @@ export function PdfInfoSection() {
                     <Shield className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg mb-2">Confiança nas informações</h3>
+                    <h3 className="font-semibold text-lg mb-2">
+                      Confiança nas informações
+                    </h3>
                     <p className="text-muted-foreground">
-                      Todo conteúdo é baseado em fontes confiáveis e pesquisas científicas, garantindo a qualidade das
-                      informações.
+                      Todo conteúdo é baseado em fontes confiáveis e pesquisas
+                      científicas, garantindo a qualidade das informações.
                     </p>
                   </div>
                 </div>
@@ -34,10 +40,12 @@ export function PdfInfoSection() {
                     <FileText className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg mb-2">Documentos de apoio em PDF</h3>
+                    <h3 className="font-semibold text-lg mb-2">
+                      Documentos de apoio em PDF
+                    </h3>
                     <p className="text-muted-foreground">
-                      Baixe o documento completo usado na produção do episódio, com resumos elaborados e referências
-                      organizadas.
+                      Baixe o documento completo usado na produção do episódio,
+                      com resumos elaborados e referências organizadas.
                     </p>
                   </div>
                 </div>
@@ -47,9 +55,12 @@ export function PdfInfoSection() {
                     <ExternalLink className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg mb-2">Links das fontes incluídos</h3>
+                    <h3 className="font-semibold text-lg mb-2">
+                      Links das fontes incluídos
+                    </h3>
                     <p className="text-muted-foreground">
-                      Acesse diretamente todas as fontes utilizadas através de links organizados no documento PDF.
+                      Acesse diretamente todas as fontes utilizadas através de
+                      links organizados no documento PDF.
                     </p>
                   </div>
                 </div>
@@ -59,10 +70,12 @@ export function PdfInfoSection() {
                     <Zap className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg mb-2">Arquivo leve e compacto</h3>
+                    <h3 className="font-semibold text-lg mb-2">
+                      Arquivo leve e compacto
+                    </h3>
                     <p className="text-muted-foreground">
-                      PDFs otimizados para download rápido e fácil armazenamento, sem comprometer a qualidade do
-                      conteúdo.
+                      PDFs otimizados para download rápido e fácil
+                      armazenamento, sem comprometer a qualidade do conteúdo.
                     </p>
                   </div>
                 </div>
@@ -84,8 +97,12 @@ export function PdfInfoSection() {
                     </div>
 
                     <div className="space-y-3">
-                      <h3 className="text-xl font-semibold">Documento de Apoio</h3>
-                      <p className="text-sm text-muted-foreground">Ep. 1 - Biotipo e Nutrição</p>
+                      <h3 className="text-xl font-semibold">
+                        Documento de Apoio
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Ep. 1 - Biotipo e Nutrição
+                      </p>
                     </div>
 
                     <div className="space-y-2 text-sm">
@@ -103,7 +120,10 @@ export function PdfInfoSection() {
                       </div>
                     </div>
 
-                    <Button variant="outline" className="w-full gap-2 bg-transparent">
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 bg-transparent"
+                    >
                       <Download className="w-4 h-4" />
                       Baixar PDF
                     </Button>
@@ -115,5 +135,5 @@ export function PdfInfoSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

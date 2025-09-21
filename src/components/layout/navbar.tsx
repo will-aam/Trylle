@@ -20,7 +20,7 @@ import { createClient } from "@/src/lib/supabase-client";
 import { User } from "@supabase/supabase-js";
 import { ThemeToggle } from "./theme-toggle";
 import { Skeleton } from "@/src/components/ui/skeleton";
-import { NavbarLoggedOut } from "./NavbarLoggedOut"; // Importe o novo componente
+import { NavbarLoggedOut } from "./NavbarLoggedOut";
 
 export function Navbar() {
   const supabase = createClient();

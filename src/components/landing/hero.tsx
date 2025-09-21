@@ -16,29 +16,41 @@ export function Hero() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 gap-12 items-center">
             <div className="space-y-6 text-center lg:text-left">
-              <h1 className="text-4xl lg:text-6xl font-bold leading-tight [text-shadow:1px_1px_3px_var(--tw-shadow-color)] shadow-black/60 text-white">
+              <h1 className="text-5xl lg:text-6xl font-bold leading-tight [text-shadow:1px_1px_3px_var(--tw-shadow-color)] shadow-black/60 text-white">
                 {" "}
                 Descubra o mundo através do
                 <span className="text-primary"> áudio</span>
               </h1>
-              <p className="text-xl text-neutral-200">
+              <p>
                 Milhares de episódios educativos sobre tecnologia, ciência,
                 saúde e muito mais. Aprenda enquanto caminha, trabalha ou
                 relaxa.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href="/login">
-                  <Button size="lg" className="text-lg px-8">
-                    <Play className="mr-2 h-5 w-5" />
-                    Começar a Ouvir
-                  </Button>
-                </Link>
-                <Button variant="outline" size="lg" className="text-lg px-8">
-                  Explorar Categorias
+              <div className="flex items-center gap-4">
+                <Button size="lg" asChild>
+                  <Link href="/signup">
+                    {" "}
+                    <Play />
+                    Começar a Aprender
+                  </Link>
                 </Button>
               </div>
             </div>
           </div>
+        </div>
+      </div>
+      <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full" />
+          Acesso 100% gratuito
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-blue-500 rounded-full" />
+          Sem anúncios
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-purple-500 rounded-full" />
+          Baseado em pesquisa
         </div>
       </div>
     </section>
