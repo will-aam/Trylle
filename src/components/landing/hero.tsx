@@ -11,7 +11,7 @@ export function Hero() {
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/60 z-0" />
 
-      {/* Main content, above the overlay */}
+      {/* Conteúdo principal, acima do overlay */}
       <div className="relative z-10">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 gap-12 items-center">
@@ -21,7 +21,8 @@ export function Hero() {
                 Descubra o mundo através do
                 <span className="text-primary"> áudio</span>
               </h1>
-              <p>
+              {/* CORREÇÃO AQUI */}
+              <p className="text-white text-lg [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)]">
                 Milhares de episódios educativos sobre tecnologia, ciência,
                 saúde e muito mais. Aprenda enquanto caminha, trabalha ou
                 relaxa.
@@ -39,7 +40,8 @@ export function Hero() {
           </div>
         </div>
       </div>
-      <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-muted-foreground">
+      {/* CORREÇÃO AQUI */}
+      <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)]">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-green-500 rounded-full" />
           Acesso 100% gratuito
