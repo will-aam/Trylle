@@ -1,20 +1,8 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/src/lib/supabase-client";
 import { Episode, Category, SortDirection } from "@/src/lib/types";
 
+// Este cliente usa a chave anônima e é seguro para o cliente
 const supabase = createClient();
-
-// Este cliente é criado com a chave de serviço e SÓ PODE SER USADO NO SERVIDOR.
-const supabaseAdmin = createSupabaseClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
 
 type FetchEpisodesParams = {
   currentPage: number;
@@ -150,38 +138,4 @@ export const updateEpisodeStatus = async (
   }
 };
 
-export const getDashboardStats = async () => {
-  try {
-    const { count: episodeCount, error: episodeError } = await supabase
-      .from("episodes")
-      .select("*", { count: "exact", head: true });
-
-    if (episodeError) {
-      console.error("Error fetching episode count:", episodeError);
-      throw new Error("Could not fetch episode count.");
-    }
-
-    const { data, error: userError } =
-      await supabaseAdmin.auth.admin.listUsers();
-
-    if (userError) {
-      console.error("Error fetching user count:", userError.message);
-      throw new Error("Could not fetch user count.");
-    }
-
-    return {
-      data: {
-        episodeCount: episodeCount ?? 0,
-        userCount: data.users.length ?? 0,
-      },
-      error: null,
-    };
-  } catch (error) {
-    console.error("Error fetching dashboard stats:", error);
-    // Em um cenário real, você poderia logar o erro em um serviço de monitoramento
-    return {
-      data: null,
-      error: "Failed to fetch dashboard statistics.",
-    };
-  }
-};
+// A função getDashboardStats foi removida daqui

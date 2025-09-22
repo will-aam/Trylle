@@ -11,13 +11,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/src/components/ui/tabs";
-import { getDashboardStats } from "@/src/services/adminService";
+// Importe a função do novo arquivo de actions
+import { getDashboardStats } from "./actions";
 
 export default async function AdminPage() {
+  // Chame a função diretamente, pois esta é uma Server Component
   const { data: stats, error } = await getDashboardStats();
 
   if (error) {
-    // TODO: Melhorar o tratamento de erro, talvez com um componente de UI
     return (
       <div className="container mx-auto px-4 py-8 text-red-500">
         <p>Erro ao carregar as estatísticas do painel: {error}</p>
