@@ -3,6 +3,7 @@
 import { Button } from "@/src/components/ui/button";
 import { Play, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+// O useIsMobile não é mais necessário, já que a lógica está aqui
 
 const upcomingEpisodes = [
   {
@@ -59,27 +60,26 @@ export function UpcomingEpisodesCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [itemsPerView, setItemsPerView] = useState(3); // Passo 1: Inicialização segura no servidor
 
-  const getItemsPerView = () => {
-    if (typeof window !== "undefined") {
+  useEffect(() => {
+    // Passo 2: Mova toda a lógica de detecção de tela para dentro do useEffect
+    const getItemsPerView = () => {
       if (window.innerWidth < 640) return 1; // mobile
       if (window.innerWidth < 1024) return 2; // tablet
       return 3; // desktop
-    }
-    return 3;
-  };
+    };
 
-  const [itemsPerView, setItemsPerView] = useState(getItemsPerView());
-  const maxIndex = Math.max(0, upcomingEpisodes.length - itemsPerView);
-
-  useEffect(() => {
     const handleResize = () => {
       setItemsPerView(getItemsPerView());
     };
 
+    handleResize(); // Define o valor inicial após a montagem do componente
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, []); // O array de dependências vazio garante que este efeito roda apenas uma vez
+
+  const maxIndex = Math.max(0, upcomingEpisodes.length - itemsPerView);
 
   useEffect(() => {
     if (!isAutoScrolling) return;
