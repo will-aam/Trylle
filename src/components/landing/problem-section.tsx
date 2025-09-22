@@ -1,6 +1,17 @@
-import { Clock, AlertTriangle, Brain } from "lucide-react";
+"use client";
+
+import {
+  Clock,
+  AlertTriangle,
+  Brain,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { useState, useEffect } from "react";
 
 export function ProblemSection() {
+  const [currentCard, setCurrentCard] = useState(0);
+
   const problems = [
     {
       icon: Clock,
@@ -22,9 +33,24 @@ export function ProblemSection() {
     },
   ];
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentCard((prev) => (prev + 1) % problems.length);
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, [problems.length]);
+
+  const nextCard = () => {
+    setCurrentCard((prev) => (prev + 1) % problems.length);
+  };
+
+  const prevCard = () => {
+    setCurrentCard((prev) => (prev - 1 + problems.length) % problems.length);
+  };
+
   return (
-    <section id="problema" className="py-12 md:py-20 scroll-mt-14">
-      {" "}
+    <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12 sm:mb-16">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-balance mb-3 sm:mb-4 px-2 sm:px-0">
@@ -36,7 +62,67 @@ export function ProblemSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="sm:hidden">
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={prevCard}
+                className="p-2 rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className="flex space-x-2">
+                {problems.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentCard(index)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      index === currentCard
+                        ? "bg-destructive"
+                        : "bg-muted-foreground/30"
+                    }`}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={nextCard}
+                className="p-2 rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative h-80 overflow-hidden">
+              {problems.map((problem, index) => (
+                <div
+                  key={index}
+                  className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+                    index === currentCard
+                      ? "translate-x-0 opacity-100 scale-100"
+                      : index < currentCard
+                      ? "-translate-x-full opacity-0 scale-95"
+                      : "translate-x-full opacity-0 scale-95"
+                  }`}
+                >
+                  <div
+                    className="h-full bg-gradient-to-br from-background to-muted/50 rounded-2xl border shadow-lg p-8 flex flex-col items-center justify-center text-center space-y-6 cursor-pointer hover:shadow-xl transition-shadow"
+                    onClick={nextCard}
+                  >
+                    <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center">
+                      <problem.icon className="w-10 h-10 text-destructive" />
+                    </div>
+                    <h3 className="text-xl font-semibold">{problem.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed text-sm">
+                      {problem.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {problems.map((problem, index) => (
             <div
               key={index}

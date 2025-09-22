@@ -1,6 +1,17 @@
-import { Zap, Shield, GraduationCap } from "lucide-react";
+"use client";
+
+import {
+  Zap,
+  Shield,
+  GraduationCap,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { useState, useEffect } from "react";
 
 export function SolutionSection() {
+  const [currentCard, setCurrentCard] = useState(0);
+
   const solutions = [
     {
       icon: Zap,
@@ -22,9 +33,24 @@ export function SolutionSection() {
     },
   ];
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentCard((prev) => (prev + 1) % solutions.length);
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, [solutions.length]);
+
+  const nextCard = () => {
+    setCurrentCard((prev) => (prev + 1) % solutions.length);
+  };
+
+  const prevCard = () => {
+    setCurrentCard((prev) => (prev - 1 + solutions.length) % solutions.length);
+  };
+
   return (
-    <section id="solucao" className="py-12 md:py-20 scroll-mt-14">
-      {" "}
+    <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12 sm:mb-16">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-balance mb-3 sm:mb-4 px-2 sm:px-0">
@@ -37,7 +63,67 @@ export function SolutionSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="sm:hidden">
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={prevCard}
+                className="p-2 rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className="flex space-x-2">
+                {solutions.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentCard(index)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      index === currentCard
+                        ? "bg-primary"
+                        : "bg-muted-foreground/30"
+                    }`}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={nextCard}
+                className="p-2 rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative h-80 overflow-hidden">
+              {solutions.map((solution, index) => (
+                <div
+                  key={index}
+                  className={`absolute inset-0 transition-all duration-500 ease-in-out ${
+                    index === currentCard
+                      ? "translate-x-0 opacity-100 scale-100"
+                      : index < currentCard
+                      ? "-translate-x-full opacity-0 scale-95"
+                      : "translate-x-full opacity-0 scale-95"
+                  }`}
+                >
+                  <div
+                    className="h-full bg-gradient-to-br from-background to-primary/5 rounded-2xl border shadow-lg p-8 flex flex-col items-center justify-center text-center space-y-6 cursor-pointer hover:shadow-xl transition-shadow"
+                    onClick={nextCard}
+                  >
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
+                      <solution.icon className="w-10 h-10 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-semibold">{solution.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed text-sm">
+                      {solution.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {solutions.map((solution, index) => (
             <div
               key={index}
