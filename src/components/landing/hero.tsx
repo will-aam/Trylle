@@ -5,7 +5,7 @@ import { Play } from "lucide-react";
 export function Hero() {
   return (
     <section
-      className="relative bg-cover bg-center bg-no-repeat -mt-14 pt-28 pb-20 -mx-4 sm:-mx-6 md:-mx-8"
+      className="relative bg-cover bg-[25%_center] lg:bg-center bg-no-repeat -mt-14 pt-28 pb-20 -mx-4 sm:-mx-6 md:-mx-8" // [!code ++]
       style={{ backgroundImage: "url('/hero-background.jpg')" }}
     >
       {/* Overlay */}
@@ -40,8 +40,7 @@ export function Hero() {
           </div>
         </div>
       </div>
-      {/* CORREÇÃO AQUI */}
-      <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)]">
+      {/* <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)]">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-green-500 rounded-full" />
           Acesso 100% gratuito
@@ -54,7 +53,7 @@ export function Hero() {
           <div className="w-2 h-2 bg-purple-500 rounded-full" />
           Baseado em pesquisa
         </div>
-      </div>
+      </div> */}
     </section>
   );
 }
