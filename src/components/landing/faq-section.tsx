@@ -40,34 +40,40 @@ export function FAQSection() {
   ];
 
   return (
-    <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
-      <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-10 sm:mb-12">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-balance mb-3 sm:mb-4 px-2 sm:px-0">
-            Perguntas Frequentes
-          </h2>
-          <p className="text-base sm:text-lg text-muted-foreground px-2 sm:px-0">
-            Tudo o que você precisa saber sobre o Trylle
-          </p>
-        </div>
+    <section id="faq" className="py-12 md:py-20 scroll-mt-14">
+      <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-10 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-balance mb-3 sm:mb-4 px-2 sm:px-0">
+              Perguntas Frequentes
+            </h2>
+            <p className="text-base sm:text-lg text-muted-foreground px-2 sm:px-0">
+              Tudo o que você precisa saber sobre o Trylle
+            </p>
+          </div>
 
-        <Accordion type="single" collapsible className="space-y-3 sm:space-y-4">
-          {faqs.map((faq, index) => (
-            <AccordionItem
-              key={index}
-              value={`item-${index}`}
-              className="bg-background rounded-lg border px-4 sm:px-6"
-            >
-              <AccordionTrigger className="text-left hover:no-underline py-4 sm:py-6 text-sm sm:text-base">
-                <span className="font-semibold pr-2">{faq.question}</span>
-              </AccordionTrigger>
-              <AccordionContent className="pb-4 sm:pb-6 text-muted-foreground leading-relaxed text-sm sm:text-base">
-                {faq.answer}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </div>
+          <Accordion
+            type="single"
+            collapsible
+            className="space-y-3 sm:space-y-4"
+          >
+            {faqs.map((faq, index) => (
+              <AccordionItem
+                key={index}
+                value={`item-${index}`}
+                className="bg-background rounded-lg border px-4 sm:px-6"
+              >
+                <AccordionTrigger className="text-left hover:no-underline py-4 sm:py-6 text-sm sm:text-base">
+                  <span className="font-semibold pr-2">{faq.question}</span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-4 sm:pb-6 text-muted-foreground leading-relaxed text-sm sm:text-base">
+                  {faq.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      </section>
     </section>
   );
 }

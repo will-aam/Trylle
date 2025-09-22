@@ -6,51 +6,45 @@ import { AudioLines, Menu, X } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { useState } from "react";
 
+// Lista de links para facilitar a manutenção
+const navLinks = [
+  { href: "#problema", label: "O Problema" },
+  { href: "#solucao", label: "A Solução" },
+  { href: "#diferencial", label: "Diferencial" },
+  { href: "#jornada", label: "Faça Parte" },
+  { href: "#faq", label: "FAQ" },
+];
+
 export function NavbarLoggedOut() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  const handleLinkClick = () => {
+    setIsMenuOpen(false);
+  };
+
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b bg-white dark:bg-black/30 dark:backdrop-blur-md px-4 sm:px-6">
-        {/* Logo à esquerda com nome */}
-        <Link href="/">
-          <div className="flex items-center gap-2">
-            <AudioLines className="h-6 w-6" />
-            <span className="text-lg font-bold md:inline hidden">Trylle</span>
-          </div>
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-4 border-b bg-background/80 backdrop-blur-md px-4 sm:px-6">
+        {/* Logo à esquerda */}
+        <Link href="/" className="flex items-center gap-2">
+          <AudioLines className="h-6 w-6" />
+          <span className="text-lg font-bold">Trylle</span>
         </Link>
 
         {/* Navegação Desktop */}
-        <nav className="hidden md:flex items-center gap-4">
-          <Button variant="ghost" asChild>
-            <Link href="/">Home</Link>
-          </Button>
-          <Button variant="ghost" asChild>
-            <Link href="/explore">Explorar</Link>
-          </Button>
-          <Button variant="ghost" asChild>
-            <Link href="/about">Sobre</Link>
-          </Button>
+        <nav className="hidden md:flex items-center gap-2">
+          {navLinks.map((link) => (
+            <Button variant="ghost" asChild key={link.href}>
+              <a href={link.href}>{link.label}</a>
+            </Button>
+          ))}
         </nav>
 
-        {/* Ações (Desktop) */}
-        <div className="hidden md:flex items-center gap-2">
+        {/* Ações e Menu Mobile */}
+        <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button asChild>
-            <Link href="/login">Login</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/signup">Cadastro</Link>
-          </Button>
-        </div>
-
-        {/* Mobile: Botão de Cadastro ao lado do hambúrguer */}
-        <div className="md:hidden flex items-center gap-2">
-          <Button asChild>
-            <Link href="/signup">Cadastre-se de graça</Link>
-          </Button>
           <button
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+            className="p-2 rounded-lg hover:bg-accent md:hidden"
             onClick={() => setIsMenuOpen(true)}
           >
             <Menu className="h-6 w-6" />
@@ -60,85 +54,48 @@ export function NavbarLoggedOut() {
 
       {/* Sidebar Mobile */}
       <div
-        className={`fixed inset-0 z-50 md:hidden transition-opacity duration-300 ${
-          isMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        className={`fixed inset-0 z-50 md:hidden transition-transform duration-300 ${
+          isMenuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        {/* Overlay com fundo opaco */}
+        {/* Overlay */}
         <div
-          className="absolute inset-0 bg-black/50"
-          onClick={() => setIsMenuOpen(false)}
+          className="absolute inset-0 bg-background/60"
+          onClick={handleLinkClick}
         ></div>
 
-        {/* Sidebar totalmente preto */}
-        <div
-          className={`absolute left-0 top-0 h-full w-64 bg-black shadow-lg transform transition-transform duration-300 ease-out ${
-            isMenuOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
-        >
-          {/* Cabeçalho do sidebar */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-800">
+        {/* Conteúdo do Sidebar */}
+        <div className="absolute right-0 top-0 h-full w-64 bg-background shadow-lg">
+          <div className="flex items-center justify-between p-4 border-b">
             <Link
               href="/"
               className="flex items-center gap-3"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={handleLinkClick}
             >
-              <AudioLines className="h-6 w-6 text-white" />
-              <span className="text-xl font-bold text-white">Trylle</span>
+              <AudioLines className="h-6 w-6" />
+              <span className="text-xl font-bold">Trylle</span>
             </Link>
             <button
-              onClick={() => setIsMenuOpen(false)}
-              className="p-2 rounded-lg hover:bg-gray-800 transition-colors duration-200"
+              onClick={handleLinkClick}
+              className="p-2 rounded-lg hover:bg-accent"
             >
-              <X className="h-6 w-6 text-white" />
+              <X className="h-6 w-6" />
             </button>
           </div>
-
-          {/* Navegação Mobile */}
           <nav className="flex flex-col p-4 space-y-2">
-            <Button
-              variant="ghost"
-              asChild
-              className="justify-start text-white hover:bg-gray-800 transition-colors duration-200"
-            >
-              <Link href="/" onClick={() => setIsMenuOpen(false)}>
-                Home
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              asChild
-              className="justify-start text-white hover:bg-gray-800 transition-colors duration-200"
-            >
-              <Link href="/explore" onClick={() => setIsMenuOpen(false)}>
-                Explorar
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              asChild
-              className="justify-start text-white hover:bg-gray-800 transition-colors duration-200"
-            >
-              <Link href="/about" onClick={() => setIsMenuOpen(false)}>
-                Sobre
-              </Link>
-            </Button>
+            {navLinks.map((link) => (
+              <Button
+                variant="ghost"
+                asChild
+                key={link.href}
+                className="justify-start"
+              >
+                <a href={link.href} onClick={handleLinkClick}>
+                  {link.label}
+                </a>
+              </Button>
+            ))}
           </nav>
-
-          {/* Divisor visual */}
-          <div className="border-t border-gray-800 my-2 mx-4"></div>
-
-          {/* Ações Mobile (apenas login) */}
-          <div className="flex flex-col p-4 space-y-2">
-            <Button
-              asChild
-              className="w-full bg-white hover:bg-gray-100 text-black transition-colors duration-200"
-            >
-              <Link href="/login" onClick={() => setIsMenuOpen(false)}>
-                Login
-              </Link>
-            </Button>
-          </div>
         </div>
       </div>
     </>

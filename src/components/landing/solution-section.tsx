@@ -23,7 +23,8 @@ export function SolutionSection() {
   ];
 
   return (
-    <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
+    <section id="solucao" className="py-12 md:py-20 scroll-mt-14">
+      {" "}
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12 sm:mb-16">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-balance mb-3 sm:mb-4 px-2 sm:px-0">

@@ -21,6 +21,7 @@ import { User } from "@supabase/supabase-js";
 import { ThemeToggle } from "./theme-toggle";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { NavbarLoggedOut } from "./NavbarLoggedOut";
+// import { NavbarWithAuth } from "./NavbarWithAuth"; para quando eu disponibilizar o login/cadastro
 
 export function Navbar() {
   const supabase = createClient();

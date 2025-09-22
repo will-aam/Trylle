@@ -12,7 +12,7 @@ import { Badge } from "@/src/components/ui/badge";
 import {
   Crown,
   Download,
-  Zap,
+  Zap, 
   BarChart3,
   Clock,
   Headphones,

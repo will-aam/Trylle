@@ -1,217 +1,219 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
-import { Card, CardContent } from "@/src/components/ui/card";
-import { Badge } from "@/src/components/ui/badge";
-import { Episode } from "@/src/lib/types";
+import { Play, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 
-interface UpcomingEpisodesCarouselProps {
-  episodes: Episode[];
-}
+const upcomingEpisodes = [
+  {
+    id: 1,
+    title: "Psicologia das Vendas B2B",
+    category: "Negócios",
+    episodeNumber: 8,
+    duration: "18 min",
+    color: "bg-gradient-to-r from-blue-500 to-blue-600",
+  },
+  {
+    id: 2,
+    title: "IA Generativa no Trabalho",
+    category: "Tecnologia",
+    episodeNumber: 12,
+    duration: "22 min",
+    color: "bg-gradient-to-r from-purple-500 to-purple-600",
+  },
+  {
+    id: 3,
+    title: "Como Lançar sua Startup",
+    category: "Empreendedorismo",
+    episodeNumber: 5,
+    duration: "20 min",
+    color: "bg-gradient-to-r from-orange-500 to-orange-600",
+  },
+  {
+    id: 4,
+    title: "Design Thinking na Prática",
+    category: "Design",
+    episodeNumber: 9,
+    duration: "16 min",
+    color: "bg-gradient-to-r from-green-500 to-green-600",
+  },
+  {
+    id: 5,
+    title: "Computação Quântica",
+    category: "Ciência",
+    episodeNumber: 13,
+    duration: "24 min",
+    color: "bg-gradient-to-r from-indigo-500 to-indigo-600",
+  },
+  {
+    id: 6,
+    title: "Marketing Digital 2024",
+    category: "Marketing",
+    episodeNumber: 7,
+    duration: "19 min",
+    color: "bg-gradient-to-r from-pink-500 to-pink-600",
+  },
+];
 
-export function UpcomingEpisodesCarousel({
-  episodes: upcomingEpisodes,
-}: UpcomingEpisodesCarouselProps) {
+export function UpcomingEpisodesCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const getItemsPerView = () => {
+    if (typeof window !== "undefined") {
+      if (window.innerWidth < 640) return 1; // mobile
+      if (window.innerWidth < 1024) return 2; // tablet
+      return 3; // desktop
+    }
+    return 3;
+  };
+
+  const [itemsPerView, setItemsPerView] = useState(getItemsPerView());
+  const maxIndex = Math.max(0, upcomingEpisodes.length - itemsPerView);
 
   useEffect(() => {
-    if (!isAutoPlaying || upcomingEpisodes.length === 0) return;
+    const handleResize = () => {
+      setItemsPerView(getItemsPerView());
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (!isAutoScrolling) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % upcomingEpisodes.length);
+      setCurrentIndex((prev) => {
+        if (prev >= maxIndex) {
+          return 0;
+        }
+        return prev + 1;
+      });
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [isAutoPlaying, upcomingEpisodes.length]);
+  }, [isAutoScrolling, maxIndex]);
 
-  if (upcomingEpisodes.length === 0) {
-    return null;
-  }
-
-  const goToPrevious = () => {
-    setCurrentIndex((prev) =>
-      prev === 0 ? upcomingEpisodes.length - 1 : prev - 1
-    );
-    setIsAutoPlaying(false);
+  const nextSlide = () => {
+    setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
   };
 
-  const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % upcomingEpisodes.length);
-    setIsAutoPlaying(false);
+  const prevSlide = () => {
+    setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
   };
 
-  const getVisibleEpisodes = () => {
-    const episodes = [];
-    for (let i = -2; i <= 3; i++) {
-      const index =
-        (currentIndex + i + upcomingEpisodes.length) % upcomingEpisodes.length;
-      episodes.push({
-        ...upcomingEpisodes[index],
-        position: i,
-      });
-    }
-    return episodes;
-  };
-
-  const formatPublishedAt = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = date.toLocaleDateString("en-US", { day: "2-digit" });
-    const month = date.toLocaleDateString("en-US", { month: "short" });
-    const time = date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    return {
-      date: `${day} ${month}`,
-      time: time,
-    };
-  };
+  const handleMouseEnter = () => setIsAutoScrolling(false);
+  const handleMouseLeave = () => setIsAutoScrolling(true);
 
   return (
-    <section className="py-16 md:py-24 bg-muted/30">
+    <section className="py-8 md:py-12 bg-background">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Upcoming Episodes
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Don't miss the next releases. Episodes carefully prepared with
-            quality content.
-          </p>
+        <div className="flex items-center justify-between mb-6 md:mb-8">
+          <div>
+            <h2 className="text-xl md:text-2xl lg:text-3xl font-bold mb-1 md:mb-2">
+              Próximos Episódios
+            </h2>
+            <p className="text-sm md:text-base text-muted-foreground">
+              Novos conteúdos toda semana
+            </p>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={prevSlide}
+              className="h-8 w-8 p-0 rounded-full hover:bg-muted transition-all duration-200"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={nextSlide}
+              className="h-8 w-8 p-0 rounded-full hover:bg-muted transition-all duration-200"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        <div className="relative">
-          {/* Desktop Carousel */}
-          <div className="hidden md:block">
-            <div className="flex items-center justify-center gap-4 overflow-hidden">
-              {getVisibleEpisodes().map((episode, idx) => {
-                const isCenter = episode.position === 0;
-                const isVisible = Math.abs(episode.position) <= 2;
-                const { date, time } = formatPublishedAt(episode.published_at);
+        <div
+          className="relative"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div className="absolute left-0 top-0 bottom-0 w-4 md:w-8 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-4 md:w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
 
-                return (
-                  <Card
-                    key={`${episode.id}-${idx}`}
-                    className={`
-                      transition-all duration-700 ease-&lsqb;cubic-bezier(0.4,0,0.2,1)&rsqb; transform-gpu
-                      ${
-                        isCenter
-                          ? "scale-110 z-10 shadow-xl border-primary/20"
-                          : "scale-90 opacity-60"
-                      }
-                      ${isVisible ? "block" : "hidden"}
-                      w-80 h-48 hover:shadow-lg
-                    `}
-                  >
-                    <CardContent className="p-6 h-full flex flex-col justify-between">
-                      <div>
-                        <Badge variant="secondary" className="mb-3">
-                          {episode.categories?.name || "No Category"}
-                        </Badge>
-                        <h3 className="font-semibold text-lg mb-2 line-clamp-2">
-                          {episode.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {episode.description}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {date}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {time}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Mobile Carousel */}
-          <div className="md:hidden">
-            <div className="flex items-center justify-center">
-              <Card className="w-full max-w-sm h-48 shadow-lg transition-all duration-500 ease-out">
-                <CardContent className="p-6 h-full flex flex-col justify-between">
-                  <div>
-                    <Badge variant="secondary" className="mb-3">
-                      {upcomingEpisodes[currentIndex].categories?.name ||
-                        "No Category"}
-                    </Badge>
-                    <h3 className="font-semibold text-lg mb-2">
-                      {upcomingEpisodes[currentIndex].title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {upcomingEpisodes[currentIndex].description}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {
-                        formatPublishedAt(
-                          upcomingEpisodes[currentIndex].published_at
-                        ).date
-                      }
+          <div className="overflow-hidden px-1 md:px-2">
+            <div
+              ref={scrollContainerRef}
+              className="flex gap-2 md:gap-4 transition-transform duration-500 ease-out"
+              style={{
+                transform: `translateX(-${
+                  currentIndex * (100 / itemsPerView)
+                }%)`,
+              }}
+            >
+              {upcomingEpisodes.map((episode) => (
+                <div
+                  key={episode.id}
+                  className={`flex-none group cursor-pointer ${
+                    itemsPerView === 1
+                      ? "w-full"
+                      : itemsPerView === 2
+                      ? "w-1/2"
+                      : "w-1/3"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-lg md:rounded-xl bg-card hover:bg-muted/50 transition-all duration-300 border border-border/50 hover:border-border hover:shadow-md min-h-[80px] md:min-h-[90px]">
+                    <div
+                      className={`flex-none w-12 h-12 md:w-14 md:h-14 rounded-lg md:rounded-xl ${episode.color} flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg`}
+                    >
+                      <Play className="w-5 h-5 md:w-6 md:h-6 text-white fill-white" />
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {
-                        formatPublishedAt(
-                          upcomingEpisodes[currentIndex].published_at
-                        ).time
-                      }
+
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <h3 className="font-semibold text-xs md:text-sm lg:text-base leading-tight group-hover:text-primary transition-colors duration-200 truncate">
+                        Ep. {episode.episodeNumber} - {episode.title}
+                      </h3>
+                      <div className="flex items-center gap-1 md:gap-2 mt-1 md:mt-2">
+                        <span className="text-xs text-muted-foreground font-medium truncate max-w-[80px] md:max-w-none">
+                          {episode.category}
+                        </span>
+                        <span className="text-xs text-muted-foreground hidden sm:inline">
+                          •
+                        </span>
+                        <div className="flex items-center gap-1 sm:flex">
+                          <Clock className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">
+                            {episode.duration}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* Navigation Arrows */}
-          <Button
-            variant="outline"
-            size="icon"
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 rounded-full bg-transparent hover:bg-background/80 transition-all duration-300"
-            onClick={goToPrevious}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-
-          <Button
-            variant="outline"
-            size="icon"
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 rounded-full bg-transparent hover:bg-background/80 transition-all duration-300"
-            onClick={goToNext}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-
-          {/* Dots Indicator */}
-          <div className="flex justify-center gap-2 mt-8">
-            {upcomingEpisodes.map((_, idx) => (
-              <button
-                key={idx}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  idx === currentIndex
-                    ? "bg-primary scale-125"
-                    : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                }`}
-                onClick={() => {
-                  setCurrentIndex(idx);
-                  setIsAutoPlaying(false);
-                }}
-              />
-            ))}
-          </div>
+        <div className="flex justify-center gap-2 mt-4 md:mt-6 sm:hidden">
+          {Array.from({ length: maxIndex + 1 }).map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentIndex(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                index === currentIndex
+                  ? "bg-primary w-6"
+                  : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+              }`}
+            />
+          ))}
         </div>
       </div>
     </section>
