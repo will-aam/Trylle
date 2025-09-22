@@ -27,7 +27,8 @@ export function Hero() {
                 saúde e muito mais. Aprenda enquanto caminha, trabalha ou
                 relaxa.
               </p>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center justify-center lg:justify-start gap-4">
+                {" "}
                 <Button size="lg" asChild>
                   <Link href="/signup">
                     {" "}
