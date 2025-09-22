@@ -37,7 +37,8 @@ export function ListeningStatistics() {
   };
 
   return (
-    <section className="py-16 lg:py-24 bg-gradient-to-br from-slate-900 to-slate-800">
+    <section className="py-16 lg:py-24 bg-white dark:bg-black">
+      {" "}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
@@ -52,18 +53,18 @@ export function ListeningStatistics() {
         <div className="max-w-4xl mx-auto">
           {/* Tab Navigation */}
           <div className="flex justify-center mb-8">
-            <div className="bg-slate-800 rounded-lg p-1 shadow-sm border border-slate-700">
+            <div className="bg-slate-900 rounded-lg p-1 shadow-sm border border-slate-800">
               <Button
                 variant={activeTab === "overview" ? "default" : "ghost"}
                 onClick={() => setActiveTab("overview")}
-                className="px-6 py-2"
+                className="px-6 py-2 text-white data-[state=active]:text-black"
               >
                 Visão Geral
               </Button>
               <Button
                 variant={activeTab === "details" ? "default" : "ghost"}
                 onClick={() => setActiveTab("details")}
-                className="px-6 py-2"
+                className="px-6 py-2 text-white data-[state=active]:text-black"
               >
                 Detalhes
               </Button>
@@ -117,7 +118,7 @@ export function ListeningStatistics() {
               {/* Category & Progress */}
               <div className="space-y-6">
                 {/* Favorite Category */}
-                <div className="bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-700">
+                <div className="bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-800">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                       <TrendingUp className="w-5 h-5 text-green-600" />
@@ -132,13 +133,13 @@ export function ListeningStatistics() {
                   <div className="text-xl font-bold text-white mb-2">
                     {stats.favoriteCategory}
                   </div>
-                  <div className="w-full bg-slate-700 rounded-full h-2">
+                  <div className="w-full bg-slate-800 rounded-full h-2">
                     <div className="bg-green-500 h-2 rounded-full w-3/4"></div>
                   </div>
                 </div>
 
                 {/* Time Distribution */}
-                <div className="bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-700">
+                <div className="bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-800">
                   <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
                     <Calendar className="w-5 h-5" />
                     Você aprende mais pela manhã
@@ -167,7 +168,7 @@ export function ListeningStatistics() {
                               {period.minutes}min
                             </span>
                           </div>
-                          <div className="w-full bg-slate-700 rounded-full h-1.5">
+                          <div className="w-full bg-slate-800 rounded-full h-1.5">
                             <div
                               className={`h-1.5 rounded-full ${
                                 index === 0
@@ -187,7 +188,7 @@ export function ListeningStatistics() {
               </div>
             </div>
           ) : (
-            <div className="bg-slate-800 rounded-2xl p-8 shadow-sm border border-slate-700">
+            <div className="bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-800">
               {/* Monthly Progress Chart */}
               <div className="mb-8">
                 <h4 className="text-xl font-semibold text-white mb-6">
@@ -265,7 +266,10 @@ export function ListeningStatistics() {
 
           {/* CTA */}
           <div className="text-center mt-12">
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              size="lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
               <Play className="w-5 h-5 mr-2" />
               Continue Aprendendo
             </Button>
