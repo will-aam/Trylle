@@ -3,6 +3,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
+import { revalidatePath } from "next/cache";
 
 // Função para criar um cliente Supabase do lado do servidor
 async function createSupabaseServerClient() {
@@ -70,4 +71,8 @@ export const getDashboardStats = async () => {
       error: "Failed to fetch dashboard statistics.",
     };
   }
+};
+
+export const revalidateAdminDashboard = async () => {
+  revalidatePath("/admin"); // Isso diz ao Next.js para recarregar os dados da página /admin
 };
