@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import { ThemeToggle } from "@/src//components/layout/theme-toggle";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/src/components/ui/button";
@@ -170,6 +171,7 @@ export default function SugerirTemaPage() {
               <Lightbulb className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               <h1 className="text-lg sm:text-xl md:text-2xl lg:text-5xl font-bold text-slate-900">
                 Trylle
+                <ThemeToggle />
               </h1>
             </div>
           </div>

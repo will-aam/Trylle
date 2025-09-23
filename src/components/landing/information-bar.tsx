@@ -22,7 +22,7 @@ export function InformationBar() {
           </div>
         </div>
 
-        <Link href="/suggest-topic" className="w-full sm:w-auto">
+        {/* <Link href="/suggest-topic" className="w-full sm:w-auto">
           <Button
             variant="outline"
             size="lg"
@@ -31,7 +31,7 @@ export function InformationBar() {
             <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5" />
             Sugerir Tema
           </Button>
-        </Link>
+        </Link> */}
       </div>
     </section>
   );
