@@ -41,20 +41,6 @@ export function Hero() {
           </div>
         </div>
       </div>
-      {/* <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.7)]">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-green-500 rounded-full" />
-          Acesso 100% gratuito
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-blue-500 rounded-full" />
-          Sem anúncios
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-purple-500 rounded-full" />
-          Baseado em pesquisa
-        </div>
-      </div> */}
     </section>
   );
 }
