@@ -1,18 +1,20 @@
 import type { Config } from "tailwindcss";
-
-// all in fixtures is set to tailwind v3 as interims solutions
+import tailwindcssAnimate from "tailwindcss-animate";
+import tailwindcssTypography from "@tailwindcss/typography";
 
 const config: Config = {
   darkMode: ["class"],
-  // Versão corrigida
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/**/*.{js,ts,jsx,tsx,mdx}", // <-- Adicione esta linha!
+    "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-sora)", "sans-serif"],
+      },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
@@ -87,13 +89,19 @@ const config: Config = {
             height: "0",
           },
         },
+        glow: {
+          "0%, 100%": { "box-shadow": "0 0 10px rgba(250, 204, 21, 0.2)" },
+          "50%": { "box-shadow": "0 0 20px 5px rgba(250, 204, 21, 0.4)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        glow: "glow 4s ease-in-out infinite",
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+  plugins: [tailwindcssAnimate, tailwindcssTypography],
 };
+
 export default config;

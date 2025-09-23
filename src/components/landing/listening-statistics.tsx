@@ -16,7 +16,7 @@ export function ListeningStatistics() {
     "overview"
   );
   const [animatedMinutes, setAnimatedMinutes] = useState(0);
-  const [hasAnimated, setHasAnimated] = useState(false);
+  // const [hasAnimated, setHasAnimated] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
 
   const stats = {
@@ -39,14 +39,20 @@ export function ListeningStatistics() {
     ],
   };
 
+  // SUBSTITUA o seu useEffect inteiro por este:
   useEffect(() => {
+    // É importante pegar a referência do elemento aqui fora
+    const currentRef = sectionRef.current;
+    if (!currentRef) return; // Sai se o elemento não existir
+
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
-        if (entry.isIntersecting && !hasAnimated) {
-          setHasAnimated(true);
+        if (entry.isIntersecting) {
+          // A mágica acontece aqui: pare de observar DEPOIS de ver o elemento.
+          observer.unobserve(currentRef);
 
-          const duration = 2000; // 2 seconds
+          const duration = 2000; // 2 segundos
           const steps = 60;
           const increment = stats.totalMinutes / steps;
           let current = 0;
@@ -65,15 +71,14 @@ export function ListeningStatistics() {
       { threshold: 0.3 }
     );
 
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
+    observer.observe(currentRef);
 
+    // Função de limpeza para quando o componente for desmontado
     return () => observer.disconnect();
-  }, [hasAnimated, stats.totalMinutes]);
+  }, [stats.totalMinutes]); // Mantenha a dependência aqui caso o total mude
 
   return (
-    <section className="py-16 lg:py-24 bg-white dark:bg-black">
+    <section ref={sectionRef} className="py-16 lg:py-24 bg-white dark:bg-black">
       {" "}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
@@ -122,7 +127,7 @@ export function ListeningStatistics() {
                 </div>
                 <div className="mb-6">
                   <div className="text-4xl font-bold mb-2">
-                    {stats.totalMinutes}{" "}
+                    {animatedMinutes} {/* Correto */}
                     <span className="text-2xl font-normal">minutos</span>
                   </div>
                   <p className="text-blue-100">

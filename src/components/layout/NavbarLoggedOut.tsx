@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/src/components/ui/button";
-import { AudioLines, Menu, X } from "lucide-react";
+import { AudioLines, Menu, X, Lightbulb } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { useState } from "react";
 
@@ -43,6 +43,16 @@ export function NavbarLoggedOut() {
         {/* Ações e Menu Mobile */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <Link href="/suggest-topic" legacyBehavior passHref>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Sugerir um tema"
+              className="rounded-full hover:bg-yellow-400/20"
+            >
+              <Lightbulb className="h-5 w-5 text-yellow-400" />
+            </Button>
+          </Link>
           <button
             className="p-2 rounded-lg hover:bg-accent md:hidden"
             onClick={() => setIsMenuOpen(true)}
@@ -52,48 +62,33 @@ export function NavbarLoggedOut() {
         </div>
       </header>
 
-      {/* Sidebar Mobile */}
+      {/* Sidebar Mobile - Fullscreen */}
       <div
-        className={`fixed inset-0 z-50 md:hidden transition-transform duration-300 ${
-          isMenuOpen ? "translate-x-0" : "translate-x-full"
+        className={`fixed inset-0 z-50 md:hidden transition-transform duration-300 bg-background ${
+          isMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Overlay */}
-        <div
-          className="absolute inset-0 bg-background/60"
-          onClick={handleLinkClick}
-        ></div>
-
-        {/* Conteúdo do Sidebar */}
-        <div className="absolute right-0 top-0 h-full w-64 bg-background shadow-lg">
-          <div className="flex items-center justify-between p-4 border-b">
-            <Link
-              href="/"
-              className="flex items-center gap-3"
-              onClick={handleLinkClick}
+        <div className="h-full w-full p-6">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-lg font-semibold">Menu</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMenuOpen(false)}
             >
-              <AudioLines className="h-6 w-6" />
-              <span className="text-xl font-bold">Trylle</span>
-            </Link>
-            <button
-              onClick={handleLinkClick}
-              className="p-2 rounded-lg hover:bg-accent"
-            >
-              <X className="h-6 w-6" />
-            </button>
+              <X className="h-5 w-5" />
+            </Button>
           </div>
-          <nav className="flex flex-col p-4 space-y-2">
+          <nav className="flex flex-col space-y-4">
             {navLinks.map((link) => (
-              <Button
-                variant="ghost"
-                asChild
+              <Link
                 key={link.href}
-                className="justify-start"
+                href={link.href}
+                className="text-lg text-foreground/80 hover:text-foreground"
+                onClick={handleLinkClick}
               >
-                <a href={link.href} onClick={handleLinkClick}>
-                  {link.label}
-                </a>
-              </Button>
+                {link.label}
+              </Link>
             ))}
           </nav>
         </div>
