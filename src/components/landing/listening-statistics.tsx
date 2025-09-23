@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Play,
   Clock,
@@ -15,6 +15,9 @@ export function ListeningStatistics() {
   const [activeTab, setActiveTab] = useState<"overview" | "details">(
     "overview"
   );
+  const [animatedMinutes, setAnimatedMinutes] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
 
   const stats = {
     totalMinutes: 847,
@@ -35,6 +38,39 @@ export function ListeningStatistics() {
       { period: "Noite", minutes: 242, percentage: 28 },
     ],
   };
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+
+          const duration = 2000; // 2 seconds
+          const steps = 60;
+          const increment = stats.totalMinutes / steps;
+          let current = 0;
+
+          const timer = setInterval(() => {
+            current += increment;
+            if (current >= stats.totalMinutes) {
+              setAnimatedMinutes(stats.totalMinutes);
+              clearInterval(timer);
+            } else {
+              setAnimatedMinutes(Math.floor(current));
+            }
+          }, duration / steps);
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasAnimated, stats.totalMinutes]);
 
   return (
     <section className="py-16 lg:py-24 bg-white dark:bg-black">
