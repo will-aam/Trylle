@@ -17,7 +17,7 @@ export function ProblemSection() {
       icon: Clock,
       title: "Tempo Perdido",
       description:
-        "Podcasts de horas com pouco conteúdo útil. Você merece mais do que conversas vazias e digressões intermináveis.",
+        "Podcasts de horas com pouco conteúdo útil. Você merece mais do que conversas vazias e distrações intermináveis.",
     },
     {
       icon: AlertTriangle,

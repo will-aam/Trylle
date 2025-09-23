@@ -6,13 +6,13 @@ import { AudioLines, Menu, X } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { useState } from "react";
 
-// Lista de links para facilitar a manutenção
 const navLinks = [
   { href: "#problema", label: "O Problema" },
   { href: "#solucao", label: "A Solução" },
   { href: "#diferencial", label: "Diferencial" },
   { href: "#jornada", label: "Faça Parte" },
   { href: "#faq", label: "FAQ" },
+  { href: "/suggest-topic", label: "Sugerir tema" },
 ];
 
 export function NavbarLoggedOut() {

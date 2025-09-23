@@ -10,17 +10,12 @@ export function FAQSection() {
     {
       question: "O acesso será gratuito para sempre?",
       answer:
-        "Durante a fase de lançamento, sim! Estamos oferecendo acesso 100% gratuito para os primeiros usuários. No futuro, poderemos introduzir planos premium com recursos adicionais, mas sempre manteremos uma versão gratuita robusta.",
+        "Durante a fase de lançamento, sim! Estamos oferecendo acesso 100% gratuito para os primeiros usuários. No futuro, poderemos introduzir planos premium com recursos adicionais.",
     },
-    // {
-    //   question: "Quem cria o conteúdo?",
-    //   answer:
-    //     "Nosso conteúdo é criado por uma equipe de pesquisadores e especialistas em diversas áreas. Cada episódio passa por um rigoroso processo de pesquisa, verificação de fontes e revisão antes de ser publicado.",
-    // },
     {
       question: "Posso sugerir temas?",
       answer:
-        "Absolutamente! Valorizamos muito o feedback da nossa comunidade. Você pode sugerir temas, fazer perguntas específicas ou até mesmo indicar fontes interessantes que gostaria de ver abordadas.",
+        "Claro! Valorizamos muito o feedback da nossa comunidade. Você pode <a href='/suggest-topic' class='underline font-semibold text-blue-500 hover:text-white'>sugerir temas</a>, fazer perguntas específicas ou até mesmo indicar fontes interessantes que gostaria de ver abordadas.",
     },
     {
       question: "Preciso cadastrar um cartão de crédito?",
@@ -67,7 +62,7 @@ export function FAQSection() {
                   <span className="font-semibold pr-2">{faq.question}</span>
                 </AccordionTrigger>
                 <AccordionContent className="pb-4 sm:pb-6 text-muted-foreground leading-relaxed text-sm sm:text-base">
-                  {faq.answer}
+                  <div dangerouslySetInnerHTML={{ __html: faq.answer }} />
                 </AccordionContent>
               </AccordionItem>
             ))}

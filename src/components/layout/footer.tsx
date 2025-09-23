@@ -73,6 +73,14 @@ export function Footer() {
                   Premium
                 </a>
               </li>
+              <li>
+                <a
+                  href="/suggest-topic"
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Sugerir Tema
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -130,7 +138,7 @@ export function Footer() {
               <div className="flex items-center space-x-3">
                 <Mail className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
-                  contato@Trylle.com
+                  contato@trylle.com
                 </span>
               </div>
             </div>

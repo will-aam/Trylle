@@ -24,8 +24,8 @@ const upcomingEpisodes = [
   },
   {
     id: 3,
-    title: "Como Lançar sua Startup",
-    category: "Empreendedorismo",
+    title: "Dualismo gnóstico",
+    category: "Filosofia",
     episodeNumber: 5,
     duration: "20 min",
     color: "bg-gradient-to-r from-orange-500 to-orange-600",
@@ -40,15 +40,15 @@ const upcomingEpisodes = [
   },
   {
     id: 5,
-    title: "Computação Quântica",
-    category: "Ciência",
+    title: "Devo guardar o sábado ou o domingo?",
+    category: "Teologia",
     episodeNumber: 13,
     duration: "24 min",
     color: "bg-gradient-to-r from-indigo-500 to-indigo-600",
   },
   {
     id: 6,
-    title: "Marketing Digital 2024",
+    title: "Marketing Digital 2025",
     category: "Marketing",
     episodeNumber: 7,
     duration: "19 min",
@@ -63,7 +63,6 @@ export function UpcomingEpisodesCarousel() {
   const [itemsPerView, setItemsPerView] = useState(3); // Passo 1: Inicialização segura no servidor
 
   useEffect(() => {
-    // Passo 2: Mova toda a lógica de detecção de tela para dentro do useEffect
     const getItemsPerView = () => {
       if (window.innerWidth < 640) return 1; // mobile
       if (window.innerWidth < 1024) return 2; // tablet

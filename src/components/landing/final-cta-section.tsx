@@ -70,7 +70,7 @@ export function FinalCTASection() {
           </div>
           <div>
             <div className="text-xl sm:text-2xl font-bold text-primary">
-              10-20
+              10-40
             </div>
             <div className="text-xs sm:text-sm text-muted-foreground">
               Minutos

@@ -17,7 +17,7 @@ export function SolutionSection() {
       icon: Zap,
       title: "Conteúdo Condensado",
       description:
-        "Episódios de 10-20 minutos, diretos ao ponto. Cada minuto é valioso e focado no que realmente importa.",
+        "Episódios de 10-30 minutos, diretos ao ponto. Cada minuto é valioso e focado no que realmente importa.",
     },
     {
       icon: Shield,

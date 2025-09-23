@@ -92,7 +92,7 @@ export default function SugerirTemaPage() {
                     <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
                   </div>
                   <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-                    💡 Dicas para uma boa sugestão
+                    Dicas para uma boa sugestão
                   </h3>
                 </div>
                 <button
@@ -185,7 +185,7 @@ export default function SugerirTemaPage() {
             Sua voz importa
           </div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-slate-900 mb-4 sm:mb-6 text-balance px-2">
-            Sugira um <span className="text-blue-600">Tema</span> para Nossos
+            Sugira um <span className="text-blue-600">Tema</span> para novos
             Episódios
           </h1>
           <p className="text-base sm:text-lg lg:text-xl text-slate-600 max-w-3xl mx-auto text-pretty px-2">
