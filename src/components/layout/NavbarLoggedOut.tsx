@@ -12,7 +12,7 @@ const navLinks = [
   { href: "#diferencial", label: "Diferencial" },
   { href: "#jornada", label: "Faça Parte" },
   { href: "#faq", label: "FAQ" },
-  { href: "/suggest-topic", label: "Sugerir tema" },
+  { href: "/suggest-topic", label: "Sugerir Tema" },
 ];
 
 export function NavbarLoggedOut() {

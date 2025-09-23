@@ -7,7 +7,7 @@ export function UniqueFeatureSection() {
       id="diferencial"
       className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-primary/5 to-secondary/5"
     >
-      <div className="max-w-6xl mx-auto">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
           <div className="space-y-4 sm:space-y-6 order-2 lg:order-1">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-balance leading-tight">

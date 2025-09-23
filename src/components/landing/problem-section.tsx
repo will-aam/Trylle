@@ -50,7 +50,7 @@ export function ProblemSection() {
   };
 
   return (
-    <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
+    <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12 sm:mb-16">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-balance mb-3 sm:mb-4 px-2 sm:px-0">
@@ -64,13 +64,7 @@ export function ProblemSection() {
 
         <div className="sm:hidden">
           <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <button
-                onClick={prevCard}
-                className="p-2 rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
+            <div className="flex items-center justify-center mb-4">
               <div className="flex space-x-2">
                 {problems.map((_, index) => (
                   <button
@@ -84,12 +78,6 @@ export function ProblemSection() {
                   />
                 ))}
               </div>
-              <button
-                onClick={nextCard}
-                className="p-2 rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
             </div>
 
             <div className="relative h-80 overflow-hidden">

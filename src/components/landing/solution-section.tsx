@@ -65,13 +65,7 @@ export function SolutionSection() {
 
         <div className="sm:hidden">
           <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <button
-                onClick={prevCard}
-                className="p-2 rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
+            <div className="flex items-center justify-center mb-4">
               <div className="flex space-x-2">
                 {solutions.map((_, index) => (
                   <button
@@ -85,12 +79,6 @@ export function SolutionSection() {
                   />
                 ))}
               </div>
-              <button
-                onClick={nextCard}
-                className="p-2 rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
             </div>
 
             <div className="relative h-80 overflow-hidden">
