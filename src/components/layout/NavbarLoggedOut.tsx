@@ -7,12 +7,9 @@ import { ThemeToggle } from "./theme-toggle";
 import { useState } from "react";
 
 const navLinks = [
-  { href: "#problema", label: "O Problema" },
-  { href: "#solucao", label: "A Solução" },
-  { href: "#diferencial", label: "Diferencial" },
   { href: "#jornada", label: "Faça Parte" },
-  { href: "#faq", label: "FAQ" },
   { href: "/suggest-topic", label: "Sugerir Tema" },
+  { href: "#faq", label: "FAQ" },
 ];
 
 export function NavbarLoggedOut() {

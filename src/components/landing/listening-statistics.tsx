@@ -16,7 +16,6 @@ export function ListeningStatistics() {
     "overview"
   );
   const [animatedMinutes, setAnimatedMinutes] = useState(0);
-  // const [hasAnimated, setHasAnimated] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
 
   const stats = {
@@ -39,24 +38,19 @@ export function ListeningStatistics() {
     ],
   };
 
-  // SUBSTITUA o seu useEffect inteiro por este:
   useEffect(() => {
-    // É importante pegar a referência do elemento aqui fora
     const currentRef = sectionRef.current;
-    if (!currentRef) return; // Sai se o elemento não existir
+    if (!currentRef) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
         if (entry.isIntersecting) {
-          // A mágica acontece aqui: pare de observar DEPOIS de ver o elemento.
           observer.unobserve(currentRef);
-
-          const duration = 2000; // 2 segundos
+          const duration = 2000;
           const steps = 60;
           const increment = stats.totalMinutes / steps;
           let current = 0;
-
           const timer = setInterval(() => {
             current += increment;
             if (current >= stats.totalMinutes) {
@@ -70,42 +64,40 @@ export function ListeningStatistics() {
       },
       { threshold: 0.3 }
     );
-
     observer.observe(currentRef);
-
-    // Função de limpeza para quando o componente for desmontado
     return () => observer.disconnect();
-  }, [stats.totalMinutes]); // Mantenha a dependência aqui caso o total mude
+  }, [stats.totalMinutes]);
 
   return (
-    <section ref={sectionRef} className="py-16 lg:py-24 bg-white dark:bg-black">
-      {" "}
+    <section
+      ref={sectionRef}
+      className="py-16 lg:py-24 bg-gradient-to-br from-blue-50 to-indigo-100 dark:bg-none dark:bg-black"
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
             Suas Estatísticas de Aprendizado
           </h2>
-          <p className="text-lg text-slate-300 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 dark:text-slate-300 max-w-2xl mx-auto">
             Acompanhe seu progresso e veja como o Trylle está transformando sua
             rotina de aprendizado
           </p>
         </div>
 
         <div className="max-w-4xl mx-auto">
-          {/* Tab Navigation */}
           <div className="flex justify-center mb-8">
-            <div className="bg-slate-900 rounded-lg p-1 shadow-sm border border-slate-800">
+            <div className="bg-white dark:bg-slate-900 rounded-lg p-1 shadow-sm border border-gray-200 dark:border-slate-800">
               <Button
                 variant={activeTab === "overview" ? "default" : "ghost"}
                 onClick={() => setActiveTab("overview")}
-                className="px-6 py-2 text-white data-[state=active]:text-black"
+                className="px-6 py-2"
               >
                 Visão Geral
               </Button>
               <Button
                 variant={activeTab === "details" ? "default" : "ghost"}
                 onClick={() => setActiveTab("details")}
-                className="px-6 py-2 text-white data-[state=active]:text-black"
+                className="px-6 py-2"
               >
                 Detalhes
               </Button>
@@ -114,7 +106,6 @@ export function ListeningStatistics() {
 
           {activeTab === "overview" ? (
             <div className="grid md:grid-cols-2 gap-8">
-              {/* Main Stats Card */}
               <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-8 text-white">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -127,7 +118,7 @@ export function ListeningStatistics() {
                 </div>
                 <div className="mb-6">
                   <div className="text-4xl font-bold mb-2">
-                    {animatedMinutes} {/* Correto */}
+                    {animatedMinutes}{" "}
                     <span className="text-2xl font-normal">minutos</span>
                   </div>
                   <p className="text-blue-100">
@@ -156,32 +147,31 @@ export function ListeningStatistics() {
                 </div>
               </div>
 
-              {/* Category & Progress */}
               <div className="space-y-6">
-                {/* Favorite Category */}
-                <div className="bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-800">
+                <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg dark:shadow-none border border-gray-200 dark:border-slate-800">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                       <TrendingUp className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-white">
+                      <h4 className="font-semibold text-gray-900 dark:text-white">
                         Categoria Favorita
                       </h4>
-                      <p className="text-slate-400 text-sm">Mais ouvida</p>
+                      <p className="text-gray-500 dark:text-slate-400 text-sm">
+                        Mais ouvida
+                      </p>
                     </div>
                   </div>
-                  <div className="text-xl font-bold text-white mb-2">
+                  <div className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                     {stats.favoriteCategory}
                   </div>
-                  <div className="w-full bg-slate-800 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-slate-800 rounded-full h-2">
                     <div className="bg-green-500 h-2 rounded-full w-3/4"></div>
                   </div>
                 </div>
 
-                {/* Time Distribution */}
-                <div className="bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-800">
-                  <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
+                <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg dark:shadow-none border border-gray-200 dark:border-slate-800">
+                  <h4 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                     <Calendar className="w-5 h-5" />
                     Você aprende mais pela manhã
                   </h4>
@@ -202,14 +192,14 @@ export function ListeningStatistics() {
                         ></div>
                         <div className="flex-1">
                           <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm font-medium text-slate-300">
+                            <span className="text-sm font-medium text-gray-600 dark:text-slate-300">
                               {period.period}
                             </span>
-                            <span className="text-sm text-slate-400">
+                            <span className="text-sm text-gray-500 dark:text-slate-400">
                               {period.minutes}min
                             </span>
                           </div>
-                          <div className="w-full bg-slate-800 rounded-full h-1.5">
+                          <div className="w-full bg-gray-200 dark:bg-slate-800 rounded-full h-1.5">
                             <div
                               className={`h-1.5 rounded-full ${
                                 index === 0
@@ -229,14 +219,13 @@ export function ListeningStatistics() {
               </div>
             </div>
           ) : (
-            <div className="bg-slate-900 rounded-2xl p-8 shadow-sm border border-slate-800">
-              {/* Monthly Progress Chart */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 shadow-lg dark:shadow-none border border-gray-200 dark:border-slate-800">
               <div className="mb-8">
-                <h4 className="text-xl font-semibold text-white mb-6">
+                <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
                   Progresso Mensal
                 </h4>
                 <div className="flex items-end justify-between h-48 gap-4">
-                  {stats.monthlyProgress.map((day, index) => (
+                  {stats.monthlyProgress.map((day) => (
                     <div
                       key={day.day}
                       className="flex-1 flex flex-col items-center"
@@ -253,52 +242,55 @@ export function ListeningStatistics() {
                           }%`,
                         }}
                       ></div>
-                      <span className="text-xs text-slate-400">{day.day}</span>
+                      <span className="text-xs text-gray-500 dark:text-slate-400">
+                        {day.day}
+                      </span>
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-between text-xs text-slate-500 mt-2">
+                <div className="flex justify-between text-xs text-gray-500 dark:text-slate-500 mt-2">
                   <span>0</span>
                   <span>80 min</span>
                 </div>
               </div>
 
-              {/* Achievement Badges */}
               <div>
-                <h4 className="text-xl font-semibold text-white mb-6">
+                <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
                   Conquistas Recentes
                 </h4>
                 <div className="grid sm:grid-cols-3 gap-4">
-                  <div className="bg-gradient-to-br from-yellow-900/50 to-yellow-800/50 rounded-lg p-4 border border-yellow-700/50">
+                  <div className="bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900/50 dark:to-yellow-800/50 border border-yellow-300 dark:border-yellow-700/50 rounded-lg p-4">
                     <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center mb-3">
                       <Award className="w-4 h-4 text-white" />
                     </div>
-                    <h5 className="font-semibold text-white mb-1">
+                    <h5 className="font-semibold text-gray-900 dark:text-white mb-1">
                       Primeira Semana
                     </h5>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-gray-600 dark:text-slate-400">
                       7 dias consecutivos
                     </p>
                   </div>
-                  <div className="bg-gradient-to-br from-green-900/50 to-green-800/50 rounded-lg p-4 border border-green-700/50">
+                  <div className="bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50 border border-green-300 dark:border-green-700/50 rounded-lg p-4">
                     <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mb-3">
                       <BookOpen className="w-4 h-4 text-white" />
                     </div>
-                    <h5 className="font-semibold text-white mb-1">
+                    <h5 className="font-semibold text-gray-900 dark:text-white mb-1">
                       Explorador
                     </h5>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-gray-600 dark:text-slate-400">
                       20+ episódios ouvidos
                     </p>
                   </div>
-                  <div className="bg-gradient-to-br from-blue-900/50 to-blue-800/50 rounded-lg p-4 border border-blue-700/50">
+                  <div className="bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50 border border-blue-300 dark:border-blue-700/50 rounded-lg p-4">
                     <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mb-3">
                       <Clock className="w-4 h-4 text-white" />
                     </div>
-                    <h5 className="font-semibold text-white mb-1">
+                    <h5 className="font-semibold text-gray-900 dark:text-white mb-1">
                       Maratonista
                     </h5>
-                    <p className="text-sm text-slate-400">10+ horas este mês</p>
+                    <p className="text-sm text-gray-600 dark:text-slate-400">
+                      10+ horas este mês
+                    </p>
                   </div>
                 </div>
               </div>

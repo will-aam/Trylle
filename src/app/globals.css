@@ -37,8 +37,8 @@ html {
     --destructive: 0 75% 50%; /* vermelho controlado */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 10% 88%;
-    --input: 0 0% 100%;
+    --border: 220 10% 70%;
+    --input: 220 10% 80%;
     --ring: 217 91% 60% / 0.4;
 
     /* Gráficos */
