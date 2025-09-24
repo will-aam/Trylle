@@ -10,7 +10,7 @@ export function UniqueFeatureSection() {
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-balance leading-tight">
               Ouça, Leia e Aprenda.{" "}
               <span className="text-primary">
-                O único podcast que vem com um resumo de pesquisa
+                Cada episódio vem com resumo pesquisado e fontes claras.
               </span>
             </h2>
 
