@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-import { ThemeToggle } from "@/src//components/layout/theme-toggle";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/src/components/ui/button";
@@ -25,14 +24,15 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useTheme } from "next-themes";
 
 const categories = [
   { name: "Negócios", icon: Briefcase, color: "bg-blue-500" },
   { name: "Tecnologia", icon: Zap, color: "bg-purple-500" },
   { name: "Saúde", icon: Heart, color: "bg-red-500" },
   { name: "Educação", icon: BookOpen, color: "bg-green-500" },
-  { name: "Cultura", icon: Globe, color: "bg-orange-500" },
   { name: "Desenvolvimento Pessoal", icon: TrendingUp, color: "bg-indigo-500" },
+  { name: "Outra", icon: Globe, color: "bg-orange-500" },
 ];
 
 const popularSuggestions = [
@@ -62,6 +62,19 @@ export default function SugerirTemaPage() {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showTipsModal, setShowTipsModal] = useState(false);
+
+  const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    const originalTheme = theme;
+    setTheme("light");
+
+    return () => {
+      if (originalTheme) {
+        setTheme(originalTheme); // Restaura o tema anterior ao sair
+      }
+    };
+  }, []); // O array vazio garante que isso execute apenas uma vez ao montar/desmontar
 
   useEffect(() => {
     setShowTipsModal(true);
@@ -361,7 +374,7 @@ export default function SugerirTemaPage() {
                     <span className="text-blue-100 text-sm sm:text-base">
                       Sugestões recebidas
                     </span>
-                    <span className="font-bold text-lg sm:text-xl">1,247</span>
+                    <span className="font-bold text-lg sm:text-xl">1.247</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-blue-100 text-sm sm:text-base">
