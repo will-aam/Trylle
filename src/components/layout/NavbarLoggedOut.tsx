@@ -40,7 +40,7 @@ export function NavbarLoggedOut() {
         {/* Ações e Menu Mobile */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link href="/suggest-topic" legacyBehavior passHref>
+          {/* <Link href="/suggest-topic" legacyBehavior passHref>
             <Button
               variant="ghost"
               size="icon"
@@ -49,7 +49,7 @@ export function NavbarLoggedOut() {
             >
               <Lightbulb className="h-5 w-5 text-yellow-400" />
             </Button>
-          </Link>
+          </Link> */}
           <button
             className="p-2 rounded-lg hover:bg-accent md:hidden"
             onClick={() => setIsMenuOpen(true)}
