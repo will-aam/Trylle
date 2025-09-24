@@ -12,14 +12,15 @@ export function FinalCTASection() {
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); // Impede o recarregamento padrão da página
-
+    e.preventDefault();
     if (!email) {
       toast({
-        title: "Ops!",
-        description: "Você esqueceu de digitar seu e-mail.",
-        variant: "destructive",
+        title: "Inscrição recebida!",
+        description:
+          "Seu e-mail foi salvo com sucesso. Fique de olho na sua caixa de entrada!",
+        variant: "success",
       });
+      setEmail("");
       return;
     }
 
