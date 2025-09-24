@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
+import { ThemeToggle } from "@/src/components/layout/theme-toggle";
 
 const categories = [
   { name: "Negócios", icon: Briefcase, color: "bg-blue-500 dark:bg-blue-600" },
@@ -70,9 +71,8 @@ export default function SugerirTemaPage() {
   const [showTipsModal, setShowTipsModal] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  const { theme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
 
-  // Set dark theme as default on mount
   useEffect(() => {
     setMounted(true);
     const savedTheme = localStorage.getItem("theme");
@@ -95,10 +95,6 @@ export default function SugerirTemaPage() {
     setTimeout(() => setIsSubmitted(false), 3000);
     setFormData({ title: "", description: "", category: "", email: "" });
     setSelectedCategory("");
-  };
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
   };
 
   if (!mounted) {
@@ -196,17 +192,7 @@ export default function SugerirTemaPage() {
               <h1 className="text-lg sm:text-xl md:text-2xl lg:text-5xl font-bold text-slate-900 dark:text-zinc-100">
                 Trylle
               </h1>
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:border dark:border-zinc-700 transition-colors"
-                aria-label="Toggle theme"
-              >
-                {theme === "dark" ? (
-                  <Sun className="w-5 h-5 text-yellow-500" />
-                ) : (
-                  <Moon className="w-5 h-5 text-slate-700" />
-                )}
-              </button>
+              <ThemeToggle />
             </div>
           </div>
         </div>
