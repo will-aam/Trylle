@@ -3,24 +3,21 @@
 import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { useToast } from "@/src/hooks/use-toast";
+import { toast } from "sonner"; // 1. Mude a importação para "sonner"
 import { Gift, Mail } from "lucide-react";
 
 export function FinalCTASection() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!email) {
-      toast({
-        title: "Inscrição recebida!",
-        description:
-          "Seu e-mail foi salvo com sucesso. Fique de olho na sua caixa de entrada!",
-        variant: "success",
+      // 3. Use o toast.error do Sonner
+      toast.error("Ops!", {
+        description: "Você esqueceu de digitar seu e-mail.",
       });
-      setEmail("");
       return;
     }
 
@@ -38,22 +35,19 @@ export function FinalCTASection() {
       const result = await response.json();
 
       if (!response.ok) {
-        // Usa a mensagem de erro da API ou uma mensagem padrão
-        throw new Error(result.error || "Falha ao registrar o e--mail.");
+        throw new Error(result.error || "Falha ao registrar o e-mail.");
       }
 
-      toast({
-        title: "Inscrição recebida!",
+      // 4. Use o toast.success do Sonner, ele já é verde!
+      toast.success("Inscrição recebida!", {
         description:
           "Seu e-mail foi salvo com sucesso. Fique de olho na sua caixa de entrada!",
       });
-      setEmail(""); // Limpa o campo após o sucesso
+      setEmail("");
     } catch (error: any) {
-      toast({
-        title: "Erro",
-        // Mostra o erro específico, por exemplo "E-mail já cadastrado"
+      // 5. Use o toast.error do Sonner para outros erros
+      toast.error("Erro", {
         description: error.message,
-        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -78,7 +72,6 @@ export function FinalCTASection() {
         </div>
 
         <div className="max-w-md mx-auto space-y-3 sm:space-y-4">
-          {/* O formulário agora envolve o Input e o Button */}
           <form
             onSubmit={handleSubmit}
             className="flex flex-col sm:flex-row gap-2 sm:gap-2"
