@@ -34,3 +34,5 @@ export type Subcategory = {
   created_at: string;
   categories?: { name: string };
 };
+
+export { createClient };

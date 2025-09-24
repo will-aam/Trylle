@@ -29,13 +29,13 @@ export function Hero() {
               </p>
               <div className="flex items-center justify-center lg:justify-start gap-4">
                 {" "}
-                <Button size="lg" asChild>
+                {/* <Button size="lg" asChild>
                   <Link href="/signup">
                     {" "}
                     <Play />
                     Começar a Aprender
                   </Link>
-                </Button>
+                </Button> */}
               </div>
             </div>
           </div>
