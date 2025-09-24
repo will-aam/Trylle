@@ -1,214 +1,132 @@
 "use client";
 
-import { createClient } from "@/src/lib/supabase-client";
-import { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/src/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/src/components/ui/form";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
-import { MailCheck } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { toast } from "sonner";
+import Link from "next/link";
+
+const formSchema = z.object({
+  email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
+  password: z
+    .string()
+    .min(6, { message: "A senha deve ter no mínimo 6 caracteres." }),
+});
 
 export default function SignupPage() {
-  const supabase = createClient();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
-    if (password !== confirmPassword) {
-      setError("As senhas não coincidem.");
-      return;
-    }
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
 
     try {
-      // A lógica do avatar foi removida daqui para ser gerenciada centralmente.
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name.trim(),
-            // A avatar_url será definida após o primeiro login.
-          },
-          emailRedirectTo: `${window.location.origin}/`,
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify(values),
       });
 
-      if (error) throw error;
-      setIsSubmitted(true);
-    } catch (error: unknown) {
-      setError(
-        error instanceof Error ? error.message : "Ocorreu um erro no cadastro."
-      );
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Ocorreu um erro desconhecido.");
+      }
+
+      // Lógica para lidar com as diferentes respostas da API
+      if (result.requiresEmailVerification) {
+        toast.success("Cadastro realizado!", {
+          description:
+            "Verifique sua caixa de entrada para confirmar seu e-mail.",
+        });
+        // Neste caso, o usuário precisa confirmar, então não o redirecionamos ainda.
+        // Pode ser uma boa ideia limpar o formulário ou mostrar uma mensagem maior.
+      } else {
+        // Este é o caso do lead, que já foi logado pela API
+        toast.success("Conta ativada com sucesso!", {
+          description: "Bem-vindo(a) de volta! Redirecionando...",
+        });
+        // Redireciona para a home, já logado
+        router.push("/");
+        router.refresh(); // Força a atualização do estado de autenticação no layout
+      }
+    } catch (error: any) {
+      toast.error("Erro no cadastro", {
+        description: error.message,
+      });
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleGoogleSignup = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      if (error) throw error;
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Ocorreu um erro");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // O useEffect com onAuthStateChange foi completamente removido daqui.
+  }
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-md space-y-8">
-          {isSubmitted ? (
-            <div className="text-center space-y-4 p-8 bg-muted/50 rounded-lg">
-              <MailCheck className="mx-auto h-12 w-12 text-green-500" />
-              <h1 className="text-2xl font-bold">Confirme seu E-mail</h1>
-              <p className="text-muted-foreground">
-                Enviamos um link de confirmação para o seu e-mail. Por favor,
-                clique no link para ativar sua conta e fazer o login.
-              </p>
-              <Button asChild variant="outline">
-                <Link href="/login">Voltar para o Login</Link>
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="text-center space-y-2">
-                <h1 className="text-3xl font-bold">Crie sua Conta Grátis</h1>
-                <p className="text-muted-foreground">
-                  Comece a sua jornada em nossa plataforma
-                </p>
-              </div>
-
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Seu Nome</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Como podemos te chamar?"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Seu Melhor E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Crie uma Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirme sua Senha</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                  />
-                </div>
-                {error && (
-                  <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
-                    {error}
-                  </div>
-                )}
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Criando conta..." : "Criar Minha Conta Grátis"}
-                </Button>
-              </form>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    Ou continue com
-                  </span>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full h-10 sm:h-11 text-sm sm:text-base bg-transparent"
-                onClick={handleGoogleSignup}
-                disabled={isLoading}
-              >
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" viewBox="0 0 24 24">
-                  <path
-                    fill="#EA4335"
-                    d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M16.04 18.013c-1.09.703-2.474 1.078-4.04 1.078a7.077 7.077 0 0 1-6.723-4.823l-4.04 3.067A11.965 11.965 0 0 0 12 24c0 1.92.445 3.73 1.237 5.335l4.04-3.067z"
-                  />
-                  <path
-                    fill="#4A90E2"
-                    d="M19.834 21c2.195-2.048 3.62-5.096 3.62-9 0-.71-.109-1.473-.272-2.182H12v4.637h6.436c-.317 1.559-1.17 2.766-2.395 3.558L19.834 21z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.277 14.268A7.12 7.12 0 0 1 4.909 12c0-.782.125-1.533.357-2.235L1.24 6.65A11.934 11.934 0 0 0 0 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067z"
-                  />
-                </svg>
-                Cadastre-se com Google
-              </Button>
-
-              <div className="mt-4 text-center text-sm">
-                Já tem uma conta?{" "}
-                <Link href="/login" className="underline font-semibold">
-                  Faça o login
-                </Link>
-              </div>
-            </>
-          )}
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
+      <div className="w-full max-w-md">
+        <h1 className="text-2xl font-bold text-center mb-6">Criar Conta</h1>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="seu@email.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Senha</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••••" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Aguarde..." : "Cadastrar"}
+            </Button>
+          </form>
+        </Form>
+        <div className="mt-4 text-center">
+          <p className="text-sm">
+            Já tem uma conta?{" "}
+            <Link href="/login" className="font-semibold hover:underline">
+              Faça login
+            </Link>
+          </p>
         </div>
       </div>
-      {/* <div className="hidden bg-muted lg:block">
-        <Image
-          src="/placeholder.jpg"
-          alt="Imagem de fundo da página de cadastro"
-          width={1920}
-          height={1080}
-          className="h-full w-full object-cover dark:brightness-[0.2]"
-        />
-      </div> */}
     </div>
   );
 }
