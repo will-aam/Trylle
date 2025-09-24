@@ -1,5 +1,8 @@
+// src/app/api/signup/route.ts
+
 import { createClient } from "@supabase/supabase-js";
-import { createRouteHandlerClient, type CookieOptions } from "@supabase/ssr";
+// A CORREÇÃO PRINCIPAL ESTÁ AQUI:
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
@@ -12,8 +15,28 @@ const signupSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const cookieStore = cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const cookieStore = await cookies();
+
+  // --- CORREÇÃO APLICADA AQUI ---
+  // Trocamos createRouteHandlerClient por createServerClient
+  // e passamos a configuração completa.
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: CookieOptions) {
+          cookieStore.set({ name, value: "", ...options });
+        },
+      },
+    }
+  );
 
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -69,19 +92,17 @@ export async function POST(request: Request) {
       const { data, error } = await supabase.auth.signUp({
         email: email,
         password: password,
+        options: {
+          // Adicione a URL de redirecionamento para o seu app aqui
+          emailRedirectTo: `${new URL(request.url).origin}/auth/callback`,
+        },
       });
 
       if (error) throw error;
 
-      const requiresEmailVerification =
-        data.user &&
-        data.user.identities &&
-        data.user.identities.length > 0 &&
-        !data.user.email_confirmed_at;
-
       return NextResponse.json({
         message: "Cadastro realizado! Por favor, verifique seu e-mail.",
-        requiresEmailVerification: requiresEmailVerification,
+        requiresEmailVerification: true,
       });
     }
   } catch (error: any) {
