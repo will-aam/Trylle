@@ -168,10 +168,8 @@ export default function SugerirTemaPage() {
               <span className="font-medium text-sm sm:text-base">Voltar</span>
             </Link>
             <div className="flex items-center gap-2">
-              <Lightbulb className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               <h1 className="text-lg sm:text-xl md:text-2xl lg:text-5xl font-bold text-slate-900">
                 Trylle
-                <ThemeToggle />
               </h1>
             </div>
           </div>
