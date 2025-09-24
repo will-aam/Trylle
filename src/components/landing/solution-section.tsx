@@ -36,7 +36,7 @@ export function SolutionSection() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentCard((prev) => (prev + 1) % solutions.length);
-    }, 4000);
+    }, 9000);
 
     return () => clearInterval(timer);
   }, [solutions.length]);
