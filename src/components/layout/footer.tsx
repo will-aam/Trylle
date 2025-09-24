@@ -16,8 +16,9 @@ export function Footer() {
               <span className="font-bold text-lg">Trylle</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Descubra, ouça e compartilhe podcasts incríveis de criadores do
-              mundo todo. Sua porta de entrada para conteúdo de áudio ilimitado.
+              Conhecimento em áudio para quem não tem tempo a perder!
+              Transformamos pesquisa em aprendizado para mentes curiosas e vidas
+              ocupadas.
             </p>
             <div className="flex space-x-4">
               <a
@@ -153,22 +154,16 @@ export function Footer() {
             </p>
             <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-2">
               <a
-                href="/privacy"
+                href="/privacy-policy"
                 className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 Política de Privacidade
               </a>
               <a
-                href="/terms"
+                href="/terms-of-service"
                 className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 Termos de Serviço
-              </a>
-              <a
-                href="/cookies"
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                Política de Cookies
               </a>
               <a
                 href="/accessibility"
