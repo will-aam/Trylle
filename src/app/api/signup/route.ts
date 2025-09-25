@@ -1,7 +1,4 @@
-// src/app/api/signup/route.ts
-
 import { createClient } from "@supabase/supabase-js";
-// A CORREÇÃO PRINCIPAL ESTÁ AQUI:
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -17,9 +14,6 @@ const signupSchema = z.object({
 export async function POST(request: Request) {
   const cookieStore = await cookies();
 
-  // --- CORREÇÃO APLICADA AQUI ---
-  // Trocamos createRouteHandlerClient por createServerClient
-  // e passamos a configuração completa.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -93,7 +87,6 @@ export async function POST(request: Request) {
         email: email,
         password: password,
         options: {
-          // Adicione a URL de redirecionamento para o seu app aqui
           emailRedirectTo: `${new URL(request.url).origin}/auth/callback`,
         },
       });

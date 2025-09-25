@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-
 import { useState, useEffect } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
@@ -22,8 +21,7 @@ import {
   Star,
   MessageSquare,
   X,
-  Moon,
-  Sun,
+  AlertCircle, // Ícone de erro que vamos usar
 } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
@@ -71,6 +69,10 @@ export default function SugerirTemaPage() {
   const [showTipsModal, setShowTipsModal] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // --- NOVOS ESTADOS PARA DAR FEEDBACK AO USUÁRIO ---
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const { setTheme } = useTheme();
 
   useEffect(() => {
@@ -90,11 +92,41 @@ export default function SugerirTemaPage() {
     setFormData((prev) => ({ ...prev, category }));
   };
 
-  const handleSubmit = () => {
-    setIsSubmitted(true);
-    setTimeout(() => setIsSubmitted(false), 3000);
-    setFormData({ title: "", description: "", category: "", email: "" });
-    setSelectedCategory("");
+  // --- FUNÇÃO DE ENVIO ATUALIZADA ---
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    setError(null);
+    setIsSubmitted(false);
+
+    try {
+      const response = await fetch("/api/suggest-topic", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Se a API retornar um erro, ele será capturado aqui
+        throw new Error(result.error || "Algo deu errado. Tente novamente.");
+      }
+
+      // Se tudo correu bem, mostra sucesso e limpa o formulário
+      setIsSubmitted(true);
+      setFormData({ title: "", description: "", category: "", email: "" });
+      setSelectedCategory("");
+      // A mensagem de sucesso some após 5 segundos
+      setTimeout(() => setIsSubmitted(false), 5000);
+    } catch (err: any) {
+      // Captura qualquer erro e o exibe para o usuário
+      setError(err.message);
+    } finally {
+      // Garante que o estado de loading seja desativado no final
+      setIsLoading(false);
+    }
   };
 
   if (!mounted) {
@@ -234,6 +266,7 @@ export default function SugerirTemaPage() {
                   </div>
                 </div>
 
+                {/* --- NOVOS ALERTS DE FEEDBACK --- */}
                 {isSubmitted && (
                   <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6 flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -243,6 +276,20 @@ export default function SugerirTemaPage() {
                       </p>
                       <p className="text-sm text-green-600 dark:text-green-400">
                         Nossa equipe analisará sua proposta em breve.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6 flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    <div>
+                      <p className="font-medium text-red-800 dark:text-red-300">
+                        Ocorreu um erro
+                      </p>
+                      <p className="text-sm text-red-600 dark:text-red-400">
+                        {error}
                       </p>
                     </div>
                   </div>
@@ -357,10 +404,11 @@ export default function SugerirTemaPage() {
                     disabled={
                       !formData.title ||
                       !formData.description ||
-                      !selectedCategory
+                      !selectedCategory ||
+                      isLoading // Desabilita o botão durante o envio
                     }
                   >
-                    Enviar Sugestão
+                    {isLoading ? "Enviando..." : "Enviar Sugestão"}
                   </Button>
                 </div>
               </CardContent>
