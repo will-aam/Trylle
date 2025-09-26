@@ -134,6 +134,10 @@ export default function AuthPage() {
       provider: "google",
       options: {
         redirectTo: `${location.origin}/auth/callback`,
+        // ADICIONE ESTA PARTE PARA FORÇAR A SELEÇÃO DE CONTA
+        queryParams: {
+          prompt: "select_account",
+        },
       },
     });
   };

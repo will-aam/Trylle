@@ -1,43 +1,34 @@
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { type CookieOptions, createServerClient } from "@supabase/ssr";
 
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  // se houver um 'next' no URL, redirecionamos para lá depois do login
-  const next = searchParams.get("next") ?? "/";
+import type { NextRequest } from "next/server";
+
+export async function GET(request: NextRequest) {
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get("code");
+  const cookieStore = cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
   if (code) {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-          set(name: string, value: string, options: CookieOptions) {
-            cookieStore.set({ name, value, ...options });
-          },
-          remove(name: string, options: CookieOptions) {
-            cookieStore.delete({ name, ...options });
-          },
-        },
-      }
-    );
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
-    }
+    // A troca do código pela sessão acontece aqui e o cookie de sessão é salvo.
+    await supabase.auth.exchangeCodeForSession(code);
   }
 
-  // URL de redirecionamento em caso de erro
-  console.error(
-    "Erro na autenticação: o código de verificação é inválido ou expirou."
-  );
-  return NextResponse.redirect(
-    `${origin}/login?error=Falha na autenticação. Por favor, tente novamente.`
-  );
+  // --- LÓGICA DE VERIFICAÇÃO DE ADMIN ---
+
+  // Após a sessão ser criada, buscamos os dados do usuário.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Verificamos se o usuário é um admin.
+  if (user?.user_metadata?.role === "admin") {
+    // Se for admin, redirecionamos para a página de admin.
+    return NextResponse.redirect(new URL("/admin", request.url));
+  }
+
+  // Para todos os outros usuários, redirecionamos para a página principal.
+  // O middleware e a página principal irão então reconhecer a sessão e mostrar a versão logada.
+  return NextResponse.redirect(new URL("/", request.url));
 }
