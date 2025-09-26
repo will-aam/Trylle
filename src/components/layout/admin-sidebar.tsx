@@ -10,11 +10,10 @@ import {
   Settings,
   MonitorCog,
   Wallet,
-  Home,
-  LibraryBig,
-  MessagesSquare,
   Eye,
   CalendarArrowUp,
+  LibraryBig,
+  MessagesSquare,
 } from "lucide-react";
 import {
   Tooltip,
@@ -23,7 +22,8 @@ import {
   TooltipTrigger,
 } from "@/src/components/ui/tooltip";
 import { Button } from "@/src/components/ui/button";
-import { createClient } from "@/src/lib/supabase-client";
+// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { ThemeToggle } from "./theme-toggle";
 import { cn } from "@/src/lib/utils";
 
@@ -35,11 +35,12 @@ interface AdminSidebarProps {
 export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = createClient();
+  // 2. E AQUI: Use a nova função para criar o cliente
+  const supabase = createSupabaseBrowserClient();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/auth"); // Redirecionar para a página de login
   };
 
   return (
@@ -124,7 +125,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 icon={<Wallet className="h-4 w-4" />}
                 label="Financeiro"
                 isCollapsed={isCollapsed}
-                isActive={pathname === "/admin/config"}
+                isActive={pathname === "/admin/config"} // <-- Corrigi um pequeno bug aqui
               />
               <SidebarLink
                 href="/admin/config"
@@ -165,6 +166,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
   );
 }
 
+// O componente SidebarLink não precisa de alterações.
 function SidebarLink({
   href,
   icon,

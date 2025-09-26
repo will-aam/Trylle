@@ -22,19 +22,19 @@ import {
 } from "../../ui/select";
 import { useToast } from "@/src/hooks/use-toast";
 import { Upload, CheckCircle } from "lucide-react";
-import { createClient } from "@/src/lib/supabase-client";
+// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Category, Subcategory, Tag } from "@/src/lib/types";
 import { TagSelector } from "./TagSelector";
 import { cn } from "@/src/lib/utils";
 import { revalidateAdminDashboard } from "@/src/app/admin/actions";
 
 export function UploadForm() {
-  const supabase = createClient();
-  // 1. Estado para controlar o status do upload
+  // 2. E AQUI: Use a nova função para criar o cliente
+  const supabase = createSupabaseBrowserClient();
   const [uploadStatus, setUploadStatus] = useState<
     "idle" | "uploading" | "success"
   >("idle");
-  // 2. Chave para forçar a recriação do formulário
   const [formKey, setFormKey] = useState(Date.now());
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -42,7 +42,7 @@ export function UploadForm() {
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [audioDuration, setAudioDuration] = useState<number | null>(null); // NOVO ESTADO
+  const [audioDuration, setAudioDuration] = useState<number | null>(null);
   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
   const [pageCount, setPageCount] = useState<string>("");
   const [referenceCount, setReferenceCount] = useState<string>("");
@@ -59,6 +59,9 @@ export function UploadForm() {
     publishedAt: new Date().toISOString().split("T")[0],
   });
 
+  // Nenhuma outra alteração é necessária no resto do arquivo.
+  // A lógica interna já está correta.
+
   useEffect(() => {
     const loadInitialData = async () => {
       const { data: catData } = await supabase
@@ -68,7 +71,7 @@ export function UploadForm() {
       setCategories(catData || []);
     };
     loadInitialData();
-  }, [supabase, formKey]); // Recarrega categorias se o form for resetado
+  }, [supabase, formKey]);
 
   useEffect(() => {
     if (selectedCategory) {
@@ -84,9 +87,8 @@ export function UploadForm() {
     } else {
       setSubcategories([]);
     }
-  }, [selectedCategory, supabase, formKey]); // Recarrega subcategorias se o form for resetado
+  }, [selectedCategory, supabase, formKey]);
 
-  // FUNÇÃO MODIFICADA
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -105,7 +107,6 @@ export function UploadForm() {
         setFormData({ ...formData, title: file.name.replace(/\.[^/.]+$/, "") });
       }
 
-      // Lógica para obter a duração do áudio
       const audio = new Audio(URL.createObjectURL(file));
       audio.onloadedmetadata = () => {
         setAudioDuration(Math.round(audio.duration));
@@ -113,7 +114,6 @@ export function UploadForm() {
     }
   };
 
-  // Função para resetar todos os estados para o valor inicial
   const resetForm = () => {
     setFormData({
       title: "",
@@ -123,18 +123,16 @@ export function UploadForm() {
       publishedAt: new Date().toISOString().split("T")[0],
     });
     setAudioFile(null);
-    setAudioDuration(null); // RESET ADICIONADO
+    setAudioDuration(null);
     setDocumentFiles([]);
     setPageCount("");
     setReferenceCount("");
     setFileSize(null);
     setSelectedTags([]);
     setSelectedCategory("");
-    // A mágica acontece aqui: mudamos a chave, o React recria o formulário
     setFormKey(Date.now());
   };
 
-  // FUNÇÃO MODIFICADA
   const handleSubmit = async (status: "draft" | "scheduled" | "published") => {
     if (!audioFile || !formData.title.trim()) {
       toast({
@@ -147,7 +145,6 @@ export function UploadForm() {
     setUploadStatus("uploading");
 
     try {
-      // 1. Pedir a Pre-signed URL para a nossa nova API
       const presignedUrlResponse = await fetch("/api/generate-presigned-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -165,7 +162,6 @@ export function UploadForm() {
       const { signedUrl, publicUrl, originalFileName } =
         await presignedUrlResponse.json();
 
-      // 2. Fazer o upload do arquivo diretamente para o R2
       const uploadResponse = await fetch(signedUrl, {
         method: "PUT",
         body: audioFile,
@@ -176,7 +172,6 @@ export function UploadForm() {
         throw new Error("Falha no upload do arquivo para o armazenamento.");
       }
 
-      // 3. Salvar os metadados no Supabase
       const { data: episodeData, error: insertError } = await supabase
         .from("episodes")
         .insert([
@@ -188,7 +183,7 @@ export function UploadForm() {
             category_id: formData.categoryId || null,
             subcategory_id: formData.subcategoryId || null,
             published_at: new Date(formData.publishedAt).toISOString(),
-            duration_in_seconds: audioDuration, // DADO ADICIONADO
+            duration_in_seconds: audioDuration,
             status: status,
           },
         ])
@@ -205,7 +200,6 @@ export function UploadForm() {
         await supabase.from("episode_tags").insert(episodeTags);
       }
 
-      // Upload de documentos de apoio
       if (documentFiles.length > 0) {
         toast({
           title: "Enviando anexos...",
@@ -254,7 +248,7 @@ export function UploadForm() {
                 reference_count: referenceCount
                   ? parseInt(referenceCount, 10)
                   : null,
-                file_size: file.size, // Use individual file size
+                file_size: file.size,
               },
             ]);
           } catch (uploadError: any) {
@@ -263,12 +257,10 @@ export function UploadForm() {
               description: `Falha ao enviar ${file.name}: ${uploadError.message}`,
               variant: "destructive",
             });
-            // Continua para o próximo arquivo em caso de erro
           }
         }
       }
 
-      // Lógica de sucesso
       setUploadStatus("success");
       toast({
         title: "Sucesso!",
@@ -278,7 +270,6 @@ export function UploadForm() {
       resetForm();
       router.refresh();
 
-      // Volta o botão para o estado normal após 3 segundos
       setTimeout(() => {
         setUploadStatus("idle");
       }, 3000);
@@ -289,12 +280,11 @@ export function UploadForm() {
         description: error.message,
         variant: "destructive",
       });
-      setUploadStatus("idle"); // Volta ao estado normal em caso de erro
+      setUploadStatus("idle");
     }
   };
 
   return (
-    // 3. Aplicando a chave ao formulário
     <form key={formKey} className="h-full flex flex-col">
       <Card className="flex-1 flex flex-col overflow-hidden">
         <CardHeader className="border-b">
@@ -417,7 +407,6 @@ export function UploadForm() {
                     if (files) {
                       const fileArray = Array.from(files);
                       setDocumentFiles(fileArray);
-                      // Set file size from the first file for display
                       if (fileArray.length > 0) {
                         setFileSize(fileArray[0].size);
                       } else {
@@ -439,7 +428,6 @@ export function UploadForm() {
                 )}
               </div>
 
-              {/* Campos de metadados para documentos */}
               {documentFiles.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t pt-4 mt-4">
                   <div className="space-y-2">

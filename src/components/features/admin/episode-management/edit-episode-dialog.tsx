@@ -20,7 +20,8 @@ import {
   SelectValue,
 } from "@/src/components/ui/select";
 import { useToast } from "@/src/hooks/use-toast";
-import { createClient } from "@/src/lib/supabase-client";
+// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import {
   Episode,
   Category,
@@ -38,7 +39,7 @@ interface EditEpisodeDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onEpisodeUpdate: () => void;
 }
-//se eu quiser mudar os quant de doc depois
+
 const MAX_DOCUMENTS_PER_EPISODE = 1;
 
 export function EditEpisodeDialog({
@@ -47,7 +48,8 @@ export function EditEpisodeDialog({
   onOpenChange,
   onEpisodeUpdate,
 }: EditEpisodeDialogProps) {
-  const supabase = createClient();
+  // 2. E AQUI: Use a nova função para criar o cliente
+  const supabase = createSupabaseBrowserClient();
   const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +66,6 @@ export function EditEpisodeDialog({
   const [newAudioFile, setNewAudioFile] = useState<File | null>(null);
   const audioFileInputRef = useRef<HTMLInputElement>(null);
 
-  // New states for editing document metadata
   const [editingDoc, setEditingDoc] = useState<EpisodeDocument | null>(null);
   const [editingPageCount, setEditingPageCount] = useState<string>("");
   const [editingReferenceCount, setEditingReferenceCount] =
@@ -155,7 +156,7 @@ export function EditEpisodeDialog({
   };
 
   const handleSelectChange = (field: keyof Episode, value: string) => {
-    const newFormData = { ...formData, [field]: value };
+    const newFormData: Partial<Episode> = { ...formData, [field]: value };
     if (field === "category_id") {
       newFormData.subcategory_id = null;
     }
@@ -173,7 +174,6 @@ export function EditEpisodeDialog({
 
       if (newAudioFile) {
         audioFileChanged = true;
-        // 1. Delete old audio file
         if (episode.audio_url) {
           try {
             const oldFileKey = episode.audio_url.substring(
@@ -186,11 +186,9 @@ export function EditEpisodeDialog({
             });
           } catch (error) {
             console.error("Failed to delete old audio file:", error);
-            // Non-blocking, maybe the file is already gone
           }
         }
 
-        // 2. Upload new audio file
         const uploadFormData = new FormData();
         uploadFormData.append("file", newAudioFile);
         const uploadResponse = await fetch("/api/upload", {
@@ -206,7 +204,6 @@ export function EditEpisodeDialog({
         file_name = newAudioFile.name;
       }
 
-      // 3. Update episode details in Supabase
       const updateData: Partial<Episode> = {
         title: formData.title,
         description: formData.description,
@@ -223,7 +220,6 @@ export function EditEpisodeDialog({
 
       if (episodeError) throw episodeError;
 
-      // ... (rest of the logic for tags and documents remains the same)
       const { error: deleteTagsError } = await supabase
         .from("episode_tags")
         .delete()
@@ -386,7 +382,6 @@ export function EditEpisodeDialog({
 
         <ScrollArea className="flex-1 min-h-0">
           <div className="flex flex-col gap-6 p-6 pt-0">
-            {/* Título */}
             <div className="space-y-2">
               <Label htmlFor="title">Título</Label>
               <Input
@@ -396,7 +391,6 @@ export function EditEpisodeDialog({
               />
             </div>
 
-            {/* Categoria e Subcategoria lado a lado */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Categoria</Label>
@@ -441,7 +435,6 @@ export function EditEpisodeDialog({
               </div>
             </div>
 
-            {/* Descrição */}
             <div className="space-y-2">
               <Label>Descrição</Label>
               <RichTextEditor
@@ -450,7 +443,6 @@ export function EditEpisodeDialog({
               />
             </div>
 
-            {/* Tags */}
             <div className="space-y-2">
               <Label>Tags</Label>
               <TagSelector
@@ -459,7 +451,6 @@ export function EditEpisodeDialog({
               />
             </div>
 
-            {/* Audio File */}
             <div className="space-y-4 pt-6 border-t">
               <Label className="font-semibold text-base">
                 Arquivo de Áudio
@@ -490,7 +481,6 @@ export function EditEpisodeDialog({
               </div>
             </div>
 
-            {/* Documentos */}
             <div className="space-y-4 pt-6 border-t">
               <Label className="font-semibold text-base">
                 Documento Anexado
@@ -574,7 +564,6 @@ export function EditEpisodeDialog({
                 )}
               </div>
 
-              {/* Upload Form - Conditionally Rendered */}
               {documents.length < MAX_DOCUMENTS_PER_EPISODE && (
                 <div className="flex items-center gap-2 pt-4 border-t">
                   <Input
@@ -603,7 +592,6 @@ export function EditEpisodeDialog({
           </div>
         </ScrollArea>
 
-        {/* RODAPÉ FIXO */}
         <DialogFooter className="p-6 pt-4 border-t">
           <Button
             type="button"

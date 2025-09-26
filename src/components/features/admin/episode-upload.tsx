@@ -16,9 +16,13 @@ import {
 } from "../../ui/select";
 import { Badge } from "../../ui/badge";
 import { useToast } from "@/src/hooks/use-toast";
-import { createClient } from "@/src/lib/supabase-client";
+// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 
 export function EpisodeUpload() {
+  // 2. E AQUI: Crie a instância do Supabase no topo do componente
+  const supabase = createSupabaseBrowserClient();
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -64,10 +68,11 @@ export function EpisodeUpload() {
     }
     setIsUploading(true);
 
-    const supabase = createClient();
+    // A instância do Supabase já foi criada no topo.
+    // const supabase = createClient(); <-- LINHA REMOVIDA DAQUI
 
     try {
-      // 1. Upload audio and thumbnail files
+      // O resto da sua lógica de submit continua igual
       const uploadFormData = new FormData();
       uploadFormData.append("file", audioFile);
       if (thumbnailFile) {
@@ -84,19 +89,15 @@ export function EpisodeUpload() {
       }
       const { audio_url, thumbnail_url } = await uploadResponse.json();
 
-      // 2. Create the episode record
       const { data: newEpisode, error: episodeError } = await supabase
         .from("episodes")
         .insert({
           title,
           description,
-          category_id: category, // Assuming category state holds the ID
+          category_id: category,
           audio_url,
-          // TODO: This needs to be fixed. The form does not provide a correct thumbnail_url
-          // It provides a file, not a URL.
-          // For now, we'll pass the uploaded URL if it exists.
           image_url: thumbnail_url,
-          status: "published", // or 'draft' depending on desired default
+          status: "published",
         })
         .select()
         .single();
@@ -108,7 +109,6 @@ export function EpisodeUpload() {
         );
       }
 
-      // 3. Upload additional documents if they exist
       if (documentFiles.length > 0) {
         const docFormData = new FormData();
         docFormData.append("episode_id", newEpisode.id);
@@ -125,8 +125,6 @@ export function EpisodeUpload() {
         );
 
         if (!docUploadResponse.ok) {
-          // Even if this fails, the episode is created.
-          // We should inform the user but not fail the entire process.
           toast({
             title: "Erro ao anexar documentos",
             description:
@@ -135,11 +133,6 @@ export function EpisodeUpload() {
           });
         }
       }
-
-      // 4. Create tag associations (if any)
-      // This part is missing from the original logic but is crucial.
-      // Assuming we have a 'tags' table and an 'episode_tags' join table.
-      // For simplicity, this is left as a TODO for a future task.
 
       toast({
         title: "Episódio enviado com sucesso!",

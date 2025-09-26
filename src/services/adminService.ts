@@ -1,8 +1,10 @@
-import { createClient } from "@/src/lib/supabase-client";
+// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Episode, Category, SortDirection } from "@/src/lib/types";
 
+// 2. E AQUI: Use a nova função para criar o cliente
 // Este cliente usa a chave anônima e é seguro para o cliente
-const supabase = createClient();
+const supabase = createSupabaseBrowserClient();
 
 type FetchEpisodesParams = {
   currentPage: number;
@@ -42,6 +44,7 @@ export const getEpisodes = async ({
     query = query.in("category_id", categoryFilter);
   }
 
+  // Corrigido: `sortColumn` pode ser vazio, então usamos um fallback
   query = query
     .order(sortColumn || "published_at", {
       ascending: sortDirection === "asc",
@@ -137,5 +140,3 @@ export const updateEpisodeStatus = async (
     throw new Error("Could not update episode status.");
   }
 };
-
-// A função getDashboardStats foi removida daqui

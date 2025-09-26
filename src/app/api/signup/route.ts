@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { cookies } from "next/headers"; 
 import { z } from "zod";
 
 const signupSchema = z.object({

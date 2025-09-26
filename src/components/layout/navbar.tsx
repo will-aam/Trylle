@@ -16,15 +16,16 @@ import {
 } from "@/src/components/ui/avatar";
 import { Input } from "@/src/components/ui/input";
 import { Search, Bell, AudioLines } from "lucide-react";
-import { createClient } from "@/src/lib/supabase-client";
+// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { User } from "@supabase/supabase-js";
 import { ThemeToggle } from "./theme-toggle";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { NavbarLoggedOut } from "./NavbarLoggedOut";
-// import { NavbarWithAuth } from "./NavbarWithAuth"; para quando eu disponibilizar o login/cadastro
 
 export function Navbar() {
-  const supabase = createClient();
+  // 2. E AQUI: Use a nova função para criar o cliente
+  const supabase = createSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [popoverOpen, setPopoverOpen] = useState(false);

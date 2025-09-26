@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/src/lib/supabase-client";
+// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { useToast } from "@/src/hooks/use-toast";
 import {
   Card,
@@ -31,7 +32,8 @@ type TagGroup = {
 };
 
 export function TagGroupManager() {
-  const supabase = createClient();
+  // 2. E AQUI: Use a nova função para criar o cliente
+  const supabase = createSupabaseBrowserClient();
   const { toast } = useToast();
 
   const [groups, setGroups] = useState<TagGroup[]>([]);
@@ -108,7 +110,7 @@ export function TagGroupManager() {
       .from("tag_groups")
       .update({ name: editingName.trim() })
       .eq("id", editingGroup.id)
-      .select()
+      .select("*, tags(id, name)") // Adicionado para manter os dados das tags
       .single();
 
     if (error) {
@@ -120,7 +122,7 @@ export function TagGroupManager() {
     } else {
       setGroups(
         groups
-          .map((g) => (g.id === editingGroup.id ? data : g))
+          .map((g) => (g.id === editingGroup.id ? { ...g, ...data } : g))
           .sort((a, b) => a.name.localeCompare(b.name))
       );
       toast({ title: "Sucesso!", description: "Grupo de tags atualizado." });

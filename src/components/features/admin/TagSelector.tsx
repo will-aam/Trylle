@@ -18,7 +18,8 @@ import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { useToast } from "@/src/hooks/use-toast";
 import { X, ChevronsUpDown } from "lucide-react";
-import { createClient } from "@/src/lib/supabase-client";
+// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Tag } from "@/src/lib/types";
 
 interface TagSelectorProps {
@@ -30,7 +31,8 @@ export function TagSelector({
   selectedTags,
   onSelectedTagsChange,
 }: TagSelectorProps) {
-  const supabase = createClient();
+  // 2. E AQUI: Use a nova função para criar o cliente
+  const supabase = createSupabaseBrowserClient();
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [tagInputValue, setTagInputValue] = useState("");
   const [popoverOpen, setPopoverOpen] = useState(false);

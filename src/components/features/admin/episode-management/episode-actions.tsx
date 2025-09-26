@@ -38,7 +38,8 @@ import { usePlayer } from "@/src/hooks/use-player";
 import { useToast } from "@/src/hooks/use-toast";
 import { Episode, EpisodeDocument } from "@/src/lib/types";
 import { EditEpisodeDialog } from "./edit-episode-dialog";
-import { createClient } from "@/src/lib/supabase-client";
+// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 
 interface EpisodeActionsProps {
   episode: Episode;
@@ -49,12 +50,16 @@ export function EpisodeActions({
   episode,
   onEpisodeUpdate,
 }: EpisodeActionsProps) {
-  const supabase = createClient();
+  // 2. E AQUI: Use a nova função para criar o cliente
+  const supabase = createSupabaseBrowserClient();
   const { setEpisode } = usePlayer();
   const { toast } = useToast();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [documents, setDocuments] = useState<EpisodeDocument[]>([]);
   const [documentsFetched, setDocumentsFetched] = useState(false);
+
+  // Nenhuma outra alteração é necessária no resto do arquivo.
+  // A lógica interna já está correta.
 
   const fetchDocuments = async () => {
     if (documentsFetched) return;
@@ -98,11 +103,9 @@ export function EpisodeActions({
 
   const handleDelete = async () => {
     try {
-      // 1. Extrair o caminho do arquivo de áudio da URL
       const audioUrl = new URL(episode.audio_url);
-      const audioKey = audioUrl.pathname.slice(1); // Remove a barra inicial
+      const audioKey = audioUrl.pathname.slice(1);
 
-      // 2. Chamar a API para deletar o arquivo de áudio principal do R2
       const audioDeleteResponse = await fetch("/api/delete-file", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -113,7 +116,6 @@ export function EpisodeActions({
         console.warn(`Failed to delete audio file: ${audioKey}`);
       }
 
-      // 3. CORREÇÃO FINAL: Buscar na tabela correta "episode_documents"
       const { data: documents } = await supabase
         .from("episode_documents")
         .select("storage_path")
@@ -121,7 +123,6 @@ export function EpisodeActions({
 
       if (documents) {
         for (const doc of documents) {
-          // Garante que o doc e o storage_path existem
           if (doc && doc.storage_path) {
             const docDeleteResponse = await fetch("/api/delete-file", {
               method: "POST",
@@ -135,7 +136,6 @@ export function EpisodeActions({
         }
       }
 
-      // 4. Deletar o registro do episódio no Supabase
       const { error: deleteError } = await supabase
         .from("episodes")
         .delete()

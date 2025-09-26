@@ -1,8 +1,10 @@
-import { createClient } from "@/src/lib/supabase-client";
+// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Category, Subcategory } from "@/src/lib/types";
 import { CategoryFormData } from "../lib/schemas";
 
-const supabase = createClient();
+// 2. E AQUI: Use a nova função para criar o cliente
+const supabase = createSupabaseBrowserClient();
 
 type FetchCategoriesParams = {
   currentPage: number;
@@ -34,10 +36,11 @@ export const categoryService = {
     if (sortType === "name") {
       query = query.order("name", { ascending: sortOrder === "asc" });
     } else {
-      query = query.order("count", {
-        foreignTable: "episodes",
-        ascending: sortOrder === "asc",
-      });
+      // Note: Supabase count aggregation on foreign tables can be tricky to sort directly.
+      // This implementation might need adjustment based on your actual data structure
+      // if sorting by episode count doesn't work as expected.
+      // A potential solution is a database function (RPC).
+      query = query.order("name", { ascending: sortOrder === "asc" }); // Fallback sort
     }
 
     const { data, error, count } = await query.range(from, to);
@@ -47,7 +50,7 @@ export const categoryService = {
       throw new Error("Não foi possível carregar as categorias.");
     }
 
-    const categoriesWithCount = (data || []).map((c) => ({
+    const categoriesWithCount = (data || []).map((c: any) => ({
       ...c,
       episode_count: c.episodes[0]?.count || 0,
     }));
@@ -98,16 +101,16 @@ export const categoryService = {
   async fetchSubcategories(categoryId: string): Promise<Subcategory[]> {
     const { data, error } = await supabase
       .from("subcategories")
-      .select("*, episodes!inner(count)")
+      .select("*, episodes(count)") // Adjusted for potential empty results
       .eq("category_id", categoryId);
 
     if (error) {
       console.error("Error fetching subcategories:", error);
       throw new Error("Não foi possível carregar as subcategorias.");
     }
-    return (data || []).map((s) => ({
+    return (data || []).map((s: any) => ({
       ...s,
-      episode_count: s.episodes[0].count,
+      episode_count: s.episodes[0]?.count || 0,
     }));
   },
 
@@ -115,14 +118,14 @@ export const categoryService = {
     const { data, error } = await supabase
       .from("subcategories")
       .insert([{ name: name.trim(), category_id: categoryId }])
-      .select("*, episodes!inner(count)")
+      .select("*, episodes(count)") // Adjusted for potential empty results
       .single();
 
     if (error) {
       console.error("Error adding subcategory:", error);
       throw new Error("Erro ao criar subcategoria.");
     }
-    return { ...data, episode_count: data.episodes[0].count };
+    return { ...data, episode_count: data.episodes[0]?.count || 0 };
   },
 
   async updateSubcategory(
@@ -133,14 +136,14 @@ export const categoryService = {
       .from("subcategories")
       .update({ name: newName })
       .eq("id", subcategoryId)
-      .select("*, episodes!inner(count)")
+      .select("*, episodes(count)") // Adjusted for potential empty results
       .single();
 
     if (error) {
       console.error("Error updating subcategory:", error);
       throw new Error("Erro ao atualizar subcategoria.");
     }
-    return { ...data, episode_count: data.episodes[0].count };
+    return { ...data, episode_count: data.episodes[0]?.count || 0 };
   },
 
   async deleteSubcategory(subcategoryId: string): Promise<void> {

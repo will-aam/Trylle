@@ -9,7 +9,8 @@ import {
   CardDescription,
 } from "../../../ui/card";
 import { useToast } from "@/src/hooks/use-toast";
-import { createClient } from "@/src/lib/supabase-client";
+// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Tag } from "@/src/lib/types";
 import { TagList } from "@/src/components/features/admin/tag-manager/TagList";
 import { TagFilters } from "@/src/components/features/admin/tag-manager/TagFilters";
@@ -24,10 +25,12 @@ import { Check, Download } from "lucide-react";
 const TAGS_PER_PAGE = 25;
 
 export function TagManager() {
-  const supabase = createClient();
+  // 2. E AQUI: Use a nova função para criar o cliente
+  const supabase = createSupabaseBrowserClient();
   const { toast } = useToast();
 
-  // Estados principais
+  // O resto do seu código permanece exatamente o mesmo.
+
   const [tags, setTags] = useState<TagWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTagName, setNewTagName] = useState("");
@@ -39,41 +42,32 @@ export function TagManager() {
   const [unusedTagCount, setUnusedTagCount] = useState(0);
   const [totalTagCount, setTotalTagCount] = useState(0);
   const [tagGroups, setTagGroups] = useState<TagGroup[]>([]);
-
-  // Estados de seleção
   const [selectedTag, setSelectedTag] = useState<TagWithCount | null>(null);
   const [selectedTags, setSelectedTags] = useState<TagWithCount[]>([]);
   const [mainTag, setMainTag] = useState<TagWithCount | null>(null);
-
-  // Estados de diálogo
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   const [editTagName, setEditTagName] = useState("");
 
-  // Função para ação na tag (preenche o campo imediatamente)
   const handleTagAction = (tag: TagWithCount | null) => {
     if (tag) {
       setSelectedTag(tag);
-      setEditTagName(tag.name); // Preenche imediatamente
+      setEditTagName(tag.name);
     } else {
       setSelectedTag(null);
-      setEditTagName(""); // Limpa o campo
+      setEditTagName("");
     }
   };
 
-  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchTerm, filterMode]);
 
-  // Fetch global counts (total tags and unused tags)
   const fetchGlobalCounts = useCallback(async () => {
-    // Get total count of all tags
     const { count: totalCount, error: totalError } = await supabase
       .from("tags")
       .select("*", { count: "exact", head: true });
@@ -81,12 +75,9 @@ export function TagManager() {
       setTotalTagCount(totalCount || 0);
     }
 
-    // Get count of unused tags (tags with no episode associations)
-    const { data: allTags, error: tagsError } = await supabase.from("tags")
-      .select(`
-        id,
-        episode_tags(count)
-      `);
+    const { data: allTags, error: tagsError } = await supabase
+      .from("tags")
+      .select(`id, episode_tags(count)`);
     if (!tagsError && allTags) {
       const unusedCount = allTags.filter((tag) => {
         const count = tag.episode_tags?.[0]?.count || 0;
@@ -96,16 +87,10 @@ export function TagManager() {
     }
   }, [supabase]);
 
-  // Fetch paginated tags based on current filters
   const fetchTags = useCallback(async () => {
     setLoading(true);
-    // First, get all tags with their counts to properly filter
-    let baseQuery = supabase.from("tags").select(`
-        *,
-        episode_tags(count)
-      `);
+    let baseQuery = supabase.from("tags").select(`*, episode_tags(count)`);
 
-    // Apply search filter if needed
     if (debouncedSearchTerm) {
       baseQuery = baseQuery.ilike("name", `%${debouncedSearchTerm}%`);
     }
@@ -124,7 +109,6 @@ export function TagManager() {
       return;
     }
 
-    // Process tags to add episode count
     const processedTags: TagWithCount[] = (allFilteredTags || []).map(
       (tag) => ({
         ...tag,
@@ -132,7 +116,6 @@ export function TagManager() {
       })
     );
 
-    // Apply filter mode
     let filteredTags = processedTags;
     if (filterMode === "used") {
       filteredTags = processedTags.filter((tag) => tag.episode_count > 0);
@@ -140,10 +123,8 @@ export function TagManager() {
       filteredTags = processedTags.filter((tag) => tag.episode_count === 0);
     }
 
-    // Set total count for pagination
     setTotalCount(filteredTags.length);
 
-    // Apply pagination
     const from = (currentPage - 1) * TAGS_PER_PAGE;
     const to = from + TAGS_PER_PAGE;
     const paginatedTags = filteredTags.slice(from, to);
@@ -151,7 +132,6 @@ export function TagManager() {
     setLoading(false);
   }, [supabase, toast, currentPage, debouncedSearchTerm, filterMode]);
 
-  // Initial load
   useEffect(() => {
     const fetchGroups = async () => {
       const { data, error } = await supabase
@@ -169,7 +149,6 @@ export function TagManager() {
 
   const totalPages = Math.ceil(totalCount / TAGS_PER_PAGE);
 
-  // Handlers
   const handleAddTag = async () => {
     if (!newTagName.trim()) return;
     const { data, error } = await supabase
@@ -232,12 +211,9 @@ export function TagManager() {
   };
 
   const handleDeleteUnusedTags = async () => {
-    // Get all unused tags (not paginated)
-    const { data: allTags, error: fetchError } = await supabase.from("tags")
-      .select(`
-        id,
-        episode_tags(count)
-      `);
+    const { data: allTags, error: fetchError } = await supabase
+      .from("tags")
+      .select(`id, episode_tags(count)`);
     if (fetchError || !allTags) {
       toast({
         title: "Erro ao buscar tags",
@@ -247,7 +223,6 @@ export function TagManager() {
       return;
     }
 
-    // Filter to get only unused tags
     const unusedTags = allTags.filter((tag) => {
       const count = tag.episode_tags?.[0]?.count || 0;
       return count === 0;
@@ -387,7 +362,6 @@ export function TagManager() {
   const handleMergeTags = async () => {
     if (!mainTag || selectedTags.length < 2) return;
     try {
-      // 1. Obter todos os episódios que usam as tags selecionadas (exceto a principal)
       const { data: episodes, error: episodesError } = await supabase
         .from("episode_tags")
         .select("episode_id")
@@ -399,7 +373,6 @@ export function TagManager() {
         );
       if (episodesError) throw episodesError;
 
-      // 2. Atualizar os episódios para usarem a tag principal
       if (episodes && episodes.length > 0) {
         const { error: updateError } = await supabase
           .from("episode_tags")
@@ -421,7 +394,6 @@ export function TagManager() {
         if (insertError) throw insertError;
       }
 
-      // 3. Excluir as tags antigas (exceto a principal)
       const { error: deleteError } = await supabase
         .from("tags")
         .delete()
@@ -433,7 +405,6 @@ export function TagManager() {
         );
       if (deleteError) throw deleteError;
 
-      // 4. Atualizar a interface
       toast({
         title: "Mesclagem concluída!",
         description: `${selectedTags.length - 1} tags foram mescladas em "${
@@ -441,7 +412,6 @@ export function TagManager() {
         }".`,
       });
 
-      // Resetar estados
       setSelectedTags([]);
       setMainTag(null);
       setIsMergeDialogOpen(false);
@@ -465,21 +435,7 @@ export function TagManager() {
           <span className="text-red-500">{unusedTagCount}</span> não estão em
           uso.
         </CardDescription>
-        {/* <CardDescription className="mt-2">
-          <div className="space-y-2">
-            <p>
-              <strong>Dica:</strong> Para mesclar tags, selecione duas ou mais
-              tags e clique em "Mesclar Tags".
-            </p>
-            <p>
-              <strong>Atenção:</strong> Esta ação é irreversível. Todas as
-              associações de episódios serão atualizadas.
-            </p>
-          </div>
-        </CardDescription> 
-        */}
         <div className="flex flex-col gap-4 mt-4">
-          {/* Adicionando os filtros de volta */}
           <TagFilters
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
@@ -524,7 +480,6 @@ export function TagManager() {
           />
         </div>
 
-        {/* Botões de seleção e mesclagem */}
         {selectedTags.length > 0 && (
           <div className="mt-2">
             <div className="flex justify-between items-center p-3 rounded-md">
@@ -562,13 +517,12 @@ export function TagManager() {
         />
       </CardContent>
 
-      {/* Diálogos */}
       <TagActionsDialog
         tag={selectedTag}
         isOpen={!!selectedTag}
         onClose={() => {
           setSelectedTag(null);
-          setEditTagName(""); // Limpa o campo ao fechar
+          setEditTagName("");
         }}
         onEdit={handleEditTag}
         onDelete={handleDeleteTag}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/src/lib/supabase-client";
+// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { useToast } from "@/src/hooks/use-toast";
 import { Tag } from "@/src/lib/types";
 import {
@@ -39,7 +40,8 @@ type TagAlias = {
 };
 
 export function TagAliasManager() {
-  const supabase = createClient();
+  // 2. E AQUI: Use a nova função para criar o cliente
+  const supabase = createSupabaseBrowserClient();
   const { toast } = useToast();
 
   const [aliases, setAliases] = useState<TagAlias[]>([]);

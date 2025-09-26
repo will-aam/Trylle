@@ -1,10 +1,11 @@
-// src/app/auth/page.tsx
-
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+// REMOVA a importação antiga
+// import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+// ADICIONE a importação da nossa nova função
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -26,9 +27,9 @@ import {
   TabsTrigger,
 } from "@/src/components/ui/tabs";
 import ParticleBackground from "@/src/components/ui/particle-background";
-import { GoogleIcon } from "@/src/components/ui/google-icon"; // 1. Importa o novo ícone do Google
+import { GoogleIcon } from "@/src/components/ui/google-icon";
 
-// Esquemas de validação (sem alterações)
+// Esquemas de validação (sem alteração aqui)
 const loginSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
   password: z.string().min(1, { message: "A senha é obrigatória." }),
@@ -45,7 +46,8 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function AuthPage() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  // CRIE O CLIENTE SUPABASE USANDO A NOVA FUNÇÃO
+  const supabase = createSupabaseBrowserClient();
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -71,21 +73,40 @@ export default function AuthPage() {
     defaultValues: { email: "", password: "" },
   });
 
+  // A função de login que você já tinha está perfeita e vai funcionar agora.
   const handleLogin = async (data: LoginFormValues) => {
     setIsLoginLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
-    if (error) {
+    const { data: signInData, error: signInError } =
+      await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+    if (signInError) {
+      console.error("Erro no login:", signInError.message);
       setError("Credenciais inválidas. Verifique seu e-mail e senha.");
-    } else {
-      router.push("/");
-      router.refresh();
+      setIsLoginLoading(false);
+      return;
     }
+
+    if (signInData.user) {
+      console.log("Dados do usuário:", signInData.user);
+
+      if (signInData.user.user_metadata?.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/");
+      }
+      router.refresh();
+    } else {
+      setError("Ocorreu um erro ao fazer login. Tente novamente.");
+    }
+
     setIsLoginLoading(false);
   };
+
+  // Nenhuma alteração necessária nas outras funções
   const handleSignUp = async (data: SignupFormValues) => {
     setIsSignupLoading(true);
     setError(null);
@@ -106,6 +127,7 @@ export default function AuthPage() {
     }
     setIsSignupLoading(false);
   };
+
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     await supabase.auth.signInWithOAuth({
@@ -116,6 +138,7 @@ export default function AuthPage() {
     });
   };
 
+  // O seu JSX permanece exatamente o mesmo.
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#021027]">
       <div className="absolute inset-0 z-0">
@@ -125,7 +148,6 @@ export default function AuthPage() {
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         <div className="w-full max-w-md">
           <Tabs defaultValue="login" className="w-full">
-            {/* 2. Cores da paleta 'slate' para harmonizar */}
             <TabsList className="grid w-full grid-cols-2 bg-slate-900/80 border-slate-800 backdrop-blur-sm">
               <TabsTrigger
                 value="login"
@@ -219,8 +241,7 @@ export default function AuthPage() {
                     onClick={handleGoogleLogin}
                     disabled={isGoogleLoading}
                   >
-                    <GoogleIcon className="mr-2 h-4 w-4" />{" "}
-                    {/* 3. Novo ícone colorido */}
+                    <GoogleIcon className="mr-2 h-4 w-4" />
                     {isGoogleLoading
                       ? "Redirecionando..."
                       : "Entrar com o Google"}
@@ -307,8 +328,7 @@ export default function AuthPage() {
                     onClick={handleGoogleLogin}
                     disabled={isGoogleLoading}
                   >
-                    <GoogleIcon className="mr-2 h-4 w-4" />{" "}
-                    {/* 3. Novo ícone colorido */}
+                    <GoogleIcon className="mr-2 h-4 w-4" />
                     {isGoogleLoading
                       ? "Redirecionando..."
                       : "Cadastre-se com o Google"}
