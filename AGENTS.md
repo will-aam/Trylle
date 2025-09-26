@@ -67,3 +67,6 @@ pnpm install @hookform/resolvers
 pnpm install @tanstack/react-table
 
 @tanstack/react-virtual
+
+pnpm dlx shadcn-ui@latest add tabs
+pnpm dlx shadcn@latest add tabs (o atual)

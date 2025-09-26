@@ -42,7 +42,7 @@ export function Footer() {
           <div className="space-y-4">
             <h3 className="font-semibold text-foreground">Links Rápidos</h3>
             <ul className="space-y-2">
-              <li>
+              {/* <li>
                 <a
                   href="/login"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
@@ -73,7 +73,7 @@ export function Footer() {
                 >
                   Premium
                 </a>
-              </li>
+              </li> */}
               <li>
                 <a
                   href="/suggest-topic"
@@ -121,14 +121,14 @@ export function Footer() {
                   Feedback
                 </a>
               </li>
-              <li>
+              {/* <li>
                 <a
                   href="/status"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   Status do Sistema
                 </a>
-              </li>
+              </li> */}
             </ul>
           </div>
 
