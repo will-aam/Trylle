@@ -3,7 +3,6 @@
 import { Button } from "@/src/components/ui/button";
 import { Play, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-// O useIsMobile não é mais necessário, já que a lógica está aqui
 
 const upcomingEpisodes = [
   {
@@ -32,10 +31,10 @@ const upcomingEpisodes = [
   },
   {
     id: 4,
-    title: "Design Thinking na Prática",
-    category: "Design",
+    title: "Crimes na internet e o direito probatório",
+    category: "Direito",
     episodeNumber: 9,
-    duration: "16 min",
+    duration: "36 min",
     color: "bg-gradient-to-r from-green-500 to-green-600",
   },
   {
@@ -60,7 +59,7 @@ export function UpcomingEpisodesCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [itemsPerView, setItemsPerView] = useState(3); // Passo 1: Inicialização segura no servidor
+  const [itemsPerView, setItemsPerView] = useState(3);
 
   useEffect(() => {
     const getItemsPerView = () => {
@@ -73,10 +72,10 @@ export function UpcomingEpisodesCarousel() {
       setItemsPerView(getItemsPerView());
     };
 
-    handleResize(); // Define o valor inicial após a montagem do componente
+    handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []); // O array de dependências vazio garante que este efeito roda apenas uma vez
+  }, []);
 
   const maxIndex = Math.max(0, upcomingEpisodes.length - itemsPerView);
 
