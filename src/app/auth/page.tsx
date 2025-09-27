@@ -2,9 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-// REMOVA a importação antiga
-// import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-// ADICIONE a importação da nossa nova função
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";

@@ -1,20 +1,14 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createRouteHandlerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
-
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
 
-  // Criamos o cliente Supabase uma única vez
-  const cookieStore = cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-
   if (code) {
-    // Trocamos o código por uma sessão.
-    // Esta etapa é crucial e é onde o cookie de login é definido.
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
@@ -28,6 +22,9 @@ export async function GET(request: NextRequest) {
   }
 
   // AGORA que a sessão foi estabelecida, buscamos o usuário.
+  const cookieStore = cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
