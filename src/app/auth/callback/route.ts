@@ -6,9 +6,10 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
 
+  const cookieStore = cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
   if (code) {
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
@@ -22,9 +23,6 @@ export async function GET(request: NextRequest) {
   }
 
   // AGORA que a sessão foi estabelecida, buscamos o usuário.
-  const cookieStore = cookies();
-  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-
   const {
     data: { user },
   } = await supabase.auth.getUser();

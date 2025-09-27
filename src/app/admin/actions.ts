@@ -1,27 +1,17 @@
 "use server";
 
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerActionClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
-// Função para criar um cliente Supabase do lado do servidor
-async function createSupabaseServerClient() {
-  const cookieStore = await cookies();
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
-  );
+// Function to create a Supabase client for Server Actions
+function createSupabaseServerActionClient() {
+  const cookieStore = cookies();
+  return createServerActionClient({ cookies: () => cookieStore });
 }
 
-// Função para criar um cliente Supabase ADMIN do lado do servidor
+// Function to create a Supabase ADMIN client on the server
 function createSupabaseAdminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,7 +26,7 @@ function createSupabaseAdminClient() {
 }
 
 export const getDashboardStats = async () => {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseServerActionClient();
   const supabaseAdmin = createSupabaseAdminClient();
 
   try {
@@ -74,5 +64,5 @@ export const getDashboardStats = async () => {
 };
 
 export const revalidateAdminDashboard = async () => {
-  revalidatePath("/admin"); // Isso diz ao Next.js para recarregar os dados da página /admin
+  revalidatePath("/admin"); // This tells Next.js to reload data for the /admin page
 };
