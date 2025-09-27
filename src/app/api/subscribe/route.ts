@@ -1,4 +1,5 @@
-import { supabase } from "@/src/lib/supabase";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -7,6 +8,10 @@ const emailSchema = z
   .email({ message: "Por favor, insira um e-mail válido." });
 
 export async function POST(request: Request) {
+  // Cria uma instância do Supabase específica para esta requisição de API
+  const cookieStore = cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
   let body;
 
   try {

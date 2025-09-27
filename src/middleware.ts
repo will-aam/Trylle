@@ -1,44 +1,32 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
+import { NextResponse } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+import type { NextRequest } from "next/server";
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options });
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          });
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: "", ...options });
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          });
-          response.cookies.set({ name, value: "", ...options });
-        },
-      },
-    }
-  );
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
 
-  await supabase.auth.getUser();
+  // Crie um cliente Supabase para este request específico.
+  // Isso é crucial para que a sessão seja atualizada corretamente.
+  const supabase = createMiddlewareClient({ req, res });
 
-  return response;
+  // A função mais importante: ela atualiza a sessão do usuário se necessário.
+  // Isso garante que, quando o usuário volta do Google, a sessão dele é
+  // reconhecida e salva antes de qualquer outra coisa.
+  await supabase.auth.getSession();
+
+  return res;
 }
 
+// Garante que o middleware seja executado em todas as rotas relevantes.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    /*
+     * Corresponde a todos os caminhos de solicitação, exceto aqueles que começam com:
+     * - _next/static (arquivos estáticos)
+     * - _next/image (arquivos de otimização de imagem)
+     * - favicon.ico (arquivo de favicon)
+     */
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ],
 };

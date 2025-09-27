@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { supabase } from "@/src/lib/supabase";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 
 async function getS3Client() {
   const accountId = process.env.R2_ACCOUNT_ID;
@@ -18,6 +19,10 @@ async function getS3Client() {
 }
 
 export async function POST(request: Request) {
+  // 3. Criar a instância do Supabase no início da função
+  const cookieStore = cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
   let s3Client;
   try {
     s3Client = await getS3Client();
@@ -80,8 +85,6 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error("Error saving documents to Supabase:", error);
-      // Even if this fails, we don't want to throw an error that crashes the client
-      // The main episode was already created. It's better to return a partial success.
       return NextResponse.json(
         {
           message: "Documents uploaded, but failed to associate with episode.",

@@ -7,28 +7,38 @@ import type { NextRequest } from "next/server";
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+
+  // Criamos o cliente Supabase uma única vez
   const cookieStore = cookies();
   const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
 
   if (code) {
-    // A troca do código pela sessão acontece aqui e o cookie de sessão é salvo.
-    await supabase.auth.exchangeCodeForSession(code);
+    // Trocamos o código por uma sessão.
+    // Esta etapa é crucial e é onde o cookie de login é definido.
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      // Se houver um erro aqui, não podemos continuar.
+      console.error("Supabase exchange code error:", error);
+      // Redireciona de volta para a página de login com uma mensagem de erro
+      return NextResponse.redirect(
+        new URL("/auth?error=Could not authenticate user", request.url)
+      );
+    }
   }
 
-  // --- LÓGICA DE VERIFICAÇÃO DE ADMIN ---
-
-  // Após a sessão ser criada, buscamos os dados do usuário.
+  // AGORA que a sessão foi estabelecida, buscamos o usuário.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Verificamos se o usuário é um admin.
+  // Verificamos os metadados do usuário para a role de admin.
   if (user?.user_metadata?.role === "admin") {
-    // Se for admin, redirecionamos para a página de admin.
+    // Se for admin, redireciona para a página de admin.
     return NextResponse.redirect(new URL("/admin", request.url));
   }
 
-  // Para todos os outros usuários, redirecionamos para a página principal.
-  // O middleware e a página principal irão então reconhecer a sessão e mostrar a versão logada.
+  // Para todos os outros, redireciona para a página principal.
+  // A aplicação agora reconhecerá a sessão e mostrará a página de usuário logado.
   return NextResponse.redirect(new URL("/", request.url));
 }

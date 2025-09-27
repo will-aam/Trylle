@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { supabase } from "@/src/lib/supabase";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 
 async function getS3Client() {
   try {
@@ -27,6 +28,10 @@ async function getS3Client() {
 }
 
 export async function POST(request: Request) {
+  // 3. Criar a instância do Supabase no início da função
+  const cookieStore = cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
   let s3Client;
   try {
     s3Client = await getS3Client();

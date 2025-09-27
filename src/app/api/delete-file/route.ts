@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
-
-// Reutilizamos a configuração do cliente S3 que fizemos para o upload
 const s3Client = new S3Client({
   region: "auto",
   endpoint: `https://cfd93b192a5f95b371cd3c99010c6ce4.r2.cloudflarestorage.com`,
