@@ -80,5 +80,5 @@ export const getDashboardStats = async () => {
 };
 
 export const revalidateAdminDashboard = async () => {
-  revalidatePath("/admin"); // This tells Next.js to reload data for the /admin page
+  revalidatePath("/admin"); // Isso diz ao Next.js para recarregar os dados da página /admin
 };
