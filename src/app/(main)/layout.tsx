@@ -2,10 +2,9 @@
 
 import { useEffect, useState, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
-import { createSupabaseBrowserClient } from "@/src/lib/supabase-client"; // Mantém a importação correta
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Navbar } from "@/src/components/layout/navbar";
-import { BottomNavbar } from "@/src/components/layout/bottom-navbar"; // Importação restaurada
-import { Footer } from "@/src/components/layout/footer";
+import { BottomNavbar } from "@/src/components/layout/bottom-navbar";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   const supabase = createSupabaseBrowserClient(); // Mantém o uso correto
@@ -57,7 +56,6 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       </main>
       {/* Lógica da BottomNavbar restaurada */}
       {user && <BottomNavbar />}
-      <Footer />
     </div>
   );
 }

@@ -54,9 +54,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between p-4 border-b">
             {!isCollapsed && (
-              <h1 className="text-xl font-bold text-foreground">
-                Trylle | Studio
-              </h1>
+              <h1 className="text-xl font-bold text-foreground">Studio</h1>
             )}
             {isCollapsed && <div className="flex-1" />}
             <div className="flex items-center gap-2">
