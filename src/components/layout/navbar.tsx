@@ -1,7 +1,6 @@
-// src/components/layout/navbar.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -25,6 +24,7 @@ export function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Lógica do placeholder animado
   const placeholders = [
@@ -36,23 +36,25 @@ export function Navbar() {
   ];
 
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const [isFading, setIsFading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setIsFading(true); // Inicia o fade-out
+    if (isTyping) return; // Se o usuário está digitando, não troca o placeholder
 
-      // Espera a animação de fade-out terminar antes de trocar o texto
-      setTimeout(() => {
-        setPlaceholderIndex(
-          (prevIndex) => (prevIndex + 1) % placeholders.length
-        );
-        setIsFading(false); // Inicia o fade-in com o novo texto
-      }, 500); // Este tempo deve corresponder à duração da transição do CSS (duration-500)
-    }, 10000); // Troca a cada 10 segundos
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prevIndex) => (prevIndex + 1) % placeholders.length);
+    }, 10000);
 
     return () => clearInterval(interval);
-  }, [placeholders.length]);
+  }, [isTyping, placeholders.length]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.value && isTyping) {
+      setIsTyping(false);
+    } else if (e.target.value && !isTyping) {
+      setIsTyping(true);
+    }
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -104,11 +106,10 @@ export function Navbar() {
         <div className="relative w-full max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            ref={inputRef}
             placeholder={placeholders[placeholderIndex]}
-            className={cn(
-              "pl-10 h-9 transition-opacity duration-500 ease-in-out",
-              isFading ? "opacity-0" : "opacity-100"
-            )}
+            onChange={handleInputChange}
+            className="pl-10 h-9"
           />
         </div>
       </div>
