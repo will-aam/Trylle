@@ -12,7 +12,7 @@ interface HomeLoggedInProps {
 export function HomeLoggedIn({ publishedEpisodes }: HomeLoggedInProps) {
   return (
     <div className="space-y-12">
-      <section>
+      {/* <section>
         <h2 className="text-2xl font-bold tracking-tight mb-4">
           Recently Played
         </h2>
@@ -29,7 +29,7 @@ export function HomeLoggedIn({ publishedEpisodes }: HomeLoggedInProps) {
       <section>
         <h2 className="text-2xl font-bold tracking-tight mb-4">Made for You</h2>
         <FeaturedEpisodes />
-      </section>
+      </section> */}
     </div>
   );
 }

@@ -45,16 +45,11 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   }, [supabase]);
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      {/* CORREÇÃO DO ERRO: 
-        Voltamos a chamar a Navbar sem a propriedade 'user' por enquanto.
-        No próximo passo, vamos ajustar o componente Navbar para que ele possa usar essa informação.
-      */}
+    <div className="flex min-h-screen w-full flex-col bg-background">
       <Navbar />
       <main className="flex flex-1 flex-col gap-4 md:gap-8 overflow-x-hidden">
         {children}
       </main>
-      {/* Lógica da BottomNavbar restaurada */}
       {user && <BottomNavbar />}
     </div>
   );
