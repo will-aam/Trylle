@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/src/components/ui/button";
-import { ScrollArea } from "@/src/components/ui/scroll-area";
 import Link from "next/link";
 import {
   Search,
@@ -17,45 +16,59 @@ import {
 
 export function Sidebar() {
   return (
-    <div className="w-48 bg-card border-r border-border h-screen flex flex-col justify-between">
-      {" "}
-      {/* Navigation */}
-      <div className="p-3 space-y-1">
-        <Link href="/">
-          <Button variant="ghost" className="w-full justify-start gap-2">
-            <span className="bg-gradient-to-r from-blue-500 to-blue-700 bg-clip-text text-transparent text-sm">
-              Sugerir Episódio
-            </span>
+    <div className="w-48 bg-card p-2 fixed top-16 left-0 h-[calc(100vh-4rem)] z-20 hidden lg:block border-r border-border">
+      <div className="space-y-4">
+        {/* Navigation */}
+        <div className="space-y-1">
+          <Link href="/">
+            <Button variant="ghost" className="w-full justify-start gap-2">
+              <span className="bg-gradient-to-r from-blue-500 to-blue-700 bg-clip-text text-transparent text-sm">
+                Sugerir Episódio
+              </span>
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-sm"
+          >
+            <Search size={16} />
+            Buscar
           </Button>
-        </Link>
-        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
-          <Search size={16} />
-          Buscar
-        </Button>
-        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
-          <Library size={16} />
-          Sua Biblioteca
-        </Button>
-      </div>
-      <div className="border-t border-border my-1" />
-      {/* Playlists */}
-      <div className="p-3 space-y-1">
-        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
-          <Plus size={16} />
-          Criar Playlist
-        </Button>
-        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
-          <Heart size={16} />
-          Curtidos
-        </Button>
-        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
-          <Download size={16} />
-          Downloads
-        </Button>
-      </div>
-      <div className="border-t border-border my-1" />
-      {/* Categories */}
-      <ScrollArea className="flex-1 p-2">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-sm"
+          >
+            <Library size={16} />
+            Sua Biblioteca
+          </Button>
+        </div>
+
+        {/* Playlists */}
+        <div className="space-y-1">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-sm"
+          >
+            <Plus size={16} />
+            Criar Playlist
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-sm"
+          >
+            <Heart size={16} />
+            Curtidos
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-sm"
+          >
+            <Download size={16} />
+            Downloads
+          </Button>
+        </div>
+
+        {/* Categories */}
         <div className="space-y-0.5">
           <Button
             variant="ghost"
@@ -72,17 +85,24 @@ export function Sidebar() {
             Recentes
           </Button>
         </div>
-      </ScrollArea>
-      {/* User Profile */}
-      <div className="p-2 border-t border-border">
-        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
-          <User size={16} />
-          Perfil
-        </Button>
-        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
-          <Settings size={16} />
-          Configurações
-        </Button>
+
+        {/* Profile section */}
+        <div className="space-y-0.5">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-sm"
+          >
+            <User size={16} />
+            Perfil
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-sm"
+          >
+            <Settings size={16} />
+            Configurações
+          </Button>
+        </div>
       </div>
     </div>
   );

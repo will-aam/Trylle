@@ -1,4 +1,3 @@
-// src/components/layout/user-menu.tsx
 "use client";
 
 import { useState } from "react";
@@ -14,7 +13,8 @@ export function UserMenu() {
   // Seus dados de usuário virão de algum contexto ou hook, mas para o teste, vamos usar um mock
   const user = {
     name: "Usuário",
-    avatar: "/path/to/your/avatar.jpg",
+    avatar:
+      "https://api.dicebear.com/9.x/thumbs/svg?backgroundType=gradientLinear,solid",
   };
 
   // 3. Adicionar a função de logout

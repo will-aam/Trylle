@@ -47,7 +47,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
       <Navbar />
-      <main className="flex flex-1 flex-col gap-4 md:gap-8 overflow-x-hidden">
+      <main className="flex flex-1 flex-col gap-4 md:gap-8 overflow-hidden">
         {children}
       </main>
       {user && <BottomNavbar />}
