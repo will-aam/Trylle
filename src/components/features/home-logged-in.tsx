@@ -1,7 +1,9 @@
+// src/components/features/home-logged-in.tsx
 import { FeaturedEpisodes } from "@/src/components/features/featured-episodes";
 import { RecentEpisodes } from "@/src/components/features/recent-episodes";
 import { CategoryCarousel } from "./category-carousel";
 import { Episode } from "@/src/lib/types";
+import { Navbar } from "../layout/navbar"; // Verifique se a Navbar está aqui
 
 interface HomeLoggedInProps {
   publishedEpisodes: Episode[];

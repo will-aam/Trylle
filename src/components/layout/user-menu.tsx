@@ -1,76 +1,46 @@
+// src/components/layout/user-menu.tsx
 "use client";
 
-import { User, Settings, LogOut, Shield } from "lucide-react";
+import { useState } from "react";
 import { Button } from "../ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import Link from "next/link";
+import { ProfileSidebar } from "./profile-sidebar";
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client"; // 1. Importar
 
 export function UserMenu() {
-  // Mock user data - replace with actual auth
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const supabase = createSupabaseBrowserClient(); // 2. Criar o cliente supabase
+
+  // Seus dados de usuário virão de algum contexto ou hook, mas para o teste, vamos usar um mock
   const user = {
-    name: "João Silva",
-    email: "joao@example.com",
-    avatar: "/Whisk_dbc581f98f.jpg?height=32&width=32",
-    isAdmin: true,
+    name: "Usuário",
+    avatar: "/path/to/your/avatar.jpg",
+  };
+
+  // 3. Adicionar a função de logout
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsSidebarOpen(false); // Opcional: fechar o sidebar após o logout
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-8 w-8">
-            <AvatarImage
-              src={user.avatar || "/Whisk_dbc581f98f.jpg"}
-              alt={user.name}
-            />
-            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {user.email}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/profile">
-            <User className="mr-2 h-4 w-4" />
-            <span>Perfil</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/settings">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Configurações</span>
-          </Link>
-        </DropdownMenuItem>
-        {user.isAdmin && (
-          <DropdownMenuItem asChild>
-            <Link href="/admin">
-              <Shield className="mr-2 h-4 w-4" />
-              <span>Painel Admin</span>
-            </Link>
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Sair</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <Button
+        variant="ghost"
+        className="relative h-9 w-9 rounded-full"
+        onClick={() => setIsSidebarOpen(true)}
+      >
+        <Avatar className="h-9 w-9">
+          <AvatarImage src={user.avatar} alt={user.name} />
+          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+      </Button>
+
+      <ProfileSidebar
+        isOpen={isSidebarOpen}
+        onOpenChange={setIsSidebarOpen}
+        onLogout={handleLogout} // 4. Passar a função para o sidebar
+      />
+    </>
   );
 }

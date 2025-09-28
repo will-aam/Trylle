@@ -1,6 +1,4 @@
 import { UpcomingEpisodesCarousel } from "@/src/components/landing/upcoming-episodes-carousel";
-// import { ExploreCategories } from "@/src/components/landing/explore-categories";
-// import { PremiumPlans } from "@/src/components/landing/premium-plans";
 import { ListeningStatistics } from "@/src/components/landing/listening-statistics";
 import { Hero } from "@/src/components/landing/hero";
 import { Episode } from "@/src/lib/types";
@@ -9,7 +7,7 @@ import { SolutionSection } from "@/src/components/landing/solution-section";
 import { UniqueFeatureSection } from "@/src/components/landing/unique-feature-section";
 import { FinalCTASection } from "@/src/components/landing/final-cta-section";
 import { FAQSection } from "@/src/components/landing/faq-section";
-import { InformationBar } from "@/src/components/landing/information-bar"; // Importe o componente que você criou
+import { InformationBar } from "@/src/components/landing/information-bar";
 interface HomeLoggedOutProps {
   scheduledEpisodes: Episode[];
 }
@@ -24,8 +22,6 @@ export function HomeLoggedOut({ scheduledEpisodes }: HomeLoggedOutProps) {
       <UniqueFeatureSection />
       <InformationBar />
       <ListeningStatistics />
-      {/* <ExploreCategories /> */}
-      {/* <PremiumPlans /> */}
       <FinalCTASection />
       <FAQSection />
     </div>
