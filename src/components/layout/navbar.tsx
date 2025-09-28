@@ -109,11 +109,11 @@ export function Navbar() {
             ref={inputRef}
             placeholder={placeholders[placeholderIndex]}
             onChange={handleInputChange}
-            className="pl-10 h-9"
+            className="pl-10 h-9 rounded-full" // Alterado para borda completamente redonda
           />
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <div className="hidden md:flex items-center gap-3">
           <TooltipProvider>
             <Tooltip>
@@ -139,7 +139,11 @@ export function Navbar() {
             </Tooltip>
           </TooltipProvider>
         </div>
-        <Button variant="outline" size="sm" className="hidden sm:inline-flex">
+        <Button
+          variant="outline"
+          size="sm"
+          className="hidden sm:inline-flex rounded-full"
+        >
           <Download className="mr-2 h-4 w-4" />
           Instalar Aplicativo
         </Button>
