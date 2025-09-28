@@ -5,13 +5,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { Search, Bell, AudioLines } from "lucide-react";
+// 1. Importar o ícone de Download
+import { Search, Bell, AudioLines, Download } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { User } from "@supabase/supabase-js";
-import { ThemeToggle } from "./theme-toggle";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { NavbarLoggedOut } from "./NavbarLoggedOut";
-import { UserMenu } from "./user-menu"; // AQUI ESTÁ A MUDANÇA PRINCIPAL
+import { UserMenu } from "./user-menu";
 
 export function Navbar() {
   const supabase = createSupabaseBrowserClient();
@@ -60,15 +60,17 @@ export function Navbar() {
           <AudioLines className="h-6 w-6" />
         </div>
       </Link>
-      <div className="flex items-center gap-2">
-        <ThemeToggle />
-        <Button variant="ghost" size="icon" className="rounded-full">
-          <Bell className="h-5 w-5" />
+      <div className="flex items-center gap-4">
+        {/* 2. Adicionar o novo botão estático aqui */}
+        <Button variant="outline" size="sm" className="hidden sm:inline-flex">
+          <Download className="mr-2 h-4 w-4" />
+          Instalar Aplicativo
         </Button>
 
-        {/* AQUI ESTÁ A SUBSTITUIÇÃO: 
-          Removemos todo o <Popover> e colocamos o <UserMenu /> no lugar.
-        */}
+        <Button variant="ghost" size="icon" className="rounded-full">
+          <Bell className="h-5 w-5" />
+          <span className="sr-only">Notificações</span>
+        </Button>
         <UserMenu />
       </div>
     </header>
