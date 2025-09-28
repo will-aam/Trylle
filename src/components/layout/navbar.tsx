@@ -123,7 +123,7 @@ export function Navbar() {
                   passHref
                   className={cn(
                     "flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-accent",
-                    pathname === "/" && "bg-accent"
+                    pathname === "/"
                   )}
                 >
                   <Home className="h-6 w-6" />

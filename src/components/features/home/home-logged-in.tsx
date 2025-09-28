@@ -3,6 +3,7 @@ import { Sidebar } from "@/src/components/layout/sidebar";
 import { Greeting } from "./greeting";
 import { NewEpisodesCarousel } from "./new-episodes-carousel";
 import { ThemeToggle } from "@/src/components/layout/theme-toggle";
+import { RecentPlaylists } from "./recent-playlists";
 
 interface HomeLoggedInProps {
   publishedEpisodes: Episode[];
@@ -21,6 +22,7 @@ export function HomeLoggedIn({ publishedEpisodes }: HomeLoggedInProps) {
         <div className="flex-1 p-4 overflow-y-auto">
           {/* <ThemeToggle /> */}
           <Greeting />
+          <RecentPlaylists />
           <NewEpisodesCarousel />
         </div>
       </div>
