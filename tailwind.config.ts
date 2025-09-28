@@ -78,41 +78,34 @@ const config: Config = {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
         glow: {
-          "0%, 100%": {
-            "box-shadow": "0 0 10px rgba(250, 204, 21, 0.2)",
-          },
-          "50%": {
-            "box-shadow": "0 0 20px 5px rgba(250, 204, 21, 0.4)",
-          },
+          "0%, 100%": { "box-shadow": "0 0 10px rgba(250, 204, 21, 0.2)" },
+          "50%": { "box-shadow": "0 0 20px 5px rgba(250, 204, 21, 0.4)" },
+        },
+        marquee: {
+          "0%": { transform: "translateX(0%)" },
+          "100%": { transform: "translateX(-100%)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         glow: "glow 4s ease-in-out infinite",
+        marquee: "marquee 15s linear infinite",
       },
     },
   },
   plugins: [
     tailwindcssAnimate,
     tailwindcssTypography,
-    require("tailwindcss-animate"),
+    // REMOVIDO: require("tailwindcss-animate") (duplicado)
   ],
 };
 

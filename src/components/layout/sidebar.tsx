@@ -1,96 +1,89 @@
 "use client";
 
-import {
-  Home,
-  Compass,
-  Heart,
-  Clock,
-  List,
-  Settings,
-  Headphones,
-} from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
-import { Separator } from "@/src/components/ui/separator";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/src/lib/utils";
-
-const navigation = [
-  { name: "Início", href: "/", icon: Home },
-  { name: "Descobrir", href: "/discover", icon: Compass },
-  { name: "Favoritos", href: "/favorites", icon: Heart },
-  { name: "Histórico", href: "/history", icon: Clock },
-  { name: "Playlists", href: "/playlists", icon: List },
-];
-
-const categories = [
-  { name: "Tecnologia", href: "/category/tecnologia" },
-  { name: "Educação", href: "/category/educacao" },
-  { name: "Saúde", href: "/category/saude" },
-  { name: "Negócios", href: "/category/negocios" },
-  { name: "Ciência", href: "/category/ciencia" },
-];
+import {
+  Search,
+  Library,
+  Plus,
+  Heart,
+  Download,
+  TrendingUp,
+  Clock,
+  User,
+  Settings,
+} from "lucide-react";
 
 export function Sidebar() {
-  const pathname = usePathname();
-
   return (
-    <div className="w-64 bg-muted/30 border-r flex flex-col">
-      <div className="p-6">
-        <Link href="/" className="flex items-center space-x-2">
-          <Headphones className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold">Audiocasts</span>
+    <div className="w-48 bg-card border-r border-border h-screen flex flex-col justify-between">
+      {" "}
+      {/* Navigation */}
+      <div className="p-3 space-y-1">
+        <Link href="/">
+          <Button variant="ghost" className="w-full justify-start gap-2">
+            <span className="bg-gradient-to-r from-blue-500 to-blue-700 bg-clip-text text-transparent text-sm">
+              Sugerir Episódio
+            </span>
+          </Button>
         </Link>
-      </div>
-
-      <ScrollArea className="flex-1 px-3">
-        <div className="space-y-1">
-          {navigation.map((item) => (
-            <Button
-              key={item.name}
-              variant={pathname === item.href ? "secondary" : "ghost"}
-              className={cn(
-                "w-full justify-start",
-                pathname === item.href && "bg-secondary"
-              )}
-              asChild
-            >
-              <Link href={item.href}>
-                <item.icon className="mr-2 h-4 w-4" />
-                {item.name}
-              </Link>
-            </Button>
-          ))}
-        </div>
-
-        <Separator className="my-4" />
-
-        <div className="space-y-1">
-          <h3 className="px-3 text-sm font-medium text-muted-foreground mb-2">
-            Categorias
-          </h3>
-          {categories.map((category) => (
-            <Button
-              key={category.name}
-              variant="ghost"
-              className="w-full justify-start text-sm"
-              asChild
-            >
-              <Link href={category.href}>{category.name}</Link>
-            </Button>
-          ))}
-        </div>
-
-        <Separator className="my-4" />
-
-        <Button variant="ghost" className="w-full justify-start" asChild>
-          <Link href="/settings">
-            <Settings className="mr-2 h-4 w-4" />
-            Configurações
-          </Link>
+        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
+          <Search size={16} />
+          Buscar
         </Button>
+        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
+          <Library size={16} />
+          Sua Biblioteca
+        </Button>
+      </div>
+      <div className="border-t border-border my-1" />
+      {/* Playlists */}
+      <div className="p-3 space-y-1">
+        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
+          <Plus size={16} />
+          Criar Playlist
+        </Button>
+        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
+          <Heart size={16} />
+          Curtidos
+        </Button>
+        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
+          <Download size={16} />
+          Downloads
+        </Button>
+      </div>
+      <div className="border-t border-border my-1" />
+      {/* Categories */}
+      <ScrollArea className="flex-1 p-2">
+        <div className="space-y-0.5">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-sm"
+          >
+            <TrendingUp size={16} />
+            Em Alta
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-sm"
+          >
+            <Clock size={16} />
+            Recentes
+          </Button>
+        </div>
       </ScrollArea>
+      {/* User Profile */}
+      <div className="p-2 border-t border-border">
+        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
+          <User size={16} />
+          Perfil
+        </Button>
+        <Button variant="ghost" className="w-full justify-start gap-2 text-sm">
+          <Settings size={16} />
+          Configurações
+        </Button>
+      </div>
     </div>
   );
 }

@@ -12,7 +12,6 @@ export function ClientLayoutWrapper({
   const { activeEpisode } = usePlayer();
 
   return (
-    // Adiciona o padding-bottom dinâmico aqui
     <div
       className={cn("relative min-h-screen", activeEpisode ? "pb-20" : "pb-0")}
     >

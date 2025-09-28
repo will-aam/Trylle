@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { HomeLoggedIn } from "@/src/components/features/home-logged-in";
+import { HomeLoggedIn } from "@/src/components/features/home/home-logged-in";
 import { HomeLoggedOut } from "@/src/components/features/home-logged-out";
 import { Episode } from "@/src/lib/types";
 

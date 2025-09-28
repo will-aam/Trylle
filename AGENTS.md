@@ -67,3 +67,4 @@ pnpm install @tanstack/react-table
 
 pnpm dlx shadcn-ui@latest add tabs
 pnpm dlx shadcn@latest add tabs (o atual)
+pnpm dlx shadcn@latest add separator
