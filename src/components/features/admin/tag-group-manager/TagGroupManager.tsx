@@ -227,8 +227,8 @@ export function TagGroupManager() {
                             <Edit className="h-4 w-4" />
                           </Button>
                           <ConfirmationDialog
-                            dialogTitle="Delete Tag Group"
-                            dialogDescription={`Are you sure you want to delete the tag group "${group.name}"? This action cannot be undone.`}
+                            title="Delete Tag Group"
+                            description={`Are you sure you want to delete the tag group "${group.name}"? This action cannot be undone.`}
                             onConfirm={() => handleDeleteGroup(group.id)}
                           >
                             {(open) => (

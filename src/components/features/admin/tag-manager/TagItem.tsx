@@ -66,8 +66,8 @@ export function TagItem({
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <ConfirmationDialog
-              dialogTitle="Excluir Tag"
-              dialogDescription={`Tem certeza que deseja excluir a tag "${tag.name}"? Esta ação não pode ser desfeita.`}
+              title="Excluir Tag"
+              description={`Tem certeza que deseja excluir a tag "${tag.name}"? Esta ação não pode ser desfeita.`}
               onConfirm={() => onDelete(tag.id)}
             >
               {(open) => (

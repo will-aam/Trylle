@@ -104,7 +104,7 @@ export function ProgramPageClient({
         </DialogContent>
       </Dialog>
 
-      <ConfirmationDialog
+      <ConfirmationDialog 
         isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={confirmDelete}
