@@ -1,7 +1,8 @@
 // src/lib/types.ts
 
 /**
- * NOVO: Representa a estrutura de um programa.
+ * Representa a estrutura de um programa.
+ * ATUALIZADO para incluir o caminho da imagem de capa.
  */
 export interface Program {
   id: string;
@@ -10,6 +11,7 @@ export interface Program {
   category_id: string;
   created_at: string;
   updated_at: string;
+  cover_image_path?: string | null; // <-- ADICIONE ESTA LINHA
   // Relacionamentos que o Supabase pode retornar
   categories?: Category;
   episodes?: Episode[];
@@ -17,7 +19,6 @@ export interface Program {
 
 /**
  * Representa a estrutura de um episódio.
- * ATUALIZADO para incluir a relação com Programas.
  */
 export interface Episode {
   id: string;
@@ -33,10 +34,9 @@ export interface Episode {
   updated_at: string;
   duration_in_seconds: number | null;
   view_count: number;
-  tags: any[]; // Manter como 'any[]' por enquanto para evitar quebrar outras partes
-  // NOVOS CAMPOS
-  program_id: string | null; // Pode ser nulo para episódios antigos
-  episode_number: number | null; // Pode ser nulo
+  tags: any[];
+  program_id: string | null;
+  episode_number: number | null;
   // Relacionamentos que o Supabase pode retornar
   categories?: { name: string } | null;
   subcategories?: { name: string } | null;

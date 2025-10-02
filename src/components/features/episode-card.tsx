@@ -1,3 +1,4 @@
+// src/components/features/episode-card.tsx
 "use client";
 
 import Image from "next/image";
@@ -19,9 +20,10 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
     }
   };
 
-  // Fallback image caso a URL não seja fornecida
+  // Agora isso vai funcionar, e com a sua imagem de fallback.
   const imageUrl =
-    episode.imageUrl || "/Whisk_dbc581f98f.jpg?height=200&width=300";
+    episode.programs?.cover_image_path ||
+    "https://rounder.pics/assets/img/ui/square-image.webp";
 
   return (
     <div className="flex flex-col gap-3">
@@ -41,9 +43,9 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
       </div>
       <div className="flex flex-col gap-3 items-center">
         <h3 className="font-semibold truncate">{episode.title}</h3>
-        <a href="/login">
-          <Button className="w-32">Ouvir Agora</Button>
-        </a>
+        <Button onClick={handlePlay} className="w-32">
+          Ouvir Agora
+        </Button>
       </div>
     </div>
   );
