@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { AdminSidebar } from "@/src/components/layout/admin-sidebar";
 import { Toaster } from "@/src/components/ui/sonner";
 import { Skeleton } from "@/src/components/ui/skeleton";
+import { AdminPlayerWrapper } from "@/src/components/layout/admin-player-wrapper";
 
 export default function AdminLayout({
   children,
@@ -17,11 +18,10 @@ export default function AdminLayout({
     setIsMounted(true);
   }, []);
 
-  // Tela de carregamento durante a hidratação - DEVE SER IDÊNTICA ao layout real
+  // Tela de carregamento (seu código original, sem alterações)
   if (!isMounted) {
     return (
       <div className="flex h-screen bg-muted/40">
-        {/* Sidebar Skeleton - DEVE usar a mesma estrutura e classes do AdminSidebar real */}
         <aside className="fixed inset-y-0 left-0 z-10 flex flex-col border-r bg-background transition-all duration-300 w-16">
           <div className="flex flex-col items-center py-4 gap-4">
             <Skeleton className="h-8 w-8 rounded-md" />
@@ -30,8 +30,6 @@ export default function AdminLayout({
             <Skeleton className="h-8 w-8 rounded-md" />
           </div>
         </aside>
-
-        {/* Conteúdo principal Skeleton */}
         <main className="flex-1 overflow-y-auto pl-16">
           <div className="p-4 sm:p-6 md:p-8">
             <Skeleton className="h-10 w-1/3 mb-6" />
@@ -50,13 +48,16 @@ export default function AdminLayout({
         setCollapsed={() => setSidebarCollapsed((prev) => !prev)}
       />
 
-      <main
-        className={`flex-1 overflow-y-auto transition-all duration-300 ${
-          isSidebarCollapsed ? "pl-16" : "pl-64"
-        }`}
-      >
-        {children}
-      </main>
+      {/* AQUI ESTÁ A ÚNICA MUDANÇA REAL */}
+      <AdminPlayerWrapper>
+        <main
+          className={`flex-1 overflow-y-auto transition-all duration-300 ${
+            isSidebarCollapsed ? "pl-16" : "pl-64"
+          }`}
+        >
+          {children}
+        </main>
+      </AdminPlayerWrapper>
 
       <Toaster position="top-center" richColors />
     </div>
