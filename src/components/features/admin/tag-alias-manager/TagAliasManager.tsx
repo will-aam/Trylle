@@ -223,8 +223,8 @@ export function TagAliasManager() {
                   <span className="font-semibold">{alias.tags.name}</span>
                 </div>
                 <ConfirmationDialog
-                  dialogTitle="Delete Synonym"
-                  dialogDescription={`Are you sure you want to delete the synonym "${alias.alias}"? This action cannot be undone.`}
+                  title="Delete Synonym"
+                  description={`Are you sure you want to delete the synonym "${alias.alias}"? This action cannot be undone.`}
                   onConfirm={() => handleDeleteAlias(alias.id)}
                 >
                   {(open) => (
