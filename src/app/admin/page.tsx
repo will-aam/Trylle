@@ -13,6 +13,7 @@ import {
 } from "@/src/components/ui/tabs";
 // Importe a função do novo arquivo de actions
 import { getDashboardStats } from "./actions";
+export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   // Chame a função diretamente, pois esta é uma Server Component

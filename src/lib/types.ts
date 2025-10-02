@@ -1,5 +1,25 @@
-export type Episode = {
-  imageUrl: string;
+// src/lib/types.ts
+
+/**
+ * NOVO: Representa a estrutura de um programa.
+ */
+export interface Program {
+  id: string;
+  title: string;
+  description: string;
+  category_id: string;
+  created_at: string;
+  updated_at: string;
+  // Relacionamentos que o Supabase pode retornar
+  categories?: Category;
+  episodes?: Episode[];
+}
+
+/**
+ * Representa a estrutura de um episódio.
+ * ATUALIZADO para incluir a relação com Programas.
+ */
+export interface Episode {
   id: string;
   title: string;
   description: string | null;
@@ -8,37 +28,41 @@ export type Episode = {
   category_id: string | null;
   subcategory_id: string | null;
   status: "draft" | "scheduled" | "published";
-  tags: any[]; // Usando 'any[]' para acomodar a estrutura aninhada por enquanto
   published_at: string;
   created_at: string;
   updated_at: string;
-  duration_in_seconds: number | null; // ADICIONE ESTA LINHA
+  duration_in_seconds: number | null;
   view_count: number;
-  // Propriedades opcionais para quando fazemos JOIN com outras tabelas
+  tags: any[]; // Manter como 'any[]' por enquanto para evitar quebrar outras partes
+  // NOVOS CAMPOS
+  program_id: string | null; // Pode ser nulo para episódios antigos
+  episode_number: number | null; // Pode ser nulo
+  // Relacionamentos que o Supabase pode retornar
   categories?: { name: string } | null;
   subcategories?: { name: string } | null;
-};
+  programs?: Program | null;
+}
 
 /**
  * Representa a estrutura de uma categoria.
  */
-export type Category = {
-  description: string;
+export interface Category {
   id: string;
   name: string;
+  description: string;
   created_at: string;
   episode_count?: number;
   subcategories?: Subcategory[];
   subcategoriesLoading?: boolean;
-};
+}
 
 /**
  * Representa a estrutura de uma subcategoria.
  */
 export type Subcategory = {
-  description: string;
   id: string;
   name: string;
+  description: string;
   category_id: string;
   created_at: string;
   categories?: { name: string };
@@ -46,8 +70,7 @@ export type Subcategory = {
 };
 
 /**
- * NOVO: Representa a estrutura de uma tag,
- * alinhada com a nova tabela 'tags'.
+ * Representa a estrutura de uma tag.
  */
 export type Tag = {
   id: string;
@@ -59,9 +82,7 @@ export type EpisodeDocument = {
   id: string;
   episode_id: string;
   file_name: string;
-  // Renomeado para public_url para consistência com o que a API retorna
   public_url: string;
-  // Renomeado para storage_path para consistência
   storage_path: string;
   created_at: string;
   file_size: number | null;

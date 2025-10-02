@@ -14,6 +14,7 @@ import {
   CalendarArrowUp,
   LibraryBig,
   MessagesSquare,
+  Radio,
 } from "lucide-react";
 import {
   Tooltip,
@@ -96,6 +97,13 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 label="Gerenciar Episódios"
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/admin/episodes"}
+              />
+              <SidebarLink
+                href="/admin/programs"
+                icon={<Radio className="h-4 w-4" />}
+                label="Programas"
+                isCollapsed={isCollapsed}
+                isActive={pathname === "/admin/programs"}
               />
               <SidebarLink
                 href="/"

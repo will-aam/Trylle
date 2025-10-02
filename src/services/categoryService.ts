@@ -1,3 +1,5 @@
+// src/services/categoryService.ts
+
 // 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Category, Subcategory } from "@/src/lib/types";
@@ -13,6 +15,29 @@ type FetchCategoriesParams = {
   sortType: "name" | "episodes";
   sortOrder: "asc" | "desc";
 };
+
+// ========================================================================
+// === ADIÇÃO: NOVA FUNÇÃO SIMPLES PARA BUSCAR TODAS AS CATEGORIAS ===
+// ========================================================================
+/**
+ * Busca todas as categorias para preencher menus de seleção.
+ */
+export const getCategories = async (): Promise<Category[]> => {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Erro ao buscar a lista de categorias:", error);
+    throw new Error("Não foi possível carregar as categorias.");
+  }
+
+  return data || [];
+};
+// ========================================================================
+// === FIM DA ADIÇÃO ===
+// ========================================================================
 
 export const categoryService = {
   async fetchCategories({
@@ -36,10 +61,6 @@ export const categoryService = {
     if (sortType === "name") {
       query = query.order("name", { ascending: sortOrder === "asc" });
     } else {
-      // Note: Supabase count aggregation on foreign tables can be tricky to sort directly.
-      // This implementation might need adjustment based on your actual data structure
-      // if sorting by episode count doesn't work as expected.
-      // A potential solution is a database function (RPC).
       query = query.order("name", { ascending: sortOrder === "asc" }); // Fallback sort
     }
 
