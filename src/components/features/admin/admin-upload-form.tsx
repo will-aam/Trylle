@@ -394,6 +394,7 @@ export function UploadForm() {
                 <TagSelector
                   selectedTags={selectedTags}
                   onSelectedTagsChange={setSelectedTags}
+                  tags={[]}
                 />
               </div>
               <div>

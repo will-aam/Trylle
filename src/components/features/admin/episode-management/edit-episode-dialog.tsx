@@ -7,9 +7,10 @@ import { Button } from "@/src/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/src/components/ui/dialog";
 import { Input } from "@/src/components/ui/input";
 import {
@@ -291,19 +292,19 @@ export function EditEpisodeDialog({
                 </div>
               </div>
             </div>
+            <DialogFooter className="mt-4 pt-4 border-t">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </DialogFooter>
           </ScrollArea>
-          <DialogFooter className="mt-4 pt-4 border-t">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Salvando..." : "Salvar Alterações"}
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
