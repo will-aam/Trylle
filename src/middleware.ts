@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Se a role do usuário não for 'admin', redireciona para a home
-    const userRole = user.user_metadata?.role;
+    const userRole = user.app_metadata?.role;
     if (userRole !== "admin") {
       return NextResponse.redirect(new URL("/", request.url));
     }
