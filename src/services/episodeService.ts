@@ -14,7 +14,6 @@ type GetEpisodesParams = {
   ascending?: boolean;
 };
 
-// NOVA FUNÇÃO que busca o episódio com todas as suas relações
 export const getEpisodesWithRelations = async (
   params: GetEpisodesParams
 ): Promise<Episode[]> => {
@@ -22,13 +21,13 @@ export const getEpisodesWithRelations = async (
     .from("episodes")
     .select(
       `
-            *,
-            categories (name),
-            subcategories (name),
-            programs (title),
-            episode_documents (*),
-            tags (*)
-        `
+      *,
+      categories (name),
+      subcategories (name),
+      programs (title),
+      episode_documents (*),
+      tags (*)
+    `
     )
     .order(params.sortBy || "published_at", { ascending: params.ascending })
     .range(params.offset || 0, (params.offset || 0) + (params.limit || 10) - 1);
@@ -47,11 +46,9 @@ export const getEpisodesWithRelations = async (
 export const getEpisodes = async (
   params: GetEpisodesParams
 ): Promise<Episode[]> => {
-  // A função antiga ainda pode ser usada em outros lugares, ou pode ser substituída pela nova
   return getEpisodesWithRelations(params);
 };
 
-// ... (a função getEpisodesCount pode ser mantida como está)
 export const getEpisodesCount = async (
   params: Omit<GetEpisodesParams, "limit" | "offset" | "sortBy" | "ascending">
 ): Promise<number> => {
@@ -68,15 +65,15 @@ export const getEpisodesCount = async (
   return count || 0;
 };
 
-// Função de update ajustada para lidar com tags (relação many-to-many)
 export const updateEpisode = async (
   episodeId: string,
   updates: any
 ): Promise<Episode> => {
   const { tags, ...episodeData } = updates;
 
-  // 1. Atualiza os dados simples do episódio
-  const { data: updatedEpisode, error: episodeError } = await supabase
+  // 1. Atualiza os dados do episódio e VERIFICA se a operação foi bem-sucedida
+  // A linha abaixo é a versão correta e final
+  const { error: episodeError } = await supabase
     .from("episodes")
     .update(episodeData)
     .eq("id", episodeId)
@@ -84,14 +81,12 @@ export const updateEpisode = async (
     .single();
 
   if (episodeError) {
-    // Agora, se houver um erro de permissão, ele será capturado aqui!
     throw new Error(
       `Não foi possível atualizar o episódio. Erro: ${episodeError.message}`
     );
   }
 
   // 2. Atualiza as tags (relação many-to-many)
-  // Primeiro, remove todas as tags existentes para este episódio
   const { error: deleteTagsError } = await supabase
     .from("episode_tags")
     .delete()
@@ -99,7 +94,6 @@ export const updateEpisode = async (
   if (deleteTagsError)
     throw new Error("Não foi possível atualizar as tags (erro ao remover).");
 
-  // Depois, insere as novas tags
   if (tags && tags.length > 0) {
     const newEpisodeTags = tags.map((tagId: string) => ({
       episode_id: episodeId,
@@ -112,7 +106,7 @@ export const updateEpisode = async (
       throw new Error("Não foi possível atualizar as tags (erro ao inserir).");
   }
 
-  // Retorna o episódio atualizado buscando todas as relações novamente para consistência
+  // 3. Retorna o episódio atualizado com todas as suas relações
   const { data: finalEpisode, error: finalError } = await supabase
     .from("episodes")
     .select(
