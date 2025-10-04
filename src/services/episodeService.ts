@@ -71,45 +71,29 @@ export const updateEpisode = async (
 ): Promise<Episode> => {
   const { tags, ...episodeData } = updates;
 
-  // ETAPA 1: ATUALIZAÇÃO ROBUSTA
-  // Removemos o .single() e faremos a verificação manualmente.
-  const { data: updatedData, error: episodeError } = await supabase
+  // ETAPA 1: ATUALIZAÇÃO
+  // Voltamos a usar .single() para que o próprio Supabase nos dê o erro
+  // se ele não encontrar exatamente uma linha para atualizar e retornar.
+  const { data: updatedEpisode, error: episodeError } = await supabase
     .from("episodes")
     .update(episodeData)
     .eq("id", episodeId)
-    .select(); // .single() foi removido daqui
+    .select()
+    .single();
 
-  // Verifica se houve um erro durante a operação de update/select
+  // Se a atualização falhar, lança o erro específico do Supabase.
   if (episodeError) {
-    throw new Error(
-      `Erro na operação de atualização do Supabase: ${episodeError.message}`
-    );
+    // A mensagem de erro agora será a original do Supabase (ex: "multiple (or no) rows returned")
+    throw new Error(episodeError.message);
   }
 
-  // Verifica se o Supabase retornou uma resposta válida
-  if (!updatedData) {
-    throw new Error("A atualização não retornou nenhum dado.");
-  }
-
-  // Verifica se o Supabase retornou um número inesperado de resultados
-  if (updatedData.length !== 1) {
-    console.error("ESTRUTURA DE DADOS INESPERADA:", updatedData);
-    throw new Error(
-      `A atualização retornou ${updatedData.length} linhas, mas esperava apenas 1. Verifique as relações da tabela 'episodes'.`
-    );
-  }
-
-  // Se tudo passou, podemos continuar com segurança.
-
-  // ETAPA 2: ATUALIZAÇÃO DAS TAGS (continua igual)
+  // ETAPA 2: ATUALIZAÇÃO DAS TAGS
   const { error: deleteTagsError } = await supabase
     .from("episode_tags")
     .delete()
     .eq("episode_id", episodeId);
-
-  if (deleteTagsError) {
+  if (deleteTagsError)
     throw new Error("Não foi possível atualizar as tags (erro ao remover).");
-  }
 
   if (tags && tags.length > 0) {
     const newEpisodeTags = tags.map((tagId: string) => ({
@@ -119,12 +103,11 @@ export const updateEpisode = async (
     const { error: insertTagsError } = await supabase
       .from("episode_tags")
       .insert(newEpisodeTags);
-    if (insertTagsError) {
+    if (insertTagsError)
       throw new Error("Não foi possível atualizar as tags (erro ao inserir).");
-    }
   }
 
-  // ETAPA 3: BUSCA FINAL DOS DADOS (continua igual)
+  // ETAPA 3: BUSCA FINAL DOS DADOS
   const { data: finalEpisode, error: finalError } = await supabase
     .from("episodes")
     .select(
@@ -133,11 +116,10 @@ export const updateEpisode = async (
     .eq("id", episodeId)
     .single();
 
-  if (finalError) {
+  if (finalError)
     throw new Error(
       "Episódio atualizado, mas houve um erro ao buscar os dados finais."
     );
-  }
 
   return finalEpisode as any;
 };

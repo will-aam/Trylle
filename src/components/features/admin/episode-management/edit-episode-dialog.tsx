@@ -75,16 +75,30 @@ export function EditEpisodeDialog({
 
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
-    const updates = {
-      ...data,
-      program_id: data.program_id || null,
-      episode_number: data.episode_number ? Number(data.episode_number) : null,
-      tags: data.tags.map((tag: any) => tag.id),
-    };
+    try {
+      const updates = {
+        ...data,
+        program_id: data.program_id || null,
+        episode_number: data.episode_number
+          ? Number(data.episode_number)
+          : null,
+        tags: data.tags.map((tag: any) => tag.id),
+      };
 
-    const success = await onUpdate(episode.id, updates);
+      // Chamamos a função onUpdate e esperamos pela sua conclusão.
+      const success = await onUpdate(episode.id, updates);
 
-    if (!success) {
+      // O onUpdate agora retorna `true` ou `false`.
+      // Se for `false`, o toast de erro já foi mostrado dentro do EpisodeManager,
+      // então só precisamos parar o estado de loading aqui.
+      if (!success) {
+        setIsSubmitting(false); // Para o loading em caso de erro.
+      }
+      // Se for `true`, o onUpdate já cuidou de fechar o modal e mostrar o toast de sucesso.
+    } catch (error) {
+      // Este catch é uma segurança extra, mas o erro principal
+      // deve ser tratado dentro da função `handleUpdateEpisode` no `EpisodeManager`.
+      console.error("Erro inesperado no formulário de edição:", error);
       setIsSubmitting(false);
     }
   };

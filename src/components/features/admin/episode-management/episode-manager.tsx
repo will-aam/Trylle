@@ -163,22 +163,30 @@ export function EpisodeManager() {
     }
   };
 
-  const handleUpdateEpisode = async (episodeId: string, updates: any) => {
+  const handleUpdateEpisode = async (
+    episodeId: string,
+    updates: any
+  ): Promise<boolean> => {
     try {
-      await updateEpisode(episodeId, updates);
+      // A chamada ao service permanece a mesma
+      const updatedEpisodeData = await updateEpisode(episodeId, updates); // OTIMIZAÇÃO: Atualizamos o estado localmente sem refetch
 
-      setIsEditDialogOpen(false); // 1. Fecha o pop-up imediatamente
+      setEpisodes((currentEpisodes) =>
+        currentEpisodes.map((ep) =>
+          ep.id === episodeId ? { ...ep, ...updatedEpisodeData } : ep
+        )
+      );
 
-      // 2. Atrasamos a notificação e a busca de dados para o próximo ciclo de renderização
-      setTimeout(() => {
-        toast.success("Episódio atualizado com sucesso.");
-        fetchData();
-      }, 50);
+      setIsEditDialogOpen(false);
+      toast.success("Episódio atualizado com sucesso."); // Se precisar, você pode re-buscar os totais ou outras contagens aqui
+
+      getEpisodeStatusCounts().then(setStatusCounts);
 
       return true;
     } catch (error: any) {
-      // Agora o erro capturado será muito mais específico!
-      toast.error("Erro ao atualizar", { description: error.message });
+      toast.error("Erro ao atualizar o episódio", {
+        description: error.message,
+      });
       return false;
     }
   };
