@@ -58,6 +58,11 @@ export function EpisodeManager() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedEpisodes, setSelectedEpisodes] = useState<string[]>([]);
+  const [notification, setNotification] = useState<{
+    type: "success" | "error";
+    message: string;
+    description?: string;
+  } | null>(null);
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -168,30 +173,33 @@ export function EpisodeManager() {
     updates: any
   ): Promise<boolean> => {
     try {
-      // Tentamos atualizar o episódio. Se o SQL do Passo 1 estiver correto,
-      // a linha abaixo vai funcionar sem erros.
       const updatedEpisodeData = await updateEpisode(episodeId, updates);
 
-      // Se deu certo, atualizamos o estado localmente (mais rápido que refetch)
+      // 1. Atualiza os dados na tela
       setEpisodes((currentEpisodes) =>
         currentEpisodes.map((ep) =>
           ep.id === episodeId ? updatedEpisodeData : ep
         )
       );
 
+      // 2. Manda fechar o modal
       setIsEditDialogOpen(false);
-      toast.success("Episódio atualizado com sucesso.");
-      return true; // Retorna SUCESSO
+
+      // 3. Empurra a notificação para a próxima "fila de tarefas" do navegador,
+      //    garantindo que ela só execute DEPOIS que o React já terminou de fechar o modal.
+      setTimeout(() => {
+        toast.success("Episódio atualizado com sucesso!");
+      }, 0); // Um timeout de 0 milissegundos é suficiente para fazer o truque.
+
+      return true;
     } catch (error: any) {
-      // Se, por qualquer motivo, um erro ocorrer, o toast de erro
-      // será chamado de forma segura.
+      // Em caso de erro, o modal não fecha, então podemos mostrar o toast imediatamente.
       toast.error("Erro ao atualizar o episódio", {
         description: error.message,
       });
-      return false; // Retorna FALHA
+      return false;
     }
   };
-
   const handleSelectAll = async (isSelected: boolean) => {
     if (isSelected) {
       try {
@@ -216,6 +224,21 @@ export function EpisodeManager() {
   };
   const hasActiveFilters =
     searchTerm !== "" || statusFilter.length > 0 || categoryFilter.length > 0;
+
+  // Adicione este bloco de código ao seu componente
+  useEffect(() => {
+    if (notification) {
+      if (notification.type === "success") {
+        toast.success(notification.message);
+      } else {
+        toast.error(notification.message, {
+          description: notification.description,
+        });
+      }
+      // Limpa a notificação para não aparecer de novo
+      setNotification(null);
+    }
+  }, [notification]);
 
   return (
     <div className="space-y-8">
