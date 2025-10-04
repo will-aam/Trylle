@@ -168,26 +168,27 @@ export function EpisodeManager() {
     updates: any
   ): Promise<boolean> => {
     try {
-      // A chamada ao service permanece a mesma
-      const updatedEpisodeData = await updateEpisode(episodeId, updates); // OTIMIZAÇÃO: Atualizamos o estado localmente sem refetch
+      // Tentamos atualizar o episódio. Se o SQL do Passo 1 estiver correto,
+      // a linha abaixo vai funcionar sem erros.
+      const updatedEpisodeData = await updateEpisode(episodeId, updates);
 
+      // Se deu certo, atualizamos o estado localmente (mais rápido que refetch)
       setEpisodes((currentEpisodes) =>
         currentEpisodes.map((ep) =>
-          ep.id === episodeId ? { ...ep, ...updatedEpisodeData } : ep
+          ep.id === episodeId ? updatedEpisodeData : ep
         )
       );
 
       setIsEditDialogOpen(false);
-      toast.success("Episódio atualizado com sucesso."); // Se precisar, você pode re-buscar os totais ou outras contagens aqui
-
-      getEpisodeStatusCounts().then(setStatusCounts);
-
-      return true;
+      toast.success("Episódio atualizado com sucesso.");
+      return true; // Retorna SUCESSO
     } catch (error: any) {
+      // Se, por qualquer motivo, um erro ocorrer, o toast de erro
+      // será chamado de forma segura.
       toast.error("Erro ao atualizar o episódio", {
         description: error.message,
       });
-      return false;
+      return false; // Retorna FALHA
     }
   };
 
