@@ -31,7 +31,7 @@ export function EpisodeStats({
         <CardContent>
           <div className="text-2xl font-bold">{totalCount}</div>
           <p className="text-xs text-muted-foreground">
-            Episódios correspondentes aos filtros
+            Episódios correspondentes
           </p>
         </CardContent>
       </Card>

@@ -1,305 +1,100 @@
 "use client";
 
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
 } from "@/src/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/src/components/ui/alert-dialog";
 import { Button } from "@/src/components/ui/button";
 import {
   MoreHorizontal,
-  Edit,
-  Archive,
-  Play,
   Trash2,
-  Send,
-  Clock,
+  Edit,
+  Code,
+  Link as LinkIcon,
   Download,
-  FileText,
 } from "lucide-react";
-import { useState } from "react";
-import { usePlayer } from "@/src/hooks/use-player";
-import { useToast } from "@/src/hooks/use-toast";
-import { Episode, EpisodeDocument } from "@/src/lib/types";
-import { EditEpisodeDialog } from "./edit-episode-dialog";
-// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
-import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
+import { Episode } from "@/src/lib/types";
+import { JsonViewDialog } from "./JsonViewDialog"; // Vamos precisar criar este
+import { toast } from "sonner";
 
 interface EpisodeActionsProps {
   episode: Episode;
-  onEpisodeUpdate: () => void;
+  onEdit: (episode: Episode) => void;
+  onDelete: (episode: Episode) => void;
 }
 
 export function EpisodeActions({
   episode,
-  onEpisodeUpdate,
+  onEdit,
+  onDelete,
 }: EpisodeActionsProps) {
-  // 2. E AQUI: Use a nova função para criar o cliente
-  const supabase = createSupabaseBrowserClient();
-  const { setEpisode } = usePlayer();
-  const { toast } = useToast();
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [documents, setDocuments] = useState<EpisodeDocument[]>([]);
-  const [documentsFetched, setDocumentsFetched] = useState(false);
+  const [isJsonViewOpen, setIsJsonViewOpen] = useState(false);
 
-  // Nenhuma outra alteração é necessária no resto do arquivo.
-  // A lógica interna já está correta.
-
-  const fetchDocuments = async () => {
-    if (documentsFetched) return;
-
-    try {
-      const { data, error } = await supabase
-        .from("episode_documents")
-        .select("*")
-        .eq("episode_id", episode.id);
-
-      if (error) {
-        throw error;
-      }
-      setDocuments(data || []);
-      setDocumentsFetched(true);
-    } catch (error: any) {
-      toast({
-        title: "Error fetching documents",
-        description: error.message || "Could not fetch episode documents.",
-        variant: "destructive",
-      });
-    }
+  const handleCopyAudioUrl = () => {
+    navigator.clipboard.writeText(episode.audio_url);
+    toast.success("URL do áudio copiada para a área de transferência!");
   };
 
-  const handlePlay = () => {
-    setEpisode(episode);
-    toast({
-      title: "Playback started",
-      description: episode.title,
-    });
-  };
-
-  const handleAudioDownload = () => {
+  const handleDownloadAudio = () => {
+    // Cria um link temporário e simula o clique para iniciar o download
     const link = document.createElement("a");
     link.href = episode.audio_url;
-    link.download = episode.title;
+    // Sugere um nome de arquivo para o navegador
+    link.download = episode.file_name || "audio.mp3";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const handleDelete = async () => {
-    try {
-      const audioUrl = new URL(episode.audio_url);
-      const audioKey = audioUrl.pathname.slice(1);
-
-      const audioDeleteResponse = await fetch("/api/delete-file", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileKey: audioKey }),
-      });
-
-      if (!audioDeleteResponse.ok) {
-        console.warn(`Failed to delete audio file: ${audioKey}`);
-      }
-
-      const { data: documents } = await supabase
-        .from("episode_documents")
-        .select("storage_path")
-        .eq("episode_id", episode.id);
-
-      if (documents) {
-        for (const doc of documents) {
-          if (doc && doc.storage_path) {
-            const docDeleteResponse = await fetch("/api/delete-file", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ fileKey: doc.storage_path }),
-            });
-            if (!docDeleteResponse.ok) {
-              console.warn(`Failed to delete document: ${doc.storage_path}`);
-            }
-          }
-        }
-      }
-
-      const { error: deleteError } = await supabase
-        .from("episodes")
-        .delete()
-        .eq("id", episode.id);
-
-      if (deleteError) {
-        throw deleteError;
-      }
-
-      toast({
-        title: "Episode deleted",
-        description: "The episode and all its files have been removed.",
-      });
-
-      onEpisodeUpdate();
-    } catch (error: any) {
-      toast({
-        title: "Error deleting",
-        description:
-          error.message ||
-          "Could not delete the episode. Check the console for more details.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleStatusChange = async (
-    status: "draft" | "scheduled" | "published"
-  ) => {
-    const { error } = await supabase
-      .from("episodes")
-      .update({ status: status })
-      .eq("id", episode.id);
-
-    if (error) {
-      toast({
-        title: `Error updating status`,
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Episode status updated",
-        description: `The episode is now ${status}.`,
-      });
-      onEpisodeUpdate();
-    }
+    toast.info("Download do áudio iniciado.");
   };
 
   return (
     <>
-      <AlertDialog>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handlePlay}>
-              <Play className="mr-2 h-4 w-4" />
-              Play Episode
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setIsEditDialogOpen(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit
-            </DropdownMenuItem>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Abrir menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Ações</DropdownMenuLabel>
+          <DropdownMenuItem onSelect={() => onEdit(episode)}>
+            <Edit className="mr-2 h-4 w-4" />
+            <span>Editar</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={handleCopyAudioUrl}>
+            <LinkIcon className="mr-2 h-4 w-4" />
+            <span>Copiar URL do Áudio</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={handleDownloadAudio}>
+            <Download className="mr-2 h-4 w-4" />
+            <span>Baixar Áudio</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setIsJsonViewOpen(true)}>
+            <Code className="mr-2 h-4 w-4" />
+            <span>Ver JSON</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-red-500 focus:text-red-500"
+            onSelect={() => onDelete(episode)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            <span>Deletar</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-            <DropdownMenuItem onClick={handleAudioDownload}>
-              <Download className="mr-2 h-4 w-4" />
-              Download do Audio
-            </DropdownMenuItem>
-
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger onMouseEnter={fetchDocuments}>
-                <FileText className="mr-2 h-4 w-4" />
-                Download do documento
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                {documents.length > 0 ? (
-                  documents.map((doc) => (
-                    <DropdownMenuItem
-                      key={doc.id}
-                      onClick={() => window.open(doc.public_url, "_blank")}
-                    >
-                      {doc.file_name}
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <DropdownMenuItem disabled>No documents</DropdownMenuItem>
-                )}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-
-            {episode.status === "draft" && (
-              <>
-                <DropdownMenuItem
-                  onClick={() => handleStatusChange("published")}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  Publicar
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleStatusChange("scheduled")}
-                >
-                  <Clock className="mr-2 h-4 w-4" />
-                  Agendar
-                </DropdownMenuItem>
-              </>
-            )}
-
-            {episode.status === "published" && (
-              <DropdownMenuItem onClick={() => handleStatusChange("draft")}>
-                <Archive className="mr-2 h-4 w-4" />
-                Converter para rascunho
-              </DropdownMenuItem>
-            )}
-
-            {episode.status === "scheduled" && (
-              <>
-                <DropdownMenuItem
-                  onClick={() => handleStatusChange("published")}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  Publicar
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleStatusChange("draft")}>
-                  <Clock className="mr-2 h-4 w-4" />
-                  Cancelar agendamento
-                </DropdownMenuItem>
-              </>
-            )}
-
-            <DropdownMenuSeparator />
-            <AlertDialogTrigger asChild>
-              <DropdownMenuItem className="text-red-600">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Deletar
-              </DropdownMenuItem>
-            </AlertDialogTrigger>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Isso excluirá permanentemente o
-              episódio e todos os seus arquivos de áudio e documentos.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <EditEpisodeDialog
-        episode={episode}
-        isOpen={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        onEpisodeUpdate={onEpisodeUpdate}
+      <JsonViewDialog
+        isOpen={isJsonViewOpen}
+        onOpenChange={setIsJsonViewOpen}
+        data={episode}
+        title="Visualizador JSON do Episódio"
       />
     </>
   );

@@ -1,6 +1,9 @@
+// src/components/features/admin/episode-management/edit-episode-dialog.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { Button } from "@/src/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,10 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/src/components/ui/dialog";
-import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
-import { ScrollArea } from "@/src/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -19,588 +19,292 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/components/ui/select";
-import { useToast } from "@/src/hooks/use-toast";
-// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
-import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
-import {
-  Episode,
-  Category,
-  Subcategory,
-  Tag,
-  EpisodeDocument,
-} from "@/src/lib/types";
-import { File, Trash2, Upload } from "lucide-react";
-import { TagSelector } from "../TagSelector";
-import RichTextEditor from "../../../ui/RichTextEditor";
+import { Label } from "@/src/components/ui/label";
+import { ScrollArea } from "@/src/components/ui/scroll-area";
+import RichTextEditor from "@/src/components/ui/RichTextEditor";
+import { TagSelector } from "@/src/components/features/admin/TagSelector";
+import { Episode, Category, Subcategory, Program, Tag } from "@/src/lib/types";
+import { Trash2, FileAudio, FileText } from "lucide-react";
 
 interface EditEpisodeDialogProps {
-  episode: Episode | null;
+  episode: Episode;
+  categories: Category[];
+  subcategories: Subcategory[];
+  programs: Program[];
+  allTags: Tag[];
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onEpisodeUpdate: () => void;
+  onUpdate: (episodeId: string, updates: any) => Promise<boolean>;
 }
-
-const MAX_DOCUMENTS_PER_EPISODE = 1;
 
 export function EditEpisodeDialog({
   episode,
+  categories,
+  subcategories,
+  programs,
+  allTags,
   isOpen,
   onOpenChange,
-  onEpisodeUpdate,
+  onUpdate,
 }: EditEpisodeDialogProps) {
-  // 2. E AQUI: Use a nova função para criar o cliente
-  const supabase = createSupabaseBrowserClient();
-  const { toast } = useToast();
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<Partial<Episode>>({});
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
-  const [documents, setDocuments] = useState<EpisodeDocument[]>([]);
-  const [selectedFile, setSelectedFile] = useState<globalThis.File | null>(
-    null
-  );
-  const [isUploading, setIsUploading] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [newAudioFile, setNewAudioFile] = useState<File | null>(null);
-  const audioFileInputRef = useRef<HTMLInputElement>(null);
-
-  const [editingDoc, setEditingDoc] = useState<EpisodeDocument | null>(null);
-  const [editingPageCount, setEditingPageCount] = useState<string>("");
-  const [editingReferenceCount, setEditingReferenceCount] =
-    useState<string>("");
+  const { register, handleSubmit, control, reset } = useForm({
+    defaultValues: {
+      title: episode.title,
+      description: episode.description,
+      program_id: episode.program_id,
+      episode_number: episode.episode_number,
+      category_id: episode.category_id,
+      subcategory_id: episode.subcategory_id,
+      tags: episode.tags || [],
+    },
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (episode && isOpen) {
-      setFormData({
-        title: episode.title,
-        description: episode.description,
-        category_id: episode.category_id,
-        subcategory_id: episode.subcategory_id,
-      });
-      const currentTags = episode.tags?.map((t: any) => t.tags) || [];
-      setSelectedTags(currentTags);
-      const fetchDocuments = async () => {
-        const { data, error } = await supabase
-          .from("episode_documents")
-          .select("*")
-          .eq("episode_id", episode.id)
-          .order("created_at", { ascending: true });
-        if (error) {
-          toast({
-            title: "Erro ao buscar documentos",
-            description: error.message,
-            variant: "destructive",
-          });
-        } else {
-          const loadedDocuments = data || [];
-          setDocuments(loadedDocuments);
-          if (loadedDocuments.length > 0) {
-            const docToEdit = loadedDocuments[0];
-            setEditingDoc(docToEdit);
-            setEditingPageCount(String(docToEdit.page_count || ""));
-            setEditingReferenceCount(String(docToEdit.reference_count || ""));
-          } else {
-            setEditingDoc(null);
-            setEditingPageCount("");
-            setEditingReferenceCount("");
-          }
-        }
-      };
-      fetchDocuments();
-    } else {
-      setDocuments([]);
-      setSelectedFile(null);
-      setNewAudioFile(null);
-      setEditingDoc(null);
-      setEditingPageCount("");
-      setEditingReferenceCount("");
-    }
-  }, [episode, isOpen, supabase, toast]);
+    reset({
+      title: episode.title,
+      description: episode.description,
+      program_id: episode.program_id,
+      episode_number: episode.episode_number,
+      category_id: episode.category_id,
+      subcategory_id: episode.subcategory_id,
+      tags: episode.tags || [],
+    });
+  }, [episode, reset]);
 
-  useEffect(() => {
-    const loadCategories = async () => {
-      const { data } = await supabase
-        .from("categories")
-        .select("*")
-        .order("name");
-      setCategories(data || []);
+  const onSubmit = async (data: any) => {
+    setIsSubmitting(true);
+    const updates = {
+      ...data,
+      episode_number: data.episode_number ? Number(data.episode_number) : null,
+      tags: data.tags.map((tag: any) => tag.id),
     };
-    if (isOpen) {
-      loadCategories();
-    }
-  }, [isOpen, supabase]);
-
-  useEffect(() => {
-    if (formData.category_id) {
-      const loadSubcategories = async () => {
-        const { data } = await supabase
-          .from("subcategories")
-          .select("*")
-          .eq("category_id", formData.category_id)
-          .order("name");
-        setSubcategories(data || []);
-      };
-      loadSubcategories();
-    } else {
-      setSubcategories([]);
-    }
-  }, [formData.category_id, supabase]);
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
-  };
-
-  const handleSelectChange = (field: keyof Episode, value: string) => {
-    const newFormData: Partial<Episode> = { ...formData, [field]: value };
-    if (field === "category_id") {
-      newFormData.subcategory_id = null;
-    }
-    setFormData(newFormData);
-  };
-
-  const handleSaveChanges = async () => {
-    if (!episode) return;
-    setIsLoading(true);
-
-    try {
-      let audio_url = episode.audio_url;
-      let file_name = episode.file_name;
-      let audioFileChanged = false;
-
-      if (newAudioFile) {
-        audioFileChanged = true;
-        if (episode.audio_url) {
-          try {
-            const oldFileKey = episode.audio_url.substring(
-              episode.audio_url.lastIndexOf("com/") + 4
-            );
-            await fetch("/api/delete-file", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ fileKey: oldFileKey }),
-            });
-          } catch (error) {
-            console.error("Failed to delete old audio file:", error);
-          }
-        }
-
-        const uploadFormData = new FormData();
-        uploadFormData.append("file", newAudioFile);
-        const uploadResponse = await fetch("/api/upload", {
-          method: "POST",
-          body: uploadFormData,
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error("Failed to upload new audio file.");
-        }
-        const uploadResult = await uploadResponse.json();
-        audio_url = uploadResult.audio_url;
-        file_name = newAudioFile.name;
-      }
-
-      const updateData: Partial<Episode> = {
-        title: formData.title,
-        description: formData.description,
-        category_id: formData.category_id,
-        subcategory_id: formData.subcategory_id,
-        audio_url,
-        file_name,
-      };
-
-      const { error: episodeError } = await supabase
-        .from("episodes")
-        .update(updateData)
-        .eq("id", episode.id);
-
-      if (episodeError) throw episodeError;
-
-      const { error: deleteTagsError } = await supabase
-        .from("episode_tags")
-        .delete()
-        .eq("episode_id", episode.id);
-
-      if (deleteTagsError) throw deleteTagsError;
-
-      if (selectedTags.length > 0) {
-        const newEpisodeTags = selectedTags.map((tag) => ({
-          episode_id: episode.id,
-          tag_id: tag.id,
-        }));
-        const { error: insertTagsError } = await supabase
-          .from("episode_tags")
-          .insert(newEpisodeTags);
-
-        if (insertTagsError) throw insertTagsError;
-      }
-
-      if (editingDoc) {
-        const { error: docError } = await supabase
-          .from("episode_documents")
-          .update({
-            page_count: editingPageCount
-              ? parseInt(editingPageCount, 10)
-              : null,
-            reference_count: editingReferenceCount
-              ? parseInt(editingReferenceCount, 10)
-              : null,
-          })
-          .eq("id", editingDoc.id);
-
-        if (docError) throw docError;
-      }
-
-      toast({
-        title: "Sucesso!",
-        description: audioFileChanged
-          ? "Arquivo trocado com sucesso"
-          : "Episódio atualizado com sucesso.",
-      });
-      onEpisodeUpdate();
+    const success = await onUpdate(episode.id, updates);
+    if (success) {
       onOpenChange(false);
-    } catch (error: any) {
-      toast({
-        title: "Erro ao salvar",
-        description:
-          "Ocorreu um erro ao salvar as alterações. " + error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
     }
+    setIsSubmitting(false);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
-
-  const handleNewAudioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setNewAudioFile(e.target.files[0]);
-    }
-  };
-
-  const handleAttachDocument = async () => {
-    if (!selectedFile || !episode) return;
-    setIsUploading(true);
-
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-    formData.append("episode_id", episode.id);
-
-    try {
-      const response = await fetch("/api/episode-documents/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Falha no upload do arquivo.");
-      }
-
-      const newDocument = await response.json();
-      setDocuments((prev) => [...prev, newDocument]);
-      setSelectedFile(null);
-
-      const fileInput = document.getElementById(
-        "document-upload"
-      ) as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
-
-      toast({
-        title: "Episódio enviado com sucesso!",
-        description:
-          "O episódio foi carregado e está pronto para ser processado.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Falha ao enviar o episódio.",
-        description: "Ocorreu um erro ao enviar o episódio. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleDeleteDocument = async (doc: EpisodeDocument) => {
-    setDeletingId(doc.id);
-    try {
-      const response = await fetch("/api/delete-file", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileKey: doc.storage_path }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Falha ao deletar o arquivo do armazenamento.");
-      }
-
-      const { error: dbError } = await supabase
-        .from("episode_documents")
-        .delete()
-        .eq("id", doc.id);
-
-      if (dbError) {
-        throw new Error("Falha ao deletar o registro do banco de dados.");
-      }
-
-      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
-      toast({
-        title: "Sucesso!",
-        description: "Documento removido com sucesso.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro ao remover",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
-  function handleDescriptionChange(markdown: string): void {
-    setFormData((prev) => ({ ...prev, description: markdown }));
-  }
+  const episodeDocument = (episode as any).episode_documents?.[0];
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl p-0 flex flex-col h-full max-h-[95vh]">
-        <DialogHeader className="p-6 pb-4">
-          <DialogTitle>Editar Episódio</DialogTitle>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Editar Episódio: {episode.title}</DialogTitle>
         </DialogHeader>
-
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="flex flex-col gap-6 p-6 pt-0">
-            <div className="space-y-2">
-              <Label htmlFor="title">Título</Label>
-              <Input
-                id="title"
-                value={formData.title || ""}
-                onChange={handleInputChange}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select
-                  value={formData.category_id || ""}
-                  onValueChange={(value) =>
-                    handleSelectChange("category_id", value)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Subcategoria</Label>
-                <Select
-                  value={formData.subcategory_id || ""}
-                  onValueChange={(value) =>
-                    handleSelectChange("subcategory_id", value)
-                  }
-                  disabled={!formData.category_id || subcategories.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma subcategoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subcategories.map((sub) => (
-                      <SelectItem key={sub.id} value={sub.id}>
-                        {sub.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <RichTextEditor
-                content={formData.description || ""}
-                onChange={handleDescriptionChange}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <TagSelector
-                selectedTags={selectedTags}
-                onSelectedTagsChange={setSelectedTags}
-              />
-            </div>
-
-            <div className="space-y-4 pt-6 border-t">
-              <Label className="font-semibold text-base">
-                Arquivo de Áudio
-              </Label>
-              <div className="p-4 border rounded-lg space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 truncate">
-                    <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-sm font-medium truncate">
-                      {newAudioFile?.name || episode?.file_name}
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => audioFileInputRef.current?.click()}
-                  >
-                    Mudar Áudio
-                  </Button>
-                  <input
-                    type="file"
-                    ref={audioFileInputRef}
-                    onChange={handleNewAudioFileChange}
-                    className="hidden"
-                    accept="audio/mpeg, audio/mp4, audio/x-m4a"
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex-1 overflow-hidden"
+        >
+          <ScrollArea className="h-full pr-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
+              {/* Coluna Esquerda */}
+              <div className="md:col-span-2 space-y-6">
+                <div>
+                  <Label htmlFor="title">Título</Label>
+                  <Input id="title" {...register("title")} className="mt-1" />
+                </div>
+                <div>
+                  <Label>Descrição</Label>
+                  <Controller
+                    name="description"
+                    control={control}
+                    render={({ field }) => (
+                      <RichTextEditor
+                        defaultValue={field.value ?? ""} // CORREÇÃO FINAL AQUI
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                </div>
+                <div>
+                  <Label>Tags</Label>
+                  <Controller
+                    name="tags"
+                    control={control}
+                    render={({ field }) => (
+                      <TagSelector
+                        tags={allTags}
+                        selectedTags={field.value}
+                        onSelectedTagsChange={field.onChange}
+                      />
+                    )}
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-4 pt-6 border-t">
-              <Label className="font-semibold text-base">
-                Documento Anexado
-              </Label>
-              <div className="space-y-2">
-                {documents.length > 0 ? (
-                  documents.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="p-4 border rounded-lg space-y-4"
-                    >
+              {/* Coluna Direita */}
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Programa</Label>
+                  <Controller
+                    name="program_id"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ?? ""}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Nenhum programa" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {programs.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="episode_number">Nº do Episódio</Label>
+                  <Input
+                    id="episode_number"
+                    type="number"
+                    {...register("episode_number")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Categoria</Label>
+                  <Controller
+                    name="category_id"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ?? ""}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Subcategoria</Label>
+                  <Controller
+                    name="subcategory_id"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ?? ""}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma subcategoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subcategories.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Arquivo de Áudio</Label>
+                  <div className="flex items-center justify-between p-3 border rounded-md">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <FileAudio className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                      <span className="truncate text-sm">
+                        {episode.file_name}
+                      </span>
+                    </div>
+                    <Button type="button" variant="outline" size="sm">
+                      Mudar áudio
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Documento Anexado</Label>
+                  {episodeDocument ? (
+                    <div className="p-3 border rounded-md space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 truncate">
-                          <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <span className="text-sm font-medium truncate">
-                            {doc.file_name}
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate text-sm">
+                            {episodeDocument.file_name}
                           </span>
                         </div>
                         <Button
+                          type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDeleteDocument(doc)}
-                          disabled={deletingId === doc.id}
-                          className="flex-shrink-0"
+                          className="h-8 w-8 text-red-500 hover:text-red-500"
                         >
-                          {deletingId === doc.id ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                          ) : (
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          )}
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="space-y-1">
-                          <Label htmlFor="editingPageCount">
-                            Nº de Páginas
+                      <div className="text-xs text-muted-foreground">
+                        Tamanho:{" "}
+                        {episodeDocument.file_size
+                          ? (episodeDocument.file_size / (1024 * 1024)).toFixed(
+                              2
+                            )
+                          : "N/A"}{" "}
+                        MB
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor="pages" className="text-xs">
+                            Páginas
                           </Label>
                           <Input
-                            id="editingPageCount"
+                            id="pages"
                             type="number"
-                            value={editingPageCount}
-                            onChange={(e) =>
-                              setEditingPageCount(e.target.value)
-                            }
-                            placeholder="Ex: 10"
+                            defaultValue={episodeDocument.page_count ?? ""}
                           />
                         </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="editingReferenceCount">
-                            Nº de Referências
+                        <div>
+                          <Label htmlFor="references" className="text-xs">
+                            Referências
                           </Label>
                           <Input
-                            id="editingReferenceCount"
+                            id="references"
                             type="number"
-                            value={editingReferenceCount}
-                            onChange={(e) =>
-                              setEditingReferenceCount(e.target.value)
-                            }
-                            placeholder="Ex: 5"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label>Tamanho (MB)</Label>
-                          <Input
-                            type="text"
-                            disabled
-                            value={
-                              doc.file_size
-                                ? (doc.file_size / (1024 * 1024)).toFixed(2)
-                                : "0.00"
-                            }
+                            defaultValue={episodeDocument.reference_count ?? ""}
                           />
                         </div>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Nenhum documento anexado.
-                  </p>
-                )}
-              </div>
-
-              {documents.length < MAX_DOCUMENTS_PER_EPISODE && (
-                <div className="flex items-center gap-2 pt-4 border-t">
-                  <Input
-                    id="document-upload"
-                    type="file"
-                    onChange={handleFileChange}
-                    className="flex-grow"
-                    accept=".pdf"
-                  />
-                  <Button
-                    onClick={handleAttachDocument}
-                    disabled={!selectedFile || isUploading}
-                  >
-                    {isUploading ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-                    ) : (
-                      <Upload className="h-4 w-4" />
-                    )}
-                    <span className="ml-2 hidden sm:inline">
-                      {isUploading ? "Enviando..." : "Anexar"}
-                    </span>
-                  </Button>
+                  ) : (
+                    <Button type="button" variant="outline" className="w-full">
+                      Anexar Documento
+                    </Button>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-        </ScrollArea>
-
-        <DialogFooter className="p-6 pt-4 border-t">
-          <Button
-            type="button"
-            onClick={handleSaveChanges}
-            disabled={isLoading}
-          >
-            {isLoading ? "Salvando..." : "Salvar Alterações"}
-          </Button>
-        </DialogFooter>
+          </ScrollArea>
+          <DialogFooter className="mt-4 pt-4 border-t">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

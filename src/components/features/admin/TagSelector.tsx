@@ -1,6 +1,7 @@
+// src/components/features/admin/TagSelector.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Command,
   CommandEmpty,
@@ -18,33 +19,25 @@ import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { useToast } from "@/src/hooks/use-toast";
 import { X, ChevronsUpDown } from "lucide-react";
-// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Tag } from "@/src/lib/types";
 
 interface TagSelectorProps {
+  tags: Tag[]; // MUDANÇA: Renomeado de allTags para tags para compatibilidade
   selectedTags: Tag[];
   onSelectedTagsChange: (tags: Tag[]) => void;
 }
 
 export function TagSelector({
+  tags: allTags, // MUDANÇA: Recebe a lista de tags como prop
   selectedTags,
   onSelectedTagsChange,
 }: TagSelectorProps) {
-  // 2. E AQUI: Use a nova função para criar o cliente
   const supabase = createSupabaseBrowserClient();
-  const [allTags, setAllTags] = useState<Tag[]>([]);
   const [tagInputValue, setTagInputValue] = useState("");
   const [popoverOpen, setPopoverOpen] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const loadTags = async () => {
-      const { data } = await supabase.from("tags").select("*").order("name");
-      setAllTags(data || []);
-    };
-    loadTags();
-  }, [supabase]);
+  // REMOVIDO: O useEffect que buscava as tags foi removido.
 
   const handleTagSelect = (tag: Tag) => {
     if (!selectedTags.some((t) => t.id === tag.id)) {
@@ -88,9 +81,7 @@ export function TagSelector({
         variant: "destructive",
       });
     } else {
-      setAllTags((prev) =>
-        [...prev, data].sort((a, b) => a.name.localeCompare(b.name))
-      );
+      // A atualização da lista de tags agora será gerenciada pelo componente pai
       handleTagSelect(data);
       toast({
         title: "Tag criada",
