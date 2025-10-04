@@ -165,23 +165,21 @@ export function EpisodeManager() {
 
   const handleUpdateEpisode = async (episodeId: string, updates: any) => {
     try {
-      await updateEpisode(episodeId, updates); // Tenta atualizar no banco de dados
+      await updateEpisode(episodeId, updates);
 
-      // Se a atualização for bem-sucedida:
       setIsEditDialogOpen(false); // 1. Fecha o pop-up imediatamente
 
-      // 2. Atrasamos a notificação e a busca de dados para o próximo ciclo de renderização,
-      //    depois que o pop-up já tiver desaparecido.
+      // 2. Atrasamos a notificação e a busca de dados para o próximo ciclo de renderização
       setTimeout(() => {
         toast.success("Episódio atualizado com sucesso.");
         fetchData();
       }, 50);
 
-      return true; // Retorna sucesso
+      return true;
     } catch (error: any) {
-      // Se a atualização falhar:
+      // Agora o erro capturado será muito mais específico!
       toast.error("Erro ao atualizar", { description: error.message });
-      return false; // Retorna falha
+      return false;
     }
   };
 
