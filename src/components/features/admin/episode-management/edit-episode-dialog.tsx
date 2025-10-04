@@ -113,7 +113,7 @@ export function EditEpisodeDialog({
                     control={control}
                     render={({ field }) => (
                       <RichTextEditor
-                        defaultValue={field.value ?? ""} // CORREÇÃO FINAL AQUI
+                        content={field.value ?? ""}
                         onChange={field.onChange}
                       />
                     )}
