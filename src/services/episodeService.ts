@@ -83,7 +83,12 @@ export const updateEpisode = async (
     .select()
     .single();
 
-  if (episodeError) throw new Error("Não foi possível atualizar o episódio.");
+  if (episodeError) {
+    // Agora, se houver um erro de permissão, ele será capturado aqui!
+    throw new Error(
+      `Não foi possível atualizar o episódio. Erro: ${episodeError.message}`
+    );
+  }
 
   // 2. Atualiza as tags (relação many-to-many)
   // Primeiro, remove todas as tags existentes para este episódio

@@ -77,14 +77,16 @@ export function EditEpisodeDialog({
     setIsSubmitting(true);
     const updates = {
       ...data,
+      program_id: data.program_id || null,
       episode_number: data.episode_number ? Number(data.episode_number) : null,
       tags: data.tags.map((tag: any) => tag.id),
     };
+
     const success = await onUpdate(episode.id, updates);
-    if (success) {
-      onOpenChange(false);
+
+    if (!success) {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   const episodeDocument = (episode as any).episode_documents?.[0];

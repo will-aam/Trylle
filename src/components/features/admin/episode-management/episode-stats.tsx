@@ -30,9 +30,9 @@ export function EpisodeStats({
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{totalCount}</div>
-          <p className="text-xs text-muted-foreground">
+          {/* <p className="text-xs text-muted-foreground">
             Episódios correspondentes
-          </p>
+          </p> */}
         </CardContent>
       </Card>
 
@@ -43,9 +43,9 @@ export function EpisodeStats({
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{publishedCount}</div>
-          <p className="text-xs text-muted-foreground">
+          {/* <p className="text-xs text-muted-foreground">
             Total de publicados no sistema
-          </p>
+          </p> */}
         </CardContent>
       </Card>
 
@@ -56,9 +56,9 @@ export function EpisodeStats({
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{draftCount}</div>
-          <p className="text-xs text-muted-foreground">
+          {/* <p className="text-xs text-muted-foreground">
             Total de rascunhos no sistema
-          </p>
+          </p> */}
         </CardContent>
       </Card>
 
@@ -69,9 +69,9 @@ export function EpisodeStats({
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{scheduledCount}</div>
-          <p className="text-xs text-muted-foreground">
+          {/* <p className="text-xs text-muted-foreground">
             Total de agendados no sistema
-          </p>
+          </p> */}
         </CardContent>
       </Card>
     </div>
