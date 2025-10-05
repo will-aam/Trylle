@@ -27,14 +27,9 @@ import { Category, Subcategory, Tag } from "@/src/lib/types";
 import { TagSelector } from "./TagSelector";
 import { cn } from "@/src/lib/utils";
 import { revalidateAdminDashboard } from "@/src/app/admin/actions";
+import { getTags } from "@/src/services/tagService"; // 1. Importar a função de buscar tags
 
-// 1. Definimos que o componente receberá uma lista de 'tags'
-interface UploadFormProps {
-  tags: Tag[];
-}
-
-// 2. Usamos as props recebidas aqui
-export function UploadForm({ tags }: UploadFormProps) {
+export function UploadForm() {
   const supabase = createSupabaseBrowserClient();
   const [uploadStatus, setUploadStatus] = useState<
     "idle" | "uploading" | "success"
@@ -43,6 +38,7 @@ export function UploadForm({ tags }: UploadFormProps) {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]); // 2. Criar um estado para armazenar as tags
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -65,11 +61,14 @@ export function UploadForm({ tags }: UploadFormProps) {
 
   useEffect(() => {
     const loadInitialData = async () => {
-      const { data: catData } = await supabase
-        .from("categories")
-        .select("*")
-        .order("name");
-      setCategories(catData || []);
+      // Busca categorias e tags ao mesmo tempo
+      const [catData, tagsData] = await Promise.all([
+        supabase.from("categories").select("*").order("name"),
+        getTags(), // 3. Chamar a função para buscar as tags
+      ]);
+
+      setCategories(catData.data || []);
+      setTags(tagsData || []); // 4. Salvar as tags no estado
     };
     loadInitialData();
   }, [supabase, formKey]);
@@ -395,8 +394,7 @@ export function UploadForm({ tags }: UploadFormProps) {
                 <TagSelector
                   selectedTags={selectedTags}
                   onSelectedTagsChange={setSelectedTags}
-                  // 3. AQUI ESTÁ A CORREÇÃO FINAL: Usamos a lista de tags
-                  tags={tags}
+                  tags={tags} // 5. Passar a lista de tags do estado para o seletor
                 />
               </div>
               <div>

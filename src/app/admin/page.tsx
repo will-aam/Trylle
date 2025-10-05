@@ -12,14 +12,11 @@ import {
   TabsTrigger,
 } from "@/src/components/ui/tabs";
 import { getDashboardStats } from "./actions";
-import { getTags } from "@/src/services/tagService"; // 1. Importa a função
-import { Tag } from "@/src/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const { data: stats, error } = await getDashboardStats();
-  const tags: Tag[] = await getTags(); // 2. Busca as tags
 
   if (error) {
     return (
@@ -52,8 +49,8 @@ export default async function AdminPage() {
         </TabsList>
 
         <TabsContent value="upload">
-          {/* 3. Passa as tags para o seu componente de formulário */}
-          <UploadForm tags={tags} />
+          {/* O formulário agora não recebe mais props */}
+          <UploadForm />
         </TabsContent>
 
         <TabsContent value="categories">
