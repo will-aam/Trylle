@@ -1,8 +1,11 @@
-import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
+import { createSupabaseServerClient } from "@/src/lib/supabase-server";
 import { Program } from "../lib/types";
 
 export const getPrograms = async (): Promise<Program[]> => {
-  const supabase = createSupabaseBrowserClient();
+  // A chamada aqui é síncrona, sem await
+  const supabase = createSupabaseServerClient();
+
+  // O único await é aqui, na chamada ao banco de dados
   const { data, error } = await supabase
     .from("programs")
     .select("*, categories(*)")
@@ -12,5 +15,6 @@ export const getPrograms = async (): Promise<Program[]> => {
     console.error("Erro ao buscar programas:", error);
     return [];
   }
-  return data;
+
+  return data || [];
 };
