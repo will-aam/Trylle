@@ -133,20 +133,15 @@ export function EditEpisodeDialog({
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
-      // Se um novo arquivo foi selecionado, faça o upload dele primeiro.
       if (newDocumentFile) {
         await uploadEpisodeDocument(episode.id, newDocumentFile);
       }
 
-      // A função onUpdate já lida com o toast de sucesso/erro.
+      // A função onUpdate agora é a única responsável pelos toasts
       await onUpdate(episode.id, data);
     } catch (error: any) {
-      console.error("Error updating episode:", error);
-      toast({
-        title: "Erro ao atualizar",
-        description: error.message || "Ocorreu um erro inesperado.",
-        variant: "destructive",
-      });
+      // O erro é tratado pela função `onUpdate` do componente pai
+      console.error("Submit error:", error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -155,34 +150,26 @@ export function EditEpisodeDialog({
   const handleDeleteDocument = async () => {
     if (!currentDocument) return;
 
-    // Se o documento for apenas um arquivo temporário na tela, limpe o estado.
+    // Se for um documento temporário, apenas limpa a interface
     if (!currentDocument.storage_path) {
       setCurrentDocument(undefined);
       setNewDocumentFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    // Se for um documento existente, chame a API para deletar.
     try {
       await deleteEpisodeDocument(
         currentDocument.id,
         currentDocument.storage_path
       );
-      setCurrentDocument(undefined);
-      setNewDocumentFile(null);
-      setValue("page_count", undefined);
-      setValue("reference_count", undefined);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
       toast({
         title: "Documento Removido",
-        description:
-          "O documento foi preparado para exclusão. Salve as alterações para confirmar.",
+        description: "O documento foi excluído com sucesso.",
       });
+      setCurrentDocument(undefined);
+      setValue("page_count", undefined);
+      setValue("reference_count", undefined);
     } catch (error: any) {
       toast({
         title: "Erro ao excluir",
@@ -195,13 +182,10 @@ export function EditEpisodeDialog({
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Se já existe um documento, ele precisa ser removido primeiro.
       if (currentDocument) {
         toast({
           title: "Ação necessária",
-          description:
-            "Por favor, remova o documento existente antes de anexar um novo.",
-          variant: "default",
+          description: "Remova o documento existente antes de anexar um novo.",
         });
         if (fileInputRef.current) fileInputRef.current.value = "";
         return;
@@ -212,7 +196,7 @@ export function EditEpisodeDialog({
         episode_id: episode.id,
         file_name: file.name,
         public_url: "",
-        storage_path: "", // Um caminho vazio indica que é um arquivo novo
+        storage_path: "", // Path vazio indica que é um arquivo novo e não salvo
         created_at: new Date().toISOString(),
         file_size: file.size,
         page_count: null,
@@ -235,7 +219,6 @@ export function EditEpisodeDialog({
         >
           <ScrollArea className="flex-1 pr-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
-              {/* Coluna Esquerda */}
               <div className="md:col-span-2 space-y-6">
                 <div>
                   <Label htmlFor="title">Título</Label>
@@ -279,7 +262,6 @@ export function EditEpisodeDialog({
                 </div>
               </div>
 
-              {/* Coluna Direita */}
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label>Programa</Label>
