@@ -11,21 +11,24 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/src/components/ui/tabs";
-// Importe a função do novo arquivo de actions
 import { getDashboardStats } from "./actions";
+import { getTags } from "@/src/services/tagService"; // 1. Importa a função
+import { Tag } from "@/src/lib/types";
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  // Chame a função diretamente, pois esta é uma Server Component
   const { data: stats, error } = await getDashboardStats();
+  const tags: Tag[] = await getTags(); // 2. Busca as tags
 
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8 text-red-500">
-        <p>Erro ao carregar as estatísticas do painel: {error}</p>
+        <p>Erro ao carregar as estatísticas: {error}</p>
       </div>
     );
   }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <Suspense
@@ -49,7 +52,8 @@ export default async function AdminPage() {
         </TabsList>
 
         <TabsContent value="upload">
-          <UploadForm />
+          {/* 3. Passa as tags para o seu componente de formulário */}
+          <UploadForm tags={tags} />
         </TabsContent>
 
         <TabsContent value="categories">

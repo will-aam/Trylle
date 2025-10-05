@@ -153,3 +153,99 @@ export const deleteEpisode = async (episodeId: string): Promise<void> => {
     .eq("id", episodeId);
   if (error) throw new Error("Não foi possível deletar o episódio.");
 };
+
+import { z } from "zod";
+import { episodeSchema } from "@/src/lib/schemas";
+
+// Função para fazer o upload de um arquivo para o Supabase Storage
+async function uploadFile(file: File, bucket: string): Promise<string> {
+  const filePath = `${Date.now()}-${file.name}`;
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .upload(filePath, file);
+
+  if (error) {
+    console.error("Supabase upload error:", error);
+    throw new Error(`Falha no upload do arquivo para o bucket ${bucket}.`);
+  }
+  return data.path;
+}
+
+// Tipo inferido do nosso novo schema
+type EpisodeFormData = z.infer<typeof episodeSchema>;
+
+// Função para criar um novo episódio (publicado ou rascunho)
+async function createNewEpisode(
+  values: EpisodeFormData,
+  status: "published" | "draft"
+): Promise<void> {
+  const validatedData = episodeSchema.parse(values);
+
+  const { audio_file, document_file, tags, ...episodeDetails } = validatedData;
+
+  // 1. Upload do Áudio
+  if (!audio_file) throw new Error("O arquivo de áudio é obrigatório.");
+  const audioPath = await uploadFile(audio_file, "episode-audios");
+  const { publicUrl: audio_url } = supabase.storage
+    .from("episode-audios")
+    .getPublicUrl(audioPath).data;
+
+  // 2. Insere o episódio no banco
+  const { data: newEpisode, error: episodeError } = await supabase
+    .from("episodes")
+    .insert({
+      ...episodeDetails,
+      audio_url: audio_url,
+      status: status,
+      // Garante que category_id seja um número
+      category_id: parseInt(validatedData.category_id, 10),
+      // Garante que subcategory_id seja um número ou nulo
+      subcategory_id: validatedData.subcategory_id
+        ? parseInt(validatedData.subcategory_id, 10)
+        : null,
+    })
+    .select()
+    .single();
+
+  if (episodeError) {
+    console.error("Episode creation error:", episodeError);
+    throw new Error("Não foi possível criar o episódio.");
+  }
+
+  // 3. Upload do Documento (se existir)
+  if (document_file) {
+    const docPath = await uploadFile(document_file, "episode-documents");
+    const { publicUrl: document_url } = supabase.storage
+      .from("episode-documents")
+      .getPublicUrl(docPath).data;
+
+    const { error: docError } = await supabase
+      .from("episode_documents")
+      .insert({
+        episode_id: newEpisode.id,
+        file_path: docPath,
+        file_url: document_url,
+        file_size: document_file.size,
+        page_count: values.page_count, // Assumindo que você adicione isso ao form
+        reference_count: values.reference_count, // Assumindo que você adicione isso ao form
+      });
+    if (docError) console.error("Document creation error:", docError.message);
+  }
+
+  // 4. Associa as Tags (se existirem)
+  if (tags && tags.length > 0) {
+    const episodeTags = tags.map((tagId) => ({
+      episode_id: newEpisode.id,
+      tag_id: parseInt(tagId, 10), // Garante que a tag_id seja um número
+    }));
+    const { error: tagsError } = await supabase
+      .from("episode_tags")
+      .insert(episodeTags);
+    if (tagsError) console.error("Tag association error:", tagsError.message);
+  }
+}
+
+export const createEpisode = (values: EpisodeFormData) =>
+  createNewEpisode(values, "published");
+export const createDraftEpisode = (values: EpisodeFormData) =>
+  createNewEpisode(values, "draft");

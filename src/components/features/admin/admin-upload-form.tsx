@@ -22,15 +22,19 @@ import {
 } from "../../ui/select";
 import { useToast } from "@/src/hooks/use-toast";
 import { Upload, CheckCircle } from "lucide-react";
-// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Category, Subcategory, Tag } from "@/src/lib/types";
 import { TagSelector } from "./TagSelector";
 import { cn } from "@/src/lib/utils";
 import { revalidateAdminDashboard } from "@/src/app/admin/actions";
 
-export function UploadForm() {
-  // 2. E AQUI: Use a nova função para criar o cliente
+// 1. Definimos que o componente receberá uma lista de 'tags'
+interface UploadFormProps {
+  tags: Tag[];
+}
+
+// 2. Usamos as props recebidas aqui
+export function UploadForm({ tags }: UploadFormProps) {
   const supabase = createSupabaseBrowserClient();
   const [uploadStatus, setUploadStatus] = useState<
     "idle" | "uploading" | "success"
@@ -58,9 +62,6 @@ export function UploadForm() {
     subcategoryId: "",
     publishedAt: new Date().toISOString().split("T")[0],
   });
-
-  // Nenhuma outra alteração é necessária no resto do arquivo.
-  // A lógica interna já está correta.
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -356,7 +357,7 @@ export function UploadForm() {
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
+                        <SelectItem key={c.id} value={String(c.id)}>
                           {c.name}
                         </SelectItem>
                       ))}
@@ -381,7 +382,7 @@ export function UploadForm() {
                     </SelectTrigger>
                     <SelectContent>
                       {subcategories.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
+                        <SelectItem key={s.id} value={String(s.id)}>
                           {s.name}
                         </SelectItem>
                       ))}
@@ -394,7 +395,8 @@ export function UploadForm() {
                 <TagSelector
                   selectedTags={selectedTags}
                   onSelectedTagsChange={setSelectedTags}
-                  tags={[]}
+                  // 3. AQUI ESTÁ A CORREÇÃO FINAL: Usamos a lista de tags
+                  tags={tags}
                 />
               </div>
               <div>
