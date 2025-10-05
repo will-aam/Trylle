@@ -1,6 +1,18 @@
 html {
   scroll-behavior: smooth;
 }
+
+*:focus,
+*:focus-visible,
+*:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: none !important;
+  --tw-ring-offset-shadow: none !important;
+  --tw-ring-offset-width: 0 !important;
+  --tw-ring-color: transparent !important;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

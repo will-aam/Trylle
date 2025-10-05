@@ -70,14 +70,14 @@ export function AdminStats({ episodeCount, userCount }: AdminStatsProps) {
       isLoading: false,
     },
     {
-      title: "Uso do Banco (Supabase)",
+      title: "Supabase (BD)",
       storage: supabaseStorage,
       icon: Database,
       color: "text-indigo-600",
       isLoading: loading,
     },
     {
-      title: "Uso do Armazenamento (R2)",
+      title: "Cloudflare (R2)",
       storage: cloudflareStorage,
       icon: Cloud,
       color: "text-orange-600",

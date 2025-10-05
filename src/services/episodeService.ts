@@ -82,23 +82,27 @@ export const updateEpisode = async (
     throw new Error(episodeError.message);
   }
 
-  const { data: existingDocument } = await supabase
-    .from("episode_documents")
-    .select("id")
-    .eq("episode_id", episodeId)
-    .single();
-
-  if (existingDocument) {
-    const { error: documentError } = await supabase
+  // CORREÇÃO AQUI: Busca o documento associado AO EPISÓDIO
+  // Isso funciona para documentos antigos e para os que acabaram de ser criados.
+  if (page_count !== undefined || reference_count !== undefined) {
+    const { data: documentToUpdate } = await supabase
       .from("episode_documents")
-      .update({
-        page_count: page_count,
-        reference_count: reference_count,
-      })
-      .eq("id", existingDocument.id);
+      .select("id")
+      .eq("episode_id", episodeId)
+      .single(); // Busca o documento pelo ID do episódio
 
-    if (documentError) {
-      console.error("Erro ao atualizar o documento:", documentError.message);
+    if (documentToUpdate) {
+      const { error: documentError } = await supabase
+        .from("episode_documents")
+        .update({
+          page_count: page_count,
+          reference_count: reference_count,
+        })
+        .eq("id", documentToUpdate.id); // Atualiza usando o ID encontrado
+
+      if (documentError) {
+        console.error("Erro ao atualizar o documento:", documentError.message);
+      }
     }
   }
 
@@ -145,8 +149,6 @@ export const deleteEpisode = async (episodeId: string): Promise<void> => {
   if (error) throw new Error("Não foi possível deletar o episódio.");
 };
 
-// ADICIONANDO AS FUNÇÕES QUE FALTAVAM AQUI
-
 /**
  * Deleta um documento de episódio do armazenamento e do banco de dados.
  */
@@ -183,7 +185,7 @@ export const uploadEpisodeDocument = async (
 ): Promise<any> => {
   const filePath = `documents/${episodeId}-${Date.now()}-${documentFile.name}`;
 
-  const { error: storageError } = await supabase.storage
+  const { data: uploadData, error: storageError } = await supabase.storage
     .from("episode-documents")
     .upload(filePath, documentFile);
 
@@ -194,14 +196,14 @@ export const uploadEpisodeDocument = async (
 
   const { data: urlData } = supabase.storage
     .from("episode-documents")
-    .getPublicUrl(filePath);
+    .getPublicUrl(uploadData.path);
 
   const { data: newDocument, error: dbError } = await supabase
     .from("episode_documents")
     .insert({
       episode_id: episodeId,
       file_name: documentFile.name,
-      storage_path: filePath,
+      storage_path: uploadData.path, // Usar o path retornado do upload
       public_url: urlData.publicUrl,
       file_size: documentFile.size,
     })

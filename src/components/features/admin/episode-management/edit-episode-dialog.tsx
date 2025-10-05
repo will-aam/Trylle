@@ -124,21 +124,29 @@ export function EditEpisodeDialog({
       });
       setCurrentDocument(episode.episode_documents?.[0]);
       setNewDocumentFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   }, [episode, isOpen, reset]);
 
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     try {
-      let finalData = { ...data };
-
+      // Se um novo arquivo foi selecionado, faça o upload dele primeiro.
       if (newDocumentFile) {
         await uploadEpisodeDocument(episode.id, newDocumentFile);
       }
 
-      await onUpdate(episode.id, finalData);
-    } catch (error) {
-      // O erro já é tratado pela função onUpdate
+      // A função onUpdate já lida com o toast de sucesso/erro.
+      await onUpdate(episode.id, data);
+    } catch (error: any) {
+      console.error("Error updating episode:", error);
+      toast({
+        title: "Erro ao atualizar",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -147,18 +155,33 @@ export function EditEpisodeDialog({
   const handleDeleteDocument = async () => {
     if (!currentDocument) return;
 
+    // Se o documento for apenas um arquivo temporário na tela, limpe o estado.
+    if (!currentDocument.storage_path) {
+      setCurrentDocument(undefined);
+      setNewDocumentFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    // Se for um documento existente, chame a API para deletar.
     try {
       await deleteEpisodeDocument(
         currentDocument.id,
         currentDocument.storage_path
       );
       setCurrentDocument(undefined);
+      setNewDocumentFile(null);
       setValue("page_count", undefined);
       setValue("reference_count", undefined);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       toast({
         title: "Documento Removido",
         description:
-          "O documento foi excluído. Clique em 'Salvar Alterações' para confirmar.",
+          "O documento foi preparado para exclusão. Salve as alterações para confirmar.",
       });
     } catch (error: any) {
       toast({
@@ -172,18 +195,31 @@ export function EditEpisodeDialog({
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Se já existe um documento, ele precisa ser removido primeiro.
+      if (currentDocument) {
+        toast({
+          title: "Ação necessária",
+          description:
+            "Por favor, remova o documento existente antes de anexar um novo.",
+          variant: "default",
+        });
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
       setNewDocumentFile(file);
       setCurrentDocument({
-        id: "new",
+        id: `temp-${Date.now()}`,
         episode_id: episode.id,
         file_name: file.name,
         public_url: "",
-        storage_path: "",
-        created_at: "",
+        storage_path: "", // Um caminho vazio indica que é um arquivo novo
+        created_at: new Date().toISOString(),
         file_size: file.size,
         page_count: null,
         reference_count: null,
       });
+      setValue("page_count", undefined);
+      setValue("reference_count", undefined);
     }
   };
 
@@ -355,39 +391,34 @@ export function EditEpisodeDialog({
                             {currentDocument.file_name}
                           </span>
                         </div>
-                        {currentDocument.id !== "new" && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-red-500 hover:text-red-500"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Você tem certeza?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Esta ação irá remover o documento. A remoção
-                                  será definitiva ao salvar as alterações.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={handleDeleteDocument}
-                                >
-                                  Confirmar
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-500"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Você tem certeza?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação irá remover o documento.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteDocument}>
+                                Confirmar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                       <div className="text-xs text-muted-foreground">
                         Tamanho:{" "}
