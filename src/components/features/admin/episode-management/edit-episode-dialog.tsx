@@ -32,11 +32,12 @@ import {
   Tag,
   EpisodeDocument,
 } from "@/src/lib/types";
-import { Trash2, FileAudio, FileText, Upload } from "lucide-react";
+import { Trash2, FileAudio, FileText, Upload, RefreshCw } from "lucide-react"; // NOVO: Ícone RefreshCw
 import { useToast } from "@/src/hooks/use-toast";
 import {
   deleteEpisodeDocument,
   uploadEpisodeDocument,
+  updateEpisodeAudio, // 1. Importar a nova função de áudio
 } from "@/src/services/episodeService";
 import {
   AlertDialog,
@@ -106,6 +107,11 @@ export function EditEpisodeDialog({
   const [newDocumentFile, setNewDocumentFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // NOVO: Estados para a lógica de mudança de áudio
+  const [newAudioFile, setNewAudioFile] = useState<File | null>(null);
+  const [isUpdatingAudio, setIsUpdatingAudio] = useState(false);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (isOpen && episode) {
       reset({
@@ -124,8 +130,12 @@ export function EditEpisodeDialog({
       });
       setCurrentDocument(episode.episode_documents?.[0]);
       setNewDocumentFile(null);
+      setNewAudioFile(null); // Limpa o estado do novo áudio
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
+      }
+      if (audioInputRef.current) {
+        audioInputRef.current.value = "";
       }
     }
   }, [episode, isOpen, reset]);
@@ -136,11 +146,8 @@ export function EditEpisodeDialog({
       if (newDocumentFile) {
         await uploadEpisodeDocument(episode.id, newDocumentFile);
       }
-
-      // A função onUpdate agora é a única responsável pelos toasts
       await onUpdate(episode.id, data);
     } catch (error: any) {
-      // O erro é tratado pela função `onUpdate` do componente pai
       console.error("Submit error:", error.message);
     } finally {
       setIsSubmitting(false);
@@ -149,15 +156,12 @@ export function EditEpisodeDialog({
 
   const handleDeleteDocument = async () => {
     if (!currentDocument) return;
-
-    // Se for um documento temporário, apenas limpa a interface
     if (!currentDocument.storage_path) {
       setCurrentDocument(undefined);
       setNewDocumentFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
-
     try {
       await deleteEpisodeDocument(
         currentDocument.id,
@@ -196,7 +200,7 @@ export function EditEpisodeDialog({
         episode_id: episode.id,
         file_name: file.name,
         public_url: "",
-        storage_path: "", // Path vazio indica que é um arquivo novo e não salvo
+        storage_path: "",
         created_at: new Date().toISOString(),
         file_size: file.size,
         page_count: null,
@@ -204,6 +208,46 @@ export function EditEpisodeDialog({
       });
       setValue("page_count", undefined);
       setValue("reference_count", undefined);
+    }
+  };
+
+  // NOVO: Função para selecionar um novo arquivo de áudio
+  const handleAudioFileSelect = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith("audio/")) {
+      setNewAudioFile(file);
+    } else if (file) {
+      toast({
+        title: "Arquivo Inválido",
+        description: "Por favor, selecione um arquivo de áudio.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // NOVO: Função para executar a troca do áudio
+  const handleConfirmAudioChange = async () => {
+    if (!newAudioFile || !episode) return;
+
+    setIsUpdatingAudio(true);
+    try {
+      await updateEpisodeAudio(episode.id, episode.file_name, newAudioFile);
+      toast({
+        title: "Sucesso!",
+        description: "O áudio do episódio foi atualizado.",
+      });
+      onOpenChange(false); // Fecha o modal após o sucesso
+    } catch (error: any) {
+      toast({
+        title: "Erro ao mudar o áudio",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingAudio(false);
+      setNewAudioFile(null);
     }
   };
 
@@ -220,6 +264,7 @@ export function EditEpisodeDialog({
           <ScrollArea className="flex-1 pr-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
               <div className="md:col-span-2 space-y-6">
+                {/* ... (código da coluna esquerda) ... */}
                 <div>
                   <Label htmlFor="title">Título</Label>
                   <Input id="title" {...register("title")} className="mt-1" />
@@ -263,6 +308,7 @@ export function EditEpisodeDialog({
               </div>
 
               <div className="space-y-6">
+                {/* ... (código da coluna direita até o áudio) ... */}
                 <div className="space-y-2">
                   <Label>Programa</Label>
                   <Controller
@@ -354,14 +400,70 @@ export function EditEpisodeDialog({
                     <div className="flex items-center gap-2 overflow-hidden">
                       <FileAudio className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                       <span className="truncate text-sm">
-                        {episode.file_name}
+                        {/* NOVO: Mostra o nome do novo áudio se ele foi selecionado */}
+                        {newAudioFile ? newAudioFile.name : episode.file_name}
                       </span>
                     </div>
-                    <Button type="button" variant="outline" size="sm">
-                      Mudar áudio
-                    </Button>
+                    {/* NOVO: Input de arquivo escondido para o áudio */}
+                    <Input
+                      type="file"
+                      ref={audioInputRef}
+                      className="hidden"
+                      onChange={handleAudioFileSelect}
+                      accept="audio/*"
+                    />
+                    {/* NOVO: Lógica condicional para os botões */}
+                    {newAudioFile ? (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button type="button" variant="secondary" size="sm">
+                            Confirmar
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Confirmar mudança de áudio?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              O áudio antigo será deletado e substituído por{" "}
+                              <strong>{newAudioFile.name}</strong>. Esta ação é
+                              imediata e não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel
+                              onClick={() => setNewAudioFile(null)}
+                            >
+                              Cancelar
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleConfirmAudioChange}
+                              disabled={isUpdatingAudio}
+                            >
+                              {isUpdatingAudio ? (
+                                <RefreshCw className="h-4 w-4 animate-spin" />
+                              ) : (
+                                "Confirmar e Mudar"
+                              )}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => audioInputRef.current?.click()}
+                      >
+                        Mudar áudio
+                      </Button>
+                    )}
                   </div>
                 </div>
+
+                {/* ... (resto do código da coluna direita, incluindo o documento) ... */}
                 <div className="space-y-2">
                   <Label>Documento Anexado</Label>
                   {currentDocument ? (
