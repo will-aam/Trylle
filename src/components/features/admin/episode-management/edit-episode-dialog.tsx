@@ -57,6 +57,9 @@ export function EditEpisodeDialog({
       category_id: episode.category_id,
       subcategory_id: episode.subcategory_id,
       tags: episode.tags || [],
+      page_count: (episode as any).episode_documents?.[0]?.page_count ?? null,
+      reference_count:
+        (episode as any).episode_documents?.[0]?.reference_count ?? null,
     },
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -285,7 +288,7 @@ export function EditEpisodeDialog({
                           <Input
                             id="pages"
                             type="number"
-                            defaultValue={episodeDocument.page_count ?? ""}
+                            {...register("page_count", { valueAsNumber: true })}
                           />
                         </div>
                         <div>
@@ -295,7 +298,9 @@ export function EditEpisodeDialog({
                           <Input
                             id="references"
                             type="number"
-                            defaultValue={episodeDocument.reference_count ?? ""}
+                            {...register("reference_count", {
+                              valueAsNumber: true,
+                            })}
                           />
                         </div>
                       </div>

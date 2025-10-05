@@ -69,7 +69,8 @@ export const updateEpisode = async (
   episodeId: string,
   updates: any
 ): Promise<Episode> => {
-  const { tags, ...episodeData } = updates;
+  // Ajuste esta linha para incluir os novos campos
+  const { tags, page_count, reference_count, ...episodeData } = updates;
 
   // ETAPA 1: ATUALIZAÇÃO
   // Voltamos a usar .single() para que o próprio Supabase nos dê o erro
@@ -85,6 +86,27 @@ export const updateEpisode = async (
   if (episodeError) {
     // A mensagem de erro agora será a original do Supabase (ex: "multiple (or no) rows returned")
     throw new Error(episodeError.message);
+  }
+
+  const { data: existingDocument } = await supabase
+    .from("episode_documents")
+    .select("id")
+    .eq("episode_id", episodeId)
+    .single();
+
+  if (existingDocument) {
+    const { error: documentError } = await supabase
+      .from("episode_documents")
+      .update({
+        page_count: page_count,
+        reference_count: reference_count,
+      })
+      .eq("id", existingDocument.id);
+
+    if (documentError) {
+      // Mesmo com erro aqui, continuamos para não travar a edição inteira
+      console.error("Erro ao atualizar o documento:", documentError.message);
+    }
   }
 
   // ETAPA 2: ATUALIZAÇÃO DAS TAGS
