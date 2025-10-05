@@ -1,7 +1,6 @@
 // src/components/features/admin/episode-management/episode-table.tsx
 "use client";
 
-import { Badge } from "@/src/components/ui/badge";
 import { EpisodeActions } from "./episode-actions";
 import { Episode, SortDirection } from "@/src/lib/types";
 import { formatTime } from "@/src/lib/utils";
@@ -16,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/src/components/ui/table";
+import { StatusBadgeSelector } from "@/src/components/ui/status-badge-selector";
 
 interface EpisodeTableProps {
   episodes: Episode[];
@@ -27,6 +27,7 @@ interface EpisodeTableProps {
   selectedEpisodes: string[];
   onSelectEpisode: (episodeId: string) => void;
   onSelectAll: (isSelected: boolean) => void;
+  onStatusChange?: (episodeId: string, newStatus: Episode["status"]) => void;
 }
 
 export function EpisodeTable({
@@ -39,6 +40,7 @@ export function EpisodeTable({
   selectedEpisodes,
   onSelectEpisode,
   onSelectAll,
+  onStatusChange,
 }: EpisodeTableProps) {
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
@@ -59,22 +61,12 @@ export function EpisodeTable({
     );
   };
 
-  const getStatusBadge = (status: Episode["status"]) => {
-    switch (status) {
-      case "published":
-        return (
-          <Badge className="bg-green-600 hover:bg-green-700">Publicado</Badge>
-        );
-      case "draft":
-        return <Badge variant="secondary">Rascunho</Badge>;
-      case "scheduled":
-        return (
-          <Badge className="bg-yellow-500 hover:bg-yellow-600 text-black">
-            Agendado
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+  const handleStatusChange = (
+    episodeId: string,
+    newStatus: Episode["status"]
+  ) => {
+    if (onStatusChange) {
+      onStatusChange(episodeId, newStatus);
     }
   };
 
@@ -119,7 +111,15 @@ export function EpisodeTable({
               <TableCell>
                 <div className="font-medium">{episode.title}</div>
               </TableCell>
-              <TableCell>{getStatusBadge(episode.status)}</TableCell>
+              <TableCell>
+                <StatusBadgeSelector
+                  status={episode.status}
+                  onStatusChange={(newStatus) =>
+                    handleStatusChange(episode.id, newStatus)
+                  }
+                  disabled={!onStatusChange}
+                />
+              </TableCell>
               <TableCell>
                 {episode.programs?.title ?? (
                   <span className="text-muted-foreground">N/A</span>

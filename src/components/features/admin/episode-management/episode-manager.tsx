@@ -278,6 +278,22 @@ export function EpisodeManager() {
               )
             }
             onSelectAll={handleSelectAll}
+            onStatusChange={async (episodeId, newStatus) => {
+              try {
+                await updateEpisode(episodeId, { status: newStatus });
+                // Atualizar o estado local
+                setEpisodes((prev) =>
+                  prev.map((ep) =>
+                    ep.id === episodeId ? { ...ep, status: newStatus } : ep
+                  )
+                );
+                toast.success("Status atualizado com sucesso!");
+              } catch (error: any) {
+                toast.error("Erro ao atualizar status", {
+                  description: error.message,
+                });
+              }
+            }}
           />
           <EpisodeTablePagination
             currentPage={currentPage}
