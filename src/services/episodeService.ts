@@ -71,60 +71,57 @@ export const updateEpisode = async (
 ): Promise<Episode> => {
   const { tags, page_count, reference_count, ...episodeData } = updates;
 
-  const { data: updatedEpisode, error: episodeError } = await supabase
+  // CORREÇÃO: Limpa os valores nulos ou vazios que o Supabase não aceita bem no update.
+  if (episodeData.program_id === null || episodeData.program_id === "") {
+    episodeData.program_id = undefined;
+  }
+  if (
+    episodeData.subcategory_id === null ||
+    episodeData.subcategory_id === ""
+  ) {
+    episodeData.subcategory_id = undefined;
+  }
+
+  const { error: episodeError } = await supabase
     .from("episodes")
     .update(episodeData)
-    .eq("id", episodeId)
-    .select()
-    .single();
+    .eq("id", episodeId);
 
   if (episodeError) {
+    console.error("Supabase episode update error:", episodeError);
     throw new Error(episodeError.message);
   }
 
-  // CORREÇÃO AQUI: Busca o documento associado AO EPISÓDIO
-  // Isso funciona para documentos antigos e para os que acabaram de ser criados.
+  // Lógica para atualizar o documento, se existir
   if (page_count !== undefined || reference_count !== undefined) {
-    const { data: documentToUpdate } = await supabase
+    const { data: doc } = await supabase
       .from("episode_documents")
       .select("id")
       .eq("episode_id", episodeId)
-      .single(); // Busca o documento pelo ID do episódio
+      .single();
 
-    if (documentToUpdate) {
-      const { error: documentError } = await supabase
+    if (doc) {
+      await supabase
         .from("episode_documents")
         .update({
           page_count: page_count,
           reference_count: reference_count,
         })
-        .eq("id", documentToUpdate.id); // Atualiza usando o ID encontrado
-
-      if (documentError) {
-        console.error("Erro ao atualizar o documento:", documentError.message);
-      }
+        .eq("id", doc.id);
     }
   }
 
-  const { error: deleteTagsError } = await supabase
-    .from("episode_tags")
-    .delete()
-    .eq("episode_id", episodeId);
-  if (deleteTagsError)
-    throw new Error("Não foi possível atualizar as tags (erro ao remover).");
-
+  // Lógica para atualizar as tags
+  await supabase.from("episode_tags").delete().eq("episode_id", episodeId);
   if (tags && tags.length > 0) {
     const newEpisodeTags = tags.map((tagId: string) => ({
       episode_id: episodeId,
       tag_id: tagId,
     }));
-    const { error: insertTagsError } = await supabase
-      .from("episode_tags")
-      .insert(newEpisodeTags);
-    if (insertTagsError)
-      throw new Error("Não foi possível atualizar as tags (erro ao inserir).");
+    await supabase.from("episode_tags").insert(newEpisodeTags);
   }
 
+  // Retorna os dados finais e completos
   const { data: finalEpisode, error: finalError } = await supabase
     .from("episodes")
     .select(
@@ -133,10 +130,9 @@ export const updateEpisode = async (
     .eq("id", episodeId)
     .single();
 
-  if (finalError)
-    throw new Error(
-      "Episódio atualizado, mas houve um erro ao buscar os dados finais."
-    );
+  if (finalError) {
+    throw new Error("Episódio salvo, mas falha ao buscar dados atualizados.");
+  }
 
   return finalEpisode as any;
 };
