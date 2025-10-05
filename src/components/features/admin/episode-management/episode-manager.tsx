@@ -1,7 +1,8 @@
 // src/components/features/admin/episode-management/episode-manager.tsx
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Program,
   Episode,
@@ -11,138 +12,115 @@ import {
   Tag,
 } from "@/src/lib/types";
 import {
-  deleteEpisode,
-  updateEpisode,
-  getEpisodesWithRelations,
-  getEpisodesCount,
-} from "@/src/services/episodeService";
-import { getCategories } from "@/src/services/categoryService";
-import { getSubcategories } from "@/src/services/subcategoryService";
-import { getPrograms } from "@/src/services/programService";
-import { getTags } from "@/src/services/tagService";
-import {
-  getEpisodeStatusCounts,
-  getAllEpisodeIds,
-} from "@/src/services/adminService";
+  updateEpisodeAction,
+  deleteEpisodeAction,
+} from "@/src/app/admin/episodes/actions";
 import { EpisodeTable } from "./episode-table";
 import { EpisodeStats } from "./episode-stats";
 import { EpisodeFilters } from "./episode-filters";
 import { EditEpisodeDialog } from "./edit-episode-dialog";
 import { EpisodeTablePagination } from "./episode-table-pagination";
-import { EpisodeBulkActions } from "./episode-bulk-actions";
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { ListMusic } from "lucide-react";
-import { Skeleton } from "@/src/components/ui/skeleton";
 import { toast } from "sonner";
 
-export function EpisodeManager() {
-  // Data states
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [totalEpisodes, setTotalEpisodes] = useState(0);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [allTags, setAllTags] = useState<Tag[]>([]);
-  const [statusCounts, setStatusCounts] = useState({
-    published: 0,
-    draft: 0,
-    scheduled: 0,
-  });
+interface EpisodeManagerProps {
+  initialEpisodes: Episode[];
+  initialTotalEpisodes: number;
+  initialCategories: Category[];
+  initialSubcategories: Subcategory[];
+  initialPrograms: Program[];
+  initialStatusCounts: { published: number; draft: number; scheduled: number };
+  initialAllTags: Tag[];
+}
+
+export function EpisodeManager({
+  initialEpisodes,
+  initialTotalEpisodes,
+  initialCategories,
+  initialSubcategories,
+  initialPrograms,
+  initialStatusCounts,
+  initialAllTags,
+}: EpisodeManagerProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   // UI states
-  const [loading, setLoading] = useState(true);
-  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [episodeToEdit, setEpisodeToEdit] = useState<Episode | null>(null);
   const [episodeToDelete, setEpisodeToDelete] = useState<Episode | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedEpisodes, setSelectedEpisodes] = useState<string[]>([]);
-  const [notification, setNotification] = useState<{
-    type: "success" | "error";
-    message: string;
-    description?: string;
-  } | null>(null);
 
-  // Filter states
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortColumn, setSortColumn] = useState<keyof Episode | "">(
-    "published_at"
-  );
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const offset = (currentPage - 1) * itemsPerPage;
-      const [
-        episodesResult,
-        count,
-        categoriesResult,
-        subcategoriesResult,
-        programsResult,
-        statusCountsResult,
-        tagsResult,
-      ] = await Promise.all([
-        getEpisodesWithRelations({
-          limit: itemsPerPage,
-          offset,
-          searchTerm: debouncedSearchTerm,
-          status: statusFilter.length > 0 ? statusFilter[0] : "all",
-          categoryId: categoryFilter.length > 0 ? categoryFilter[0] : "all",
-          sortBy: sortColumn || "published_at",
-          ascending: sortDirection === "asc",
-        }),
-        getEpisodesCount({
-          searchTerm: debouncedSearchTerm,
-          status: statusFilter.length > 0 ? statusFilter[0] : "all",
-          categoryId: categoryFilter.length > 0 ? categoryFilter[0] : "all",
-        }),
-        getCategories(),
-        getSubcategories(),
-        getPrograms(),
-        getEpisodeStatusCounts(),
-        getTags(),
-      ]);
-      setEpisodes(episodesResult);
-      setTotalEpisodes(count);
-      setCategories(categoriesResult);
-      setSubcategories(subcategoriesResult);
-      setPrograms(programsResult);
-      setStatusCounts(statusCountsResult);
-      setAllTags(tagsResult);
-    } catch (err: any) {
-      toast.error("Erro ao carregar dados", { description: err.message });
-    } finally {
-      setLoading(false);
+  // Funções para manipular a URL, que é a nova "fonte da verdade"
+  const createQueryString = (
+    params: Record<string, string | number | null>
+  ) => {
+    const newSearchParams = new URLSearchParams(searchParams?.toString());
+    for (const [key, value] of Object.entries(params)) {
+      if (value === null) {
+        newSearchParams.delete(key);
+      } else {
+        newSearchParams.set(key, String(value));
+      }
     }
-  }, [
-    currentPage,
-    itemsPerPage,
-    debouncedSearchTerm,
-    statusFilter,
-    categoryFilter,
-    sortColumn,
-    sortDirection,
-  ]);
+    return newSearchParams.toString();
+  };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 500);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchTerm]);
+  const handleSearch = (term: string) => {
+    startTransition(() => {
+      router.push(
+        `${pathname}?${createQueryString({ q: term || null, page: 1 })}`
+      );
+    });
+  };
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const handleFilterChange = (key: string, value: string[] | string) => {
+    startTransition(() => {
+      const filterValue = Array.isArray(value) ? value.join(",") : value;
+      router.push(
+        `${pathname}?${createQueryString({
+          [key]: filterValue || null,
+          page: 1,
+        })}`
+      );
+    });
+  };
+
+  const handleSort = (column: keyof Episode | "") => {
+    const currentSort = searchParams.get("sortBy");
+    const currentOrder = searchParams.get("order");
+    let order = "asc";
+    if (currentSort === column && currentOrder === "asc") {
+      order = "desc";
+    }
+    startTransition(() => {
+      router.push(
+        `${pathname}?${createQueryString({
+          sortBy: column || null,
+          order: order,
+        })}`
+      );
+    });
+  };
+
+  const handlePageChange = (page: number) => {
+    startTransition(() => {
+      router.push(`${pathname}?${createQueryString({ page: page })}`);
+    });
+  };
+
+  const handleItemsPerPageChange = (limit: number) => {
+    startTransition(() => {
+      router.push(
+        `${pathname}?${createQueryString({ limit: limit, page: 1 })}`
+      );
+    });
+  };
 
   const handleEdit = (episode: Episode) => {
     setEpisodeToEdit(episode);
@@ -156,89 +134,40 @@ export function EpisodeManager() {
 
   const confirmDelete = async () => {
     if (!episodeToDelete) return;
-    try {
-      await deleteEpisode(episodeToDelete.id);
+    const result = await deleteEpisodeAction(episodeToDelete.id);
+    if (result.success) {
       toast.success("Episódio deletado com sucesso.");
-      fetchData();
-    } catch (error: any) {
-      toast.error("Erro ao deletar", { description: error.message });
-    } finally {
-      setIsDeleteDialogOpen(false);
-      setEpisodeToDelete(null);
+    } else {
+      toast.error("Erro ao deletar", { description: result.error });
     }
+    setIsDeleteDialogOpen(false);
+    setEpisodeToDelete(null);
   };
 
   const handleUpdateEpisode = async (
     episodeId: string,
-    updates: any
+    updates: Partial<Episode>
   ): Promise<boolean> => {
-    try {
-      const updatedEpisodeData = await updateEpisode(episodeId, updates);
-
-      // 1. Atualiza os dados na tela
-      setEpisodes((currentEpisodes) =>
-        currentEpisodes.map((ep) =>
-          ep.id === episodeId ? updatedEpisodeData : ep
-        )
-      );
-
-      // 2. Manda fechar o modal
-      // setIsEditDialogOpen(false);
-
-      // 3. Empurra a notificação para a próxima "fila de tarefas" do navegador,
-      //    garantindo que ela só execute DEPOIS que o React já terminou de fechar o modal.
-      setTimeout(() => {
-        toast.success("Episódio atualizado com sucesso!");
-      }, 0); // Um timeout de 0 milissegundos é suficiente para fazer o truque.
-
+    const result = await updateEpisodeAction(episodeId, updates);
+    if (result.success) {
+      toast.success("Episódio atualizado com sucesso!");
+      setIsEditDialogOpen(false);
       return true;
-    } catch (error: any) {
-      // Em caso de erro, o modal não fecha, então podemos mostrar o toast imediatamente.
+    } else {
       toast.error("Erro ao atualizar o episódio", {
-        description: error.message,
+        description: result.error,
       });
       return false;
     }
   };
-  const handleSelectAll = async (isSelected: boolean) => {
-    if (isSelected) {
-      try {
-        const ids = await getAllEpisodeIds({
-          searchTerm: debouncedSearchTerm,
-          statusFilter,
-          categoryFilter,
-        });
-        setSelectedEpisodes(ids);
-      } catch (error) {
-        toast.error("Erro ao selecionar todos");
-      }
-    } else {
-      setSelectedEpisodes([]);
-    }
-  };
 
   const clearFilters = () => {
-    setSearchTerm("");
-    setStatusFilter([]);
-    setCategoryFilter([]);
+    startTransition(() => {
+      router.push(pathname);
+    });
   };
-  const hasActiveFilters =
-    searchTerm !== "" || statusFilter.length > 0 || categoryFilter.length > 0;
 
-  // Adicione este bloco de código ao seu componente
-  useEffect(() => {
-    if (notification) {
-      if (notification.type === "success") {
-        toast.success(notification.message);
-      } else {
-        toast.error(notification.message, {
-          description: notification.description,
-        });
-      }
-      // Limpa a notificação para não aparecer de novo
-      setNotification(null);
-    }
-  }, [notification]);
+  const hasActiveFilters = searchParams.toString().length > 0;
 
   return (
     <div className="space-y-8">
@@ -246,61 +175,61 @@ export function EpisodeManager() {
         <h2 className="text-3xl font-bold">Gerenciador de Episódios</h2>
       </div>
       <EpisodeStats
-        totalCount={totalEpisodes}
-        publishedCount={statusCounts.published}
-        draftCount={statusCounts.draft}
-        scheduledCount={statusCounts.scheduled}
+        totalCount={initialTotalEpisodes}
+        publishedCount={initialStatusCounts.published}
+        draftCount={initialStatusCounts.draft}
+        scheduledCount={initialStatusCounts.scheduled}
       />
       <EpisodeFilters
-        categories={categories}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        categoryFilter={categoryFilter}
-        setCategoryFilter={setCategoryFilter}
+        categories={initialCategories}
+        searchTerm={searchParams.get("q") || ""}
+        setSearchTerm={handleSearch}
+        statusFilter={searchParams.get("status")?.split(",") || []}
+        setStatusFilter={(value) => handleFilterChange("status", value)}
+        categoryFilter={searchParams.get("category")?.split(",") || []}
+        setCategoryFilter={(value) => handleFilterChange("category", value)}
         onClearFilters={clearFilters}
         hasActiveFilters={hasActiveFilters}
       />
-      {episodes.length > 0 ? (
+      {initialEpisodes.length > 0 ? (
         <>
           <EpisodeTable
-            episodes={episodes}
+            episodes={initialEpisodes}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            onSort={(col) => setSortColumn(col as keyof Episode)}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
+            onSort={handleSort}
+            sortColumn={
+              (searchParams.get("sortBy") as keyof Episode) || "published_at"
+            }
+            sortDirection={
+              (searchParams.get("order") as SortDirection) || "desc"
+            }
             selectedEpisodes={selectedEpisodes}
             onSelectEpisode={(id) =>
               setSelectedEpisodes((prev) =>
                 prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
               )
             }
-            onSelectAll={handleSelectAll}
+            onSelectAll={() => {}} // Lógica de selecionar todos precisa ser ajustada se necessário
             onStatusChange={async (episodeId, newStatus) => {
-              try {
-                await updateEpisode(episodeId, { status: newStatus });
-                // Atualizar o estado local
-                setEpisodes((prev) =>
-                  prev.map((ep) =>
-                    ep.id === episodeId ? { ...ep, status: newStatus } : ep
-                  )
-                );
+              const result = await updateEpisodeAction(episodeId, {
+                status: newStatus,
+              });
+              if (result.success) {
                 toast.success("Status atualizado com sucesso!");
-              } catch (error: any) {
+              } else {
                 toast.error("Erro ao atualizar status", {
-                  description: error.message,
+                  description: result.error,
                 });
               }
             }}
           />
           <EpisodeTablePagination
-            currentPage={currentPage}
-            totalCount={totalEpisodes}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-            setItemsPerPage={setItemsPerPage}
+            currentPage={Number(searchParams.get("page")) || 1}
+            totalCount={initialTotalEpisodes}
+            itemsPerPage={Number(searchParams.get("limit")) || 10}
+            onPageChange={handlePageChange}
+            setItemsPerPage={handleItemsPerPageChange}
           />
         </>
       ) : (
@@ -318,10 +247,10 @@ export function EpisodeManager() {
       {isEditDialogOpen && episodeToEdit && (
         <EditEpisodeDialog
           episode={episodeToEdit}
-          categories={categories}
-          subcategories={subcategories}
-          programs={programs}
-          allTags={allTags} // CORREÇÃO AQUI: Passando a propriedade com o nome correto 'allTags'
+          categories={initialCategories}
+          subcategories={initialSubcategories}
+          programs={initialPrograms}
+          allTags={initialAllTags}
           isOpen={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
           onUpdate={handleUpdateEpisode}
