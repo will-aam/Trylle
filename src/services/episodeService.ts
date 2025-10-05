@@ -213,3 +213,68 @@ export const uploadEpisodeDocument = async (
 
   return newDocument;
 };
+
+/**
+ * Atualiza o arquivo de áudio de um episódio.
+ * Deleta o áudio antigo, faz o upload do novo e atualiza os metadados do episódio.
+ * @param episodeId O ID do episódio a ser atualizado.
+ * @param oldAudioFileName O nome do arquivo de áudio antigo para ser deletado do storage.
+ * @param newAudioFile O novo arquivo de áudio a ser enviado.
+ * @returns O objeto do episódio com os dados atualizados.
+ */
+export const updateEpisodeAudio = async (
+  episodeId: string,
+  oldAudioFileName: string,
+  newAudioFile: File
+): Promise<Episode> => {
+  // 1. Deletar o arquivo de áudio antigo do Storage
+  // Ignoramos o erro aqui, pois o arquivo pode não existir ou a permissão pode falhar,
+  // mas o processo principal (upload do novo) deve continuar.
+  await supabase.storage.from("episode-audios").remove([oldAudioFileName]);
+
+  // 2. Fazer o upload do novo arquivo de áudio
+  const newFilePath = `${episodeId}-${Date.now()}-${newAudioFile.name}`;
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from("episode-audios")
+    .upload(newFilePath, newAudioFile);
+
+  if (uploadError) {
+    console.error("Erro no upload do novo áudio:", uploadError);
+    throw new Error("Falha no upload do novo arquivo de áudio.");
+  }
+
+  // 3. Obter a URL pública do novo áudio
+  const { data: urlData } = supabase.storage
+    .from("episode-audios")
+    .getPublicUrl(uploadData.path);
+
+  // 4. Obter a duração do novo áudio
+  const audio = new Audio(URL.createObjectURL(newAudioFile));
+  const duration: number = await new Promise((resolve) => {
+    audio.onloadedmetadata = () => {
+      resolve(Math.round(audio.duration));
+    };
+  });
+
+  // 5. Atualizar o registro do episódio no banco de dados com as novas informações
+  const { data: updatedEpisode, error: updateError } = await supabase
+    .from("episodes")
+    .update({
+      audio_url: urlData.publicUrl,
+      file_name: newAudioFile.name, // Atualiza o nome do arquivo
+      duration_in_seconds: duration, // Atualiza a duração
+      updated_at: new Date().toISOString(), // Atualiza a data de modificação
+    })
+    .eq("id", episodeId)
+    .select(
+      `*, categories(name), subcategories(name), programs(title), episode_documents(*), tags(*)`
+    )
+    .single();
+
+  if (updateError) {
+    console.error("Erro ao atualizar o episódio no banco:", updateError);
+    throw new Error("Não foi possível atualizar os dados do episódio.");
+  }
+
+  return updatedEpisode as any;
+};
