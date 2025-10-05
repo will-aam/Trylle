@@ -183,7 +183,7 @@ export function EpisodeManager() {
       );
 
       // 2. Manda fechar o modal
-      setIsEditDialogOpen(false);
+      // setIsEditDialogOpen(false);
 
       // 3. Empurra a notificação para a próxima "fila de tarefas" do navegador,
       //    garantindo que ela só execute DEPOIS que o React já terminou de fechar o modal.

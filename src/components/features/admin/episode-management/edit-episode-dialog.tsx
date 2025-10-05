@@ -3,12 +3,13 @@
 
 import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/src/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
+  DialogFooter, // Certifique-se que DialogFooter está sendo importado
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/dialog";
@@ -26,6 +27,23 @@ import RichTextEditor from "@/src/components/ui/RichTextEditor";
 import { TagSelector } from "@/src/components/features/admin/TagSelector";
 import { Episode, Category, Subcategory, Program, Tag } from "@/src/lib/types";
 import { Trash2, FileAudio, FileText } from "lucide-react";
+
+// Definição do Schema para validação do formulário
+const updateEpisodeSchema = z.object({
+  title: z.string().min(1, "O título é obrigatório."),
+  description: z.string().optional(),
+  program_id: z.string().optional().nullable(),
+  episode_number: z.coerce
+    .number()
+    .positive("O número do episódio deve ser positivo.")
+    .optional()
+    .nullable(),
+  category_id: z.string().min(1, "A categoria é obrigatória."),
+  subcategory_id: z.string().optional().nullable(),
+  tags: z.array(z.any()).optional(),
+  page_count: z.coerce.number().optional().nullable(),
+  reference_count: z.coerce.number().optional().nullable(),
+});
 
 interface EditEpisodeDialogProps {
   episode: Episode;
@@ -48,83 +66,87 @@ export function EditEpisodeDialog({
   onOpenChange,
   onUpdate,
 }: EditEpisodeDialogProps) {
-  const { register, handleSubmit, control, reset } = useForm({
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(updateEpisodeSchema),
     defaultValues: {
       title: episode.title,
-      description: episode.description,
+      description: episode.description ?? "",
       program_id: episode.program_id,
       episode_number: episode.episode_number,
-      category_id: episode.category_id,
+      category_id: episode.category_id ?? "",
       subcategory_id: episode.subcategory_id,
-      tags: episode.tags || [],
-      page_count: (episode as any).episode_documents?.[0]?.page_count ?? null,
+      tags:
+        episode.tags?.map((t: any) => (typeof t === "object" ? t.id : t)) || [],
+      page_count: episode.episode_documents?.[0]?.page_count ?? undefined,
       reference_count:
-        (episode as any).episode_documents?.[0]?.reference_count ?? null,
+        episode.episode_documents?.[0]?.reference_count ?? undefined,
     },
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    reset({
-      title: episode.title,
-      description: episode.description,
-      program_id: episode.program_id,
-      episode_number: episode.episode_number,
-      category_id: episode.category_id,
-      subcategory_id: episode.subcategory_id,
-      tags: episode.tags || [],
-    });
-  }, [episode, reset]);
+    if (isOpen) {
+      reset({
+        title: episode.title,
+        description: episode.description ?? "",
+        program_id: episode.program_id ?? "",
+        episode_number: episode.episode_number ?? undefined,
+        category_id: episode.category_id ?? "",
+        subcategory_id: episode.subcategory_id ?? "",
+        tags:
+          episode.tags?.map((t: any) => (typeof t === "object" ? t.id : t)) ||
+          [],
+        page_count: episode.episode_documents?.[0]?.page_count ?? undefined,
+        reference_count:
+          episode.episode_documents?.[0]?.reference_count ?? undefined,
+      });
+    }
+  }, [episode, isOpen, reset]);
 
   const onSubmit = async (data: any) => {
-    setIsSubmitting(true);
+    setIsSubmitting(true); // Inicia o estado de "salvando"
     try {
-      const updates = {
-        ...data,
-        program_id: data.program_id || null,
-        episode_number: data.episode_number
-          ? Number(data.episode_number)
-          : null,
-        tags: data.tags.map((tag: any) => tag.id),
-      };
-
-      // Chamamos a função onUpdate e esperamos pela sua conclusão.
-      const success = await onUpdate(episode.id, updates);
-
-      // O onUpdate agora retorna `true` ou `false`.
-      // Se for `false`, o toast de erro já foi mostrado dentro do EpisodeManager,
-      // então só precisamos parar o estado de loading aqui.
-      if (!success) {
-        setIsSubmitting(false); // Para o loading em caso de erro.
-      }
-      // Se for `true`, o onUpdate já cuidou de fechar o modal e mostrar o toast de sucesso.
-    } catch (error) {
-      // Este catch é uma segurança extra, mas o erro principal
-      // deve ser tratado dentro da função `handleUpdateEpisode` no `EpisodeManager`.
-      console.error("Erro inesperado no formulário de edição:", error);
-      setIsSubmitting(false);
+      // Tenta executar a atualização
+      await onUpdate(episode.id, data);
+    } finally {
+      // A mágica acontece aqui: o bloco `finally` é executado
+      // SEMPRE, tanto em caso de sucesso quanto de erro.
+      setIsSubmitting(false); // Finaliza o estado de "salvando"
     }
   };
 
-  const episodeDocument = (episode as any).episode_documents?.[0];
+  const episodeDocument = episode.episode_documents?.[0];
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {/* 👇 PASSO 1: O conteúdo do modal se torna um container flexível vertical */}
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Editar Episódio: {episode.title}</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="flex-1 overflow-hidden"
+          className="flex-1 flex flex-col overflow-hidden" // O formulário também se torna flexível
         >
-          <ScrollArea className="h-full pr-6">
+          {/* 👇 PASSO 2: A área de rolagem ocupa todo o espaço disponível */}
+          <ScrollArea className="flex-1 pr-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
               {/* Coluna Esquerda */}
               <div className="md:col-span-2 space-y-6">
                 <div>
                   <Label htmlFor="title">Título</Label>
                   <Input id="title" {...register("title")} className="mt-1" />
+                  {errors.title && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.title.message}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label>Descrição</Label>
@@ -147,16 +169,21 @@ export function EditEpisodeDialog({
                     render={({ field }) => (
                       <TagSelector
                         tags={allTags}
-                        selectedTags={field.value}
-                        onSelectedTagsChange={field.onChange}
+                        selectedTags={allTags.filter((tag) =>
+                          field.value?.includes(tag.id)
+                        )}
+                        onSelectedTagsChange={(tags) =>
+                          field.onChange(tags.map((t) => t.id))
+                        }
                       />
                     )}
                   />
                 </div>
               </div>
 
-              {/* Coluna Direita */}
+              {/* Coluna Direita (conteúdo idêntico) */}
               <div className="space-y-6">
+                {/* ... todo o conteúdo da coluna direita permanece o mesmo ... */}
                 <div className="space-y-2">
                   <Label>Programa</Label>
                   <Controller
@@ -212,6 +239,11 @@ export function EditEpisodeDialog({
                       </Select>
                     )}
                   />
+                  {errors.category_id && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.category_id.message}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Subcategoria</Label>
@@ -288,7 +320,7 @@ export function EditEpisodeDialog({
                           <Input
                             id="pages"
                             type="number"
-                            {...register("page_count", { valueAsNumber: true })}
+                            {...register("page_count")}
                           />
                         </div>
                         <div>
@@ -298,9 +330,7 @@ export function EditEpisodeDialog({
                           <Input
                             id="references"
                             type="number"
-                            {...register("reference_count", {
-                              valueAsNumber: true,
-                            })}
+                            {...register("reference_count")}
                           />
                         </div>
                       </div>
@@ -313,19 +343,21 @@ export function EditEpisodeDialog({
                 </div>
               </div>
             </div>
-            <DialogFooter className="mt-4 pt-4 border-t">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Salvando..." : "Salvar Alterações"}
-              </Button>
-            </DialogFooter>
           </ScrollArea>
+
+          {/* 👇 PASSO 3: O rodapé fica FORA da área de rolagem, mas DENTRO do formulário */}
+          <DialogFooter className="mt-auto pt-4 border-t">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

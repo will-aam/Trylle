@@ -41,6 +41,7 @@ export interface Episode {
   categories?: { name: string } | null;
   subcategories?: { name: string } | null;
   programs?: Program | null;
+  episode_documents: EpisodeDocument[];
 }
 
 /**
