@@ -69,12 +69,8 @@ export const updateEpisode = async (
   episodeId: string,
   updates: any
 ): Promise<Episode> => {
-  // Ajuste esta linha para incluir os novos campos
   const { tags, page_count, reference_count, ...episodeData } = updates;
 
-  // ETAPA 1: ATUALIZAÇÃO
-  // Voltamos a usar .single() para que o próprio Supabase nos dê o erro
-  // se ele não encontrar exatamente uma linha para atualizar e retornar.
   const { data: updatedEpisode, error: episodeError } = await supabase
     .from("episodes")
     .update(episodeData)
@@ -82,9 +78,7 @@ export const updateEpisode = async (
     .select()
     .single();
 
-  // Se a atualização falhar, lança o erro específico do Supabase.
   if (episodeError) {
-    // A mensagem de erro agora será a original do Supabase (ex: "multiple (or no) rows returned")
     throw new Error(episodeError.message);
   }
 
@@ -104,12 +98,10 @@ export const updateEpisode = async (
       .eq("id", existingDocument.id);
 
     if (documentError) {
-      // Mesmo com erro aqui, continuamos para não travar a edição inteira
       console.error("Erro ao atualizar o documento:", documentError.message);
     }
   }
 
-  // ETAPA 2: ATUALIZAÇÃO DAS TAGS
   const { error: deleteTagsError } = await supabase
     .from("episode_tags")
     .delete()
@@ -129,7 +121,6 @@ export const updateEpisode = async (
       throw new Error("Não foi possível atualizar as tags (erro ao inserir).");
   }
 
-  // ETAPA 3: BUSCA FINAL DOS DADOS
   const { data: finalEpisode, error: finalError } = await supabase
     .from("episodes")
     .select(
@@ -154,98 +145,73 @@ export const deleteEpisode = async (episodeId: string): Promise<void> => {
   if (error) throw new Error("Não foi possível deletar o episódio.");
 };
 
-import { z } from "zod";
-import { episodeSchema } from "@/src/lib/schemas";
+// ADICIONANDO AS FUNÇÕES QUE FALTAVAM AQUI
 
-// Função para fazer o upload de um arquivo para o Supabase Storage
-async function uploadFile(file: File, bucket: string): Promise<string> {
-  const filePath = `${Date.now()}-${file.name}`;
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .upload(filePath, file);
+/**
+ * Deleta um documento de episódio do armazenamento e do banco de dados.
+ */
+export const deleteEpisodeDocument = async (
+  documentId: string,
+  storagePath: string
+): Promise<void> => {
+  const { error: storageError } = await supabase.storage
+    .from("episode-documents")
+    .remove([storagePath]);
 
-  if (error) {
-    console.error("Supabase upload error:", error);
-    throw new Error(`Falha no upload do arquivo para o bucket ${bucket}.`);
+  if (storageError) {
+    console.error("Erro ao deletar arquivo do storage:", storageError.message);
+    throw new Error("Ocorreu um erro ao remover o arquivo do armazenamento.");
   }
-  return data.path;
-}
 
-// Tipo inferido do nosso novo schema
-type EpisodeFormData = z.infer<typeof episodeSchema>;
+  const { error: dbError } = await supabase
+    .from("episode_documents")
+    .delete()
+    .eq("id", documentId);
 
-// Função para criar um novo episódio (publicado ou rascunho)
-async function createNewEpisode(
-  values: EpisodeFormData,
-  status: "published" | "draft"
-): Promise<void> {
-  const validatedData = episodeSchema.parse(values);
+  if (dbError) {
+    console.error("Erro ao deletar referência do documento:", dbError.message);
+    throw new Error("Não foi possível deletar a referência do documento.");
+  }
+};
 
-  const { audio_file, document_file, tags, ...episodeDetails } = validatedData;
+/**
+ * Faz o upload de um novo documento e o associa a um episódio.
+ */
+export const uploadEpisodeDocument = async (
+  episodeId: string,
+  documentFile: File
+): Promise<any> => {
+  const filePath = `documents/${episodeId}-${Date.now()}-${documentFile.name}`;
 
-  // 1. Upload do Áudio
-  if (!audio_file) throw new Error("O arquivo de áudio é obrigatório.");
-  const audioPath = await uploadFile(audio_file, "episode-audios");
-  const { publicUrl: audio_url } = supabase.storage
-    .from("episode-audios")
-    .getPublicUrl(audioPath).data;
+  const { error: storageError } = await supabase.storage
+    .from("episode-documents")
+    .upload(filePath, documentFile);
 
-  // 2. Insere o episódio no banco
-  const { data: newEpisode, error: episodeError } = await supabase
-    .from("episodes")
+  if (storageError) {
+    console.error("Erro no upload do documento para o storage:", storageError);
+    throw new Error("Falha no upload do arquivo do documento.");
+  }
+
+  const { data: urlData } = supabase.storage
+    .from("episode-documents")
+    .getPublicUrl(filePath);
+
+  const { data: newDocument, error: dbError } = await supabase
+    .from("episode_documents")
     .insert({
-      ...episodeDetails,
-      audio_url: audio_url,
-      status: status,
-      // Garante que category_id seja um número
-      category_id: parseInt(validatedData.category_id, 10),
-      // Garante que subcategory_id seja um número ou nulo
-      subcategory_id: validatedData.subcategory_id
-        ? parseInt(validatedData.subcategory_id, 10)
-        : null,
+      episode_id: episodeId,
+      file_name: documentFile.name,
+      storage_path: filePath,
+      public_url: urlData.publicUrl,
+      file_size: documentFile.size,
     })
     .select()
     .single();
 
-  if (episodeError) {
-    console.error("Episode creation error:", episodeError);
-    throw new Error("Não foi possível criar o episódio.");
+  if (dbError) {
+    console.error("Erro ao salvar referência do documento:", dbError);
+    throw new Error("Não foi possível salvar a referência do novo documento.");
   }
 
-  // 3. Upload do Documento (se existir)
-  if (document_file) {
-    const docPath = await uploadFile(document_file, "episode-documents");
-    const { publicUrl: document_url } = supabase.storage
-      .from("episode-documents")
-      .getPublicUrl(docPath).data;
-
-    const { error: docError } = await supabase
-      .from("episode_documents")
-      .insert({
-        episode_id: newEpisode.id,
-        file_path: docPath,
-        file_url: document_url,
-        file_size: document_file.size,
-        page_count: values.page_count, // Assumindo que você adicione isso ao form
-        reference_count: values.reference_count, // Assumindo que você adicione isso ao form
-      });
-    if (docError) console.error("Document creation error:", docError.message);
-  }
-
-  // 4. Associa as Tags (se existirem)
-  if (tags && tags.length > 0) {
-    const episodeTags = tags.map((tagId) => ({
-      episode_id: newEpisode.id,
-      tag_id: parseInt(tagId, 10), // Garante que a tag_id seja um número
-    }));
-    const { error: tagsError } = await supabase
-      .from("episode_tags")
-      .insert(episodeTags);
-    if (tagsError) console.error("Tag association error:", tagsError.message);
-  }
-}
-
-export const createEpisode = (values: EpisodeFormData) =>
-  createNewEpisode(values, "published");
-export const createDraftEpisode = (values: EpisodeFormData) =>
-  createNewEpisode(values, "draft");
+  return newDocument;
+};
