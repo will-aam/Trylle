@@ -3,13 +3,17 @@
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
 import { revalidatePath } from "next/cache";
 
-/**
- * Tipos base
- */
+/* ================== CONFIG ================== */
+const DOCUMENT_BUCKET = "episode-documents";
+const AUDIO_BUCKET = "episode-audios";
+const ALLOWED_DOC_EXT = [".pdf", ".doc", ".docx"];
+const MAX_DOCUMENT_SIZE_BYTES = 25 * 1024 * 1024;
+
+/* ================== TIPOS ================== */
 interface BaseResult {
   success: boolean;
   error?: string;
-  code?: string;
+  code?: string; // usado apenas quando tivermos alguma string explícita (ex: dbError.code)
 }
 
 export interface EpisodeDocumentRecord {
@@ -24,89 +28,16 @@ export interface EpisodeDocumentRecord {
   created_at: string;
 }
 
-/**
- * Upload
- */
-export interface UploadDocumentSuccess extends BaseResult {
-  success: true;
-  document: EpisodeDocumentRecord;
-}
-export interface UploadDocumentFailure extends BaseResult {
-  success: false;
-}
-export type UploadDocumentResult =
-  | UploadDocumentSuccess
-  | UploadDocumentFailure;
+/* =========================================================
+   1) Funções de documento (LEGADO) - upload simples (sem progresso)
+   Mantidas para compatibilidade caso ainda haja chamadas antigas.
+========================================================= */
 
-/**
- * Update metadata
- */
-export interface UpdateMetadataSuccess extends BaseResult {
-  success: true;
-  document: EpisodeDocumentRecord;
-}
-export interface UpdateMetadataFailure extends BaseResult {
-  success: false;
-}
-export type UpdateDocumentMetadataResult =
-  | UpdateMetadataSuccess
-  | UpdateMetadataFailure;
-
-/**
- * Update Audio
- */
-export interface UpdateAudioSuccess extends BaseResult {
-  success: true;
-  audio_url: string;
-  file_name: string;
-}
-export interface UpdateAudioFailure extends BaseResult {
-  success: false;
-}
-export type UpdateAudioResult = UpdateAudioSuccess | UpdateAudioFailure;
-
-const DOCUMENT_BUCKET = "episode-documents";
-const AUDIO_BUCKET = "episode-audios";
-const MAX_DOCUMENT_SIZE_BYTES = 25 * 1024 * 1024; // 25MB (ajuste se quiser)
-const ALLOWED_DOC_EXT = [".pdf", ".doc", ".docx"];
-
-/* ---------------- DELETE DOCUMENT ---------------- */
-export async function deleteDocumentAction(
-  documentId: string,
-  storagePath: string
-): Promise<BaseResult> {
-  const supabase = await createSupabaseServerClient();
-
-  const { error: storageError } = await supabase.storage
-    .from(DOCUMENT_BUCKET)
-    .remove([storagePath]);
-  if (storageError) {
-    return {
-      success: false,
-      error: storageError.message,
-      code: storageError.name,
-    };
-  }
-
-  const { error: dbError } = await supabase
-    .from("episode_documents")
-    .delete()
-    .eq("id", documentId);
-
-  if (dbError) {
-    return { success: false, error: dbError.message, code: dbError.code };
-  }
-
-  revalidatePath("/admin/episodes");
-  return { success: true };
+export interface UploadDocumentResult extends BaseResult {
+  success: boolean;
+  document?: EpisodeDocumentRecord;
 }
 
-/* ---------------- UPLOAD DOCUMENT + METADADOS ----------------
-   Espera FormData com:
-   - file: File
-   - page_count (opcional)
-   - reference_count (opcional)
-*/
 export async function uploadDocumentAction(
   episodeId: string,
   formData: FormData
@@ -114,12 +45,10 @@ export async function uploadDocumentAction(
   try {
     const supabase = await createSupabaseServerClient();
     const documentFile = formData.get("file") as File | null;
-
     if (!documentFile) {
       return { success: false, error: "Nenhum arquivo encontrado." };
     }
 
-    // Captura dos metadados opcionais
     const pageCountRaw = formData.get("page_count");
     const referenceCountRaw = formData.get("reference_count");
 
@@ -147,7 +76,8 @@ export async function uploadDocumentAction(
         success: false,
         error: `Arquivo excede ${(
           MAX_DOCUMENT_SIZE_BYTES /
-          (1024 * 1024)
+          1024 /
+          1024
         ).toFixed(0)}MB.`,
         code: "FILE_TOO_LARGE",
       };
@@ -173,7 +103,6 @@ export async function uploadDocumentAction(
       return {
         success: false,
         error: storageError.message,
-        code: storageError.name,
       };
     }
 
@@ -239,12 +168,50 @@ export async function uploadDocumentAction(
     return {
       success: false,
       error: e?.message || "Erro inesperado no upload.",
-      code: "UNEXPECTED",
     };
   }
 }
 
-/* ---------------- UPDATE METADATA (page_count, reference_count) ---------------- */
+/* =========================================================
+   2) Delete de documento
+========================================================= */
+export async function deleteDocumentAction(
+  documentId: string,
+  storagePath: string
+): Promise<BaseResult> {
+  const supabase = await createSupabaseServerClient();
+
+  const { error: storageError } = await supabase.storage
+    .from(DOCUMENT_BUCKET)
+    .remove([storagePath]);
+  if (storageError) {
+    return {
+      success: false,
+      error: storageError.message,
+    };
+  }
+
+  const { error: dbError } = await supabase
+    .from("episode_documents")
+    .delete()
+    .eq("id", documentId);
+
+  if (dbError) {
+    return { success: false, error: dbError.message, code: dbError.code };
+  }
+
+  revalidatePath("/admin/episodes");
+  return { success: true };
+}
+
+/* =========================================================
+   3) Update metadados de documento (page_count, reference_count)
+========================================================= */
+export interface UpdateDocumentMetadataResult extends BaseResult {
+  success: boolean;
+  document?: EpisodeDocumentRecord;
+}
+
 export async function updateDocumentMetadataAction(
   documentId: string,
   {
@@ -293,7 +260,7 @@ export async function updateDocumentMetadataAction(
       return {
         success: false,
         error: error?.message || "Falha ao atualizar metadados do documento.",
-        code: error?.code,
+        code: (error as any)?.code,
       };
     }
 
@@ -316,12 +283,19 @@ export async function updateDocumentMetadataAction(
     return {
       success: false,
       error: e?.message || "Erro inesperado ao atualizar metadados.",
-      code: "UNEXPECTED",
     };
   }
 }
 
-/* ---------------- UPDATE AUDIO ---------------- */
+/* =========================================================
+   4) Update audio
+========================================================= */
+export interface UpdateAudioResult extends BaseResult {
+  success: boolean;
+  audio_url?: string;
+  file_name?: string;
+}
+
 export async function updateAudioAction(
   episodeId: string,
   formData: FormData
@@ -339,6 +313,7 @@ export async function updateAudioAction(
       return { success: false, error: "Formato de áudio inválido." };
     }
 
+    // Remove antigo (se passado)
     if (oldAudioFileName) {
       await supabase.storage.from(AUDIO_BUCKET).remove([oldAudioFileName]);
     }
@@ -349,6 +324,7 @@ export async function updateAudioAction(
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(AUDIO_BUCKET)
       .upload(newFilePath, newAudioFile);
+
     if (uploadError || !uploadData) {
       return {
         success: false,
@@ -380,4 +356,140 @@ export async function updateAudioAction(
   } catch (e: any) {
     return { success: false, error: e?.message || "Erro inesperado." };
   }
+}
+
+/* =========================================================
+   5) NOVO: Signed URL para upload com progresso real
+========================================================= */
+export interface GetSignedUrlResult extends BaseResult {
+  success: boolean;
+  signedUrl?: string;
+  storagePath?: string;
+  sanitizedFileName?: string;
+}
+
+export async function getDocumentSignedUploadUrl(
+  episodeId: string,
+  originalFileName: string
+): Promise<GetSignedUrlResult> {
+  const supabase = await createSupabaseServerClient();
+
+  if (!originalFileName) {
+    return { success: false, error: "Nome de arquivo ausente." };
+  }
+
+  const lower = originalFileName.toLowerCase();
+  if (!ALLOWED_DOC_EXT.some((ext) => lower.endsWith(ext))) {
+    return {
+      success: false,
+      error: `Extensão não suportada. Use: ${ALLOWED_DOC_EXT.join(", ")}`,
+      code: "INVALID_EXTENSION",
+    };
+  }
+
+  const safeName = originalFileName.replace(/[^\w.\-]+/g, "_");
+  const storagePath = `documents/${episodeId}-${Date.now()}-${safeName}`;
+
+  const { data, error } = await supabase.storage
+    .from(DOCUMENT_BUCKET)
+    .createSignedUploadUrl(storagePath);
+
+  if (error || !data) {
+    return {
+      success: false,
+      error: error?.message || "Falha ao gerar URL assinada.",
+    };
+  }
+
+  return {
+    success: true,
+    signedUrl: data.signedUrl,
+    storagePath,
+    sanitizedFileName: safeName,
+  };
+}
+
+/* =========================================================
+   6) NOVO: Registrar documento após upload real
+========================================================= */
+export interface RegisterDocumentResult extends BaseResult {
+  success: boolean;
+  document?: EpisodeDocumentRecord;
+}
+
+export async function registerUploadedDocumentAction(params: {
+  episodeId: string;
+  storagePath: string;
+  fileName: string;
+  fileSize: number;
+  pageCount?: number | null;
+  referenceCount?: number | null;
+}): Promise<RegisterDocumentResult> {
+  const {
+    episodeId,
+    storagePath,
+    fileName,
+    fileSize,
+    pageCount = null,
+    referenceCount = null,
+  } = params;
+
+  const supabase = await createSupabaseServerClient();
+
+  // Public URL
+  const { data: publicData } = supabase.storage
+    .from(DOCUMENT_BUCKET)
+    .getPublicUrl(storagePath);
+  const publicUrl = publicData.publicUrl;
+
+  const { data: inserted, error: dbError } = await supabase
+    .from("episode_documents")
+    .insert({
+      episode_id: episodeId,
+      file_name: fileName,
+      public_url: publicUrl,
+      storage_path: storagePath,
+      file_size: fileSize,
+      page_count: pageCount ?? null,
+      reference_count: referenceCount ?? null,
+    })
+    .select(
+      `
+      id,
+      episode_id,
+      file_name,
+      public_url,
+      storage_path,
+      file_size,
+      page_count,
+      reference_count,
+      created_at
+    `
+    )
+    .single();
+
+  if (dbError || !inserted) {
+    return {
+      success: false,
+      error: dbError?.message || "Falha ao registrar documento.",
+      code: dbError?.code,
+    };
+  }
+
+  revalidatePath("/admin/episodes");
+
+  return {
+    success: true,
+    document: {
+      id: inserted.id,
+      episode_id: inserted.episode_id,
+      file_name: inserted.file_name,
+      public_url: inserted.public_url,
+      storage_path: inserted.storage_path,
+      file_size: inserted.file_size,
+      page_count: inserted.page_count,
+      reference_count: inserted.reference_count,
+      created_at: inserted.created_at,
+    },
+  };
 }

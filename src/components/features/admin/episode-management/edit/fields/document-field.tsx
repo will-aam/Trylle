@@ -14,16 +14,24 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/src/components/ui/alert-dialog";
-import { FileText, Trash2, Upload, Edit3, Check, X } from "lucide-react";
+import {
+  FileText,
+  Trash2,
+  Upload,
+  Edit3,
+  Check,
+  X,
+  StopCircle,
+} from "lucide-react";
 import { EpisodeDocument } from "@/src/lib/types";
 import {
-  uploadDocumentAction,
   deleteDocumentAction,
   updateDocumentMetadataAction,
+  getDocumentSignedUploadUrl,
+  registerUploadedDocumentAction,
 } from "@/src/app/admin/episodes/documentActions";
 import { useToast } from "@/src/hooks/use-toast";
 
-/* Barra de progresso simples */
 function ProgressBar({ value }: { value: number }) {
   return (
     <div className="w-full h-2 rounded bg-muted overflow-hidden">
@@ -44,6 +52,14 @@ interface DocumentFieldProps {
   className?: string;
 }
 
+type UploadPhase =
+  | "idle"
+  | "preparing"
+  | "uploading"
+  | "registering"
+  | "done"
+  | "error";
+
 export function DocumentField({
   episodeId,
   document,
@@ -55,19 +71,22 @@ export function DocumentField({
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Upload (novo doc)
+  // Novo upload
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState<string>("");
   const [referenceCount, setReferenceCount] = useState<string>("");
 
-  // Edição meta
+  // Edit meta
   const [editingMeta, setEditingMeta] = useState(false);
   const [editPageCount, setEditPageCount] = useState<string>("");
   const [editReferenceCount, setEditReferenceCount] = useState<string>("");
 
-  // Estados operacionais
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  // Upload real
+  const [phase, setPhase] = useState<UploadPhase>("idle");
+  const [progress, setProgress] = useState<number>(0);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
+
+  // Delete / Save meta states
   const [deleting, setDeleting] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
 
@@ -85,18 +104,7 @@ export function DocumentField({
     }
   }, [document]);
 
-  const readableSizeMB = (bytes: number | null | undefined) =>
-    bytes != null ? (bytes / (1024 * 1024)).toFixed(2) + " MB" : "";
-
-  const resetPending = () => {
-    setPendingFile(null);
-    setPageCount("");
-    setReferenceCount("");
-    setUploadProgress(0);
-    setUploading(false);
-  };
-
-  /* Auto extração de páginas (dinâmica) */
+  // Auto page count (PDF) via import dinâmico
   useEffect(() => {
     (async () => {
       if (!pendingFile) return;
@@ -110,30 +118,29 @@ export function DocumentField({
         if (count && !isNaN(count)) {
           setPageCount(String(count));
           toast({
-            description: `Nº de páginas detectado automaticamente: ${count}`,
+            description: `Detectado automaticamente: ${count} páginas.`,
           });
         }
-      } catch (err) {
-        console.warn("Falha extração automática (pdf):", err);
+      } catch {
+        /* silencioso */
       }
     })();
   }, [pendingFile, pageCount, toast]);
 
-  /* Simulação de progresso (2 fases) */
-  const simulateUploadPhases = () => {
-    let current = 60;
-    const interval = setInterval(() => {
-      current += Math.random() * 10;
-      if (current >= 95 || !uploading) {
-        clearInterval(interval);
-        if (uploading) setUploadProgress(95);
-      } else {
-        setUploadProgress(current);
-      }
-    }, 300);
+  const readableSizeMB = (bytes: number | null | undefined) =>
+    bytes != null ? (bytes / (1024 * 1024)).toFixed(2) + " MB" : "";
+
+  const resetPending = () => {
+    setPendingFile(null);
+    setPageCount("");
+    setReferenceCount("");
+    setPhase("idle");
+    setProgress(0);
+    xhrRef.current?.abort();
+    xhrRef.current = null;
   };
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
     if (!f) {
       resetPending();
@@ -149,73 +156,140 @@ export function DocumentField({
       });
       return;
     }
-    setPendingFile(f);
-    setPageCount("");
-    setReferenceCount("");
-    setUploadProgress(0);
-
-    const reader = new FileReader();
-    reader.onprogress = (event) => {
-      if (event.lengthComputable) {
-        const percent = (event.loaded / event.total) * 60;
-        setUploadProgress(percent);
-      }
-    };
-    reader.onloadend = () => {
-      setUploadProgress((prev) => (prev < 60 ? 60 : prev));
-    };
-    reader.readAsArrayBuffer(f);
-  };
-
-  const handleUpload = async () => {
-    if (!pendingFile) return;
-    setUploading(true);
-    simulateUploadPhases();
-    try {
-      const formData = new FormData();
-      formData.append("file", pendingFile);
-      if (pageCount.trim()) formData.append("page_count", pageCount.trim());
-      if (referenceCount.trim())
-        formData.append("reference_count", referenceCount.trim());
-
-      const result = await uploadDocumentAction(episodeId, formData);
-      if (result.success) {
-        setUploadProgress(100);
-        toast({ description: "Documento anexado." });
-        onUpload(result.document as any);
-        resetPending();
-      } else {
-        toast({
-          description: result.error || "Falha ao anexar documento.",
-          variant: "destructive",
-        });
-        setUploadProgress(0);
-      }
-    } catch (e: any) {
+    if (f.size > 25 * 1024 * 1024) {
       toast({
-        description: e?.message || "Erro inesperado no upload.",
+        title: "Arquivo muito grande",
+        description: "Máximo permitido: 25MB.",
         variant: "destructive",
       });
-      setUploadProgress(0);
-    } finally {
-      setUploading(false);
+      return;
+    }
+    setPendingFile(f);
+    setPhase("idle");
+    setProgress(0);
+  };
+
+  /* ============= Fluxo: upload com progresso real ============= */
+  const performUpload = async () => {
+    if (!pendingFile) return;
+    setPhase("preparing");
+    setProgress(0);
+
+    // 1. Gera signed URL
+    const signed = await getDocumentSignedUploadUrl(
+      episodeId,
+      pendingFile.name
+    );
+    if (!signed.success || !signed.signedUrl || !signed.storagePath) {
+      setPhase("error");
+      toast({
+        title: "Falha ao preparar upload",
+        description: signed.error || "Erro desconhecido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 2. XHR PUT com progresso
+    await new Promise<void>((resolve) => {
+      setPhase("uploading");
+      const xhr = new XMLHttpRequest();
+      xhrRef.current = xhr;
+
+      xhr.upload.onprogress = (evt) => {
+        if (evt.lengthComputable) {
+          const pct = (evt.loaded / evt.total) * 100;
+          setProgress(pct);
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          setProgress(100);
+          resolve();
+        } else {
+          setPhase("error");
+          toast({
+            title: "Falha no upload",
+            description: `Status ${xhr.status}`,
+            variant: "destructive",
+          });
+        }
+      };
+      xhr.onerror = () => {
+        setPhase("error");
+        toast({
+          title: "Erro de rede",
+          description: "Não foi possível enviar o arquivo.",
+          variant: "destructive",
+        });
+      };
+      xhr.onabort = () => {
+        if (phase !== "error") {
+          setPhase("idle");
+          setProgress(0);
+        }
+      };
+      xhr.open("PUT", signed.signedUrl!, true);
+      xhr.setRequestHeader(
+        "Content-Type",
+        pendingFile.type || "application/octet-stream"
+      );
+      xhr.send(pendingFile);
+    });
+
+    if (phase === "error") return;
+
+    // 3. Registrar no banco
+    setPhase("registering");
+    const register = await registerUploadedDocumentAction({
+      episodeId,
+      storagePath: signed.storagePath,
+      fileName: signed.sanitizedFileName || pendingFile.name,
+      fileSize: pendingFile.size,
+      pageCount: pageCount ? Number(pageCount) : null,
+      referenceCount: referenceCount ? Number(referenceCount) : null,
+    });
+
+    if (!register.success || !register.document) {
+      setPhase("error");
+      toast({
+        title: "Falha ao registrar",
+        description: register.error || "Erro desconhecido.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPhase("done");
+    toast({ description: "Documento anexado." });
+    onUpload(register.document as any);
+    resetPending();
+  };
+
+  const cancelUpload = () => {
+    if (xhrRef.current && phase === "uploading") {
+      xhrRef.current.abort();
+      toast({ description: "Upload cancelado." });
+    } else {
+      resetPending();
     }
   };
 
+  /* ============= Delete ============= */
   const handleDelete = async () => {
     if (!document) return;
     setDeleting(true);
     try {
-      const result = await deleteDocumentAction(
+      const res = await deleteDocumentAction(
         document.id,
         document.storage_path
       );
-      if (result.success) {
+      if (res.success) {
         toast({ description: "Documento removido." });
         onDelete();
       } else {
         toast({
-          description: result.error || "Falha ao remover.",
+          description: res.error || "Falha ao remover.",
           variant: "destructive",
         });
       }
@@ -224,7 +298,8 @@ export function DocumentField({
     }
   };
 
-  const startEditMetadata = () => {
+  /* ============= Edit Meta ============= */
+  const startEditMeta = () => {
     setEditPageCount(
       document?.page_count != null ? String(document.page_count) : ""
     );
@@ -233,18 +308,10 @@ export function DocumentField({
     );
     setEditingMeta(true);
   };
-
-  const cancelEditMetadata = () => {
+  const cancelEditMeta = () => {
     setEditingMeta(false);
-    setEditPageCount(
-      document?.page_count != null ? String(document.page_count) : ""
-    );
-    setEditReferenceCount(
-      document?.reference_count != null ? String(document.reference_count) : ""
-    );
   };
-
-  const saveMetadata = async () => {
+  const saveMeta = async () => {
     if (!document) return;
     setSavingMeta(true);
     try {
@@ -252,7 +319,7 @@ export function DocumentField({
         page_count: editPageCount ? Number(editPageCount) : null,
         reference_count: editReferenceCount ? Number(editReferenceCount) : null,
       });
-      if (updated.success) {
+      if (updated.success && updated.document) {
         toast({ description: "Metadados atualizados." });
         onUpload(updated.document as any);
         setEditingMeta(false);
@@ -262,11 +329,6 @@ export function DocumentField({
           variant: "destructive",
         });
       }
-    } catch (e: any) {
-      toast({
-        description: e?.message || "Erro inesperado.",
-        variant: "destructive",
-      });
     } finally {
       setSavingMeta(false);
     }
@@ -280,7 +342,7 @@ export function DocumentField({
         <div className="mt-2 space-y-3 rounded-md border p-3">
           <div className="flex items-center justify-between">
             <div className="flex min-w-0 items-center gap-2">
-              <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <FileText className="h-5 w-5 text-muted-foreground" />
               <a
                 href={document.public_url}
                 target="_blank"
@@ -298,7 +360,7 @@ export function DocumentField({
                   variant="outline"
                   size="sm"
                   disabled={disabled}
-                  onClick={startEditMetadata}
+                  onClick={startEditMeta}
                 >
                   <Edit3 className="h-4 w-4 mr-1" />
                   Editar Meta
@@ -402,7 +464,7 @@ export function DocumentField({
                   size="sm"
                   variant="outline"
                   disabled={savingMeta}
-                  onClick={cancelEditMetadata}
+                  onClick={cancelEditMeta}
                 >
                   <X className="h-4 w-4 mr-1" />
                   Cancelar
@@ -411,7 +473,7 @@ export function DocumentField({
                   type="button"
                   size="sm"
                   disabled={savingMeta}
-                  onClick={() => void saveMetadata()}
+                  onClick={() => void saveMeta()}
                 >
                   {savingMeta ? (
                     "Salvando..."
@@ -425,18 +487,11 @@ export function DocumentField({
           )}
         </div>
       ) : (
-        <div className="mt-2 space-y-3 rounded-md border p-3">
+        <div className="mt-2 space-y-4 rounded-md border p-3">
           <div className="flex items-center justify-between">
             <div className="flex min-w-0 items-center gap-2">
-              <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-              <span
-                className="truncate text-sm"
-                title={
-                  pendingFile
-                    ? pendingFile.name
-                    : "Nenhum documento selecionado"
-                }
-              >
+              <FileText className="h-5 w-5 text-muted-foreground" />
+              <span className="truncate text-sm">
                 {pendingFile ? pendingFile.name : "Nenhum documento"}
               </span>
             </div>
@@ -446,15 +501,19 @@ export function DocumentField({
                 type="file"
                 accept=".pdf,.doc,.docx"
                 className="hidden"
-                disabled={disabled || uploading}
-                onChange={handleFileInputChange}
+                disabled={
+                  disabled || phase === "uploading" || phase === "registering"
+                }
+                onChange={onFileChange}
               />
               {!pendingFile && (
                 <Button
                   variant="outline"
                   size="sm"
                   type="button"
-                  disabled={disabled || uploading}
+                  disabled={
+                    disabled || phase === "uploading" || phase === "registering"
+                  }
                   onClick={() => inputRef.current?.click()}
                 >
                   <Upload className="h-4 w-4 mr-2" />
@@ -466,17 +525,23 @@ export function DocumentField({
 
           {pendingFile && (
             <>
-              {(uploading || uploadProgress > 0) && (
+              {(phase === "uploading" ||
+                phase === "registering" ||
+                progress > 0) && (
                 <div className="space-y-1">
-                  <ProgressBar value={uploadProgress} />
+                  <ProgressBar
+                    value={phase === "registering" ? 100 : progress}
+                  />
                   <div className="text-[11px] text-muted-foreground">
-                    {uploadProgress < 100
-                      ? `Progresso: ${Math.floor(uploadProgress)}%`
-                      : "Concluído"}
+                    {phase === "preparing" && "Preparando..."}
+                    {phase === "uploading" &&
+                      `Enviando: ${Math.floor(progress)}%`}
+                    {phase === "registering" && "Registrando documento..."}
+                    {phase === "done" && "Concluído."}
+                    {phase === "error" && "Erro no upload."}
                   </div>
                 </div>
               )}
-
               <div className="text-[11px] text-muted-foreground">
                 Tamanho Local: {readableSizeMB(pendingFile.size)} (
                 {pendingFile.size} bytes)
@@ -492,7 +557,11 @@ export function DocumentField({
                     min={0}
                     value={pageCount}
                     onChange={(e) => setPageCount(e.target.value)}
-                    disabled={uploading}
+                    disabled={
+                      phase !== "idle" &&
+                      phase !== "error" &&
+                      phase !== "preparing"
+                    }
                   />
                 </div>
                 <div className="flex flex-col">
@@ -504,66 +573,88 @@ export function DocumentField({
                     min={0}
                     value={referenceCount}
                     onChange={(e) => setReferenceCount(e.target.value)}
-                    disabled={uploading}
+                    disabled={
+                      phase !== "idle" &&
+                      phase !== "error" &&
+                      phase !== "preparing"
+                    }
                   />
                 </div>
               </div>
 
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
+              <div className="flex items-center gap-2">
+                {phase === "uploading" ? (
                   <Button
-                    size="sm"
-                    disabled={disabled || uploading}
                     type="button"
+                    size="sm"
+                    variant="destructive"
+                    onClick={cancelUpload}
                   >
-                    {uploading ? "Enviando..." : "Enviar Documento"}
+                    <StopCircle className="h-4 w-4 mr-1" />
+                    Cancelar
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirmar upload?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Enviar <strong>{pendingFile.name}</strong>
-                      {pageCount && (
-                        <>
-                          {" "}
-                          com <strong>{pageCount}</strong> páginas
-                        </>
-                      )}
-                      {referenceCount && (
-                        <>
-                          {" "}
-                          e <strong>{referenceCount}</strong> referências
-                        </>
-                      )}
-                      ?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel disabled={uploading}>
-                      Cancelar
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      disabled={uploading}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        void handleUpload();
-                      }}
-                    >
-                      {uploading ? "Processando..." : "Confirmar"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-
-              <div>
+                ) : (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        disabled={
+                          disabled ||
+                          phase === "preparing" ||
+                          phase === "registering"
+                        }
+                        type="button"
+                      >
+                        {phase === "preparing"
+                          ? "Preparando..."
+                          : phase === "registering"
+                          ? "Registrando..."
+                          : "Enviar Documento"}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar upload?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Enviar <strong>{pendingFile.name}</strong>
+                          {pageCount && (
+                            <>
+                              {" "}
+                              com <strong>{pageCount}</strong> páginas
+                            </>
+                          )}
+                          {referenceCount && (
+                            <>
+                              {" "}
+                              e <strong>{referenceCount}</strong> referências
+                            </>
+                          )}
+                          ?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={phase === "preparing"}>
+                          Cancelar
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          disabled={phase === "preparing"}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            void performUpload();
+                          }}
+                        >
+                          {phase === "preparing" ? "..." : "Confirmar"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  disabled={uploading}
-                  onClick={() => resetPending()}
-                  className="text-xs"
+                  onClick={resetPending}
+                  disabled={phase === "uploading" || phase === "registering"}
                 >
                   Remover seleção
                 </Button>

@@ -70,3 +70,5 @@ pnpm dlx shadcn@latest add tabs (o atual)
 pnpm dlx shadcn@latest add separator
 
 pnpm install pdfjs-dist
+
+2. **pnpm install @supabase/auth-helpers-nextjs @supabase/auth-ui-react** _O que faz:_ Instala pacotes auxiliares do Supabase para facilitar a autenticação (login, cadastro) em Next.js. **(antigo não usar)**
