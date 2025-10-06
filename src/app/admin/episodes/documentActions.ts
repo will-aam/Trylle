@@ -1,100 +1,251 @@
-// src/app/admin/episodes/documentActions.ts
 "use server";
 
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
 import { revalidatePath } from "next/cache";
 
+/* ------------- Tipos base ------------- */
+interface BaseResult {
+  success: boolean;
+  error?: string;
+  code?: string;
+}
+
+export interface EpisodeDocumentRecord {
+  id: string;
+  episode_id: string;
+  file_name: string;
+  public_url: string;
+  storage_path: string;
+  file_size: number | null;
+  page_count: number | null;
+  reference_count: number | null;
+  created_at: string; // agora obrigatório
+}
+
+export interface UploadDocumentSuccess extends BaseResult {
+  success: true;
+  document: EpisodeDocumentRecord;
+}
+export interface UploadDocumentFailure extends BaseResult {
+  success: false;
+}
+export type UploadDocumentResult =
+  | UploadDocumentSuccess
+  | UploadDocumentFailure;
+
+export interface UpdateAudioSuccess extends BaseResult {
+  success: true;
+  audio_url: string;
+  file_name: string;
+}
+export interface UpdateAudioFailure extends BaseResult {
+  success: false;
+}
+export type UpdateAudioResult = UpdateAudioSuccess | UpdateAudioFailure;
+
+/* ------------- Constantes ------------- */
+const DOCUMENT_BUCKET = "episode-documents";
+const AUDIO_BUCKET = "episode-audios";
+const MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_DOC_EXT = [".pdf", ".doc", ".docx"];
+const ADMIN_LIST_REVALIDATE_PATH = "/admin/episodes";
+
+/* ------------- Delete ------------- */
 export async function deleteDocumentAction(
   documentId: string,
   storagePath: string
-) {
+): Promise<BaseResult> {
   const supabase = await createSupabaseServerClient();
-  const { error: storageError } = await supabase.storage
-    .from("episode-documents")
-    .remove([storagePath]);
 
+  const { error: storageError } = await supabase.storage
+    .from(DOCUMENT_BUCKET)
+    .remove([storagePath]);
   if (storageError) {
-    return { success: false, error: storageError.message };
+    return {
+      success: false,
+      error: storageError.message,
+      code: storageError.name,
+    };
   }
 
   const { error: dbError } = await supabase
     .from("episode_documents")
     .delete()
     .eq("id", documentId);
-
   if (dbError) {
-    return { success: false, error: dbError.message };
+    return { success: false, error: dbError.message, code: dbError.code };
   }
 
-  revalidatePath("/admin/episodes");
+  revalidatePath(ADMIN_LIST_REVALIDATE_PATH);
   return { success: true };
 }
 
+/* ------------- Upload Document ------------- */
 export async function uploadDocumentAction(
   episodeId: string,
   formData: FormData
-) {
-  const supabase = await createSupabaseServerClient();
-  const documentFile = formData.get("file") as File;
+): Promise<UploadDocumentResult> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const documentFile = formData.get("file") as File | null;
+    if (!documentFile) {
+      return { success: false, error: "Nenhum arquivo encontrado." };
+    }
 
-  if (!documentFile) {
-    return { success: false, error: "Nenhum arquivo encontrado." };
+    if (documentFile.size > MAX_DOCUMENT_SIZE_BYTES) {
+      return {
+        success: false,
+        error: `Arquivo excede ${MAX_DOCUMENT_SIZE_BYTES / (1024 * 1024)}MB.`,
+        code: "FILE_TOO_LARGE",
+      };
+    }
+
+    const lowerName = documentFile.name.toLowerCase();
+    if (!ALLOWED_DOC_EXT.some((ext) => lowerName.endsWith(ext))) {
+      return {
+        success: false,
+        error: `Extensão não suportada. Use: ${ALLOWED_DOC_EXT.join(", ")}`,
+        code: "INVALID_EXTENSION",
+      };
+    }
+
+    const safeOriginalName = documentFile.name.replace(/[^\w.\-]+/g, "_");
+    const filePath = `documents/${episodeId}-${Date.now()}-${safeOriginalName}`;
+
+    const { error: storageError } = await supabase.storage
+      .from(DOCUMENT_BUCKET)
+      .upload(filePath, documentFile);
+    if (storageError) {
+      return {
+        success: false,
+        error: storageError.message,
+        code: storageError.name,
+      };
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from(DOCUMENT_BUCKET)
+      .getPublicUrl(filePath);
+    const publicUrl = publicUrlData.publicUrl;
+
+    const { data: inserted, error: dbError } = await supabase
+      .from("episode_documents")
+      .insert({
+        episode_id: episodeId,
+        file_name: safeOriginalName,
+        public_url: publicUrl,
+        storage_path: filePath,
+        file_size: documentFile.size,
+        page_count: null,
+        reference_count: 0,
+      })
+      .select(
+        `
+        id,
+        episode_id,
+        file_name,
+        public_url,
+        storage_path,
+        file_size,
+        page_count,
+        reference_count,
+        created_at
+      `
+      )
+      .single();
+
+    if (dbError || !inserted) {
+      await supabase.storage.from(DOCUMENT_BUCKET).remove([filePath]);
+      return {
+        success: false,
+        error:
+          dbError?.message ||
+          "Falha ao salvar registro do documento após upload.",
+        code: dbError?.code,
+      };
+    }
+
+    revalidatePath(ADMIN_LIST_REVALIDATE_PATH);
+
+    return {
+      success: true,
+      document: {
+        id: inserted.id,
+        episode_id: inserted.episode_id,
+        file_name: inserted.file_name,
+        public_url: inserted.public_url,
+        storage_path: inserted.storage_path,
+        file_size: inserted.file_size,
+        page_count: inserted.page_count,
+        reference_count: inserted.reference_count,
+        created_at: inserted.created_at || new Date().toISOString(),
+      },
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      error: e?.message || "Erro inesperado no upload.",
+      code: "UNEXPECTED",
+    };
   }
-
-  const filePath = `documents/${episodeId}-${Date.now()}-${documentFile.name}`;
-
-  const { error: storageError } = await supabase.storage
-    .from("episode-documents")
-    .upload(filePath, documentFile);
-
-  if (storageError) {
-    return { success: false, error: storageError.message };
-  }
-
-  revalidatePath("/admin/episodes");
-  return { success: true };
 }
 
-export async function updateAudioAction(episodeId: string, formData: FormData) {
-  const supabase = await createSupabaseServerClient();
-  const newAudioFile = formData.get("file") as File;
-  const oldAudioFileName = formData.get("oldFile") as string;
+/* ------------- Update Audio ------------- */
+export async function updateAudioAction(
+  episodeId: string,
+  formData: FormData
+): Promise<UpdateAudioResult> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const newAudioFile = formData.get("file") as File | null;
+    const oldAudioFileName = formData.get("oldFile") as string | null;
 
-  if (!newAudioFile) {
-    return { success: false, error: "Nenhum arquivo de áudio encontrado." };
+    if (!newAudioFile) {
+      return { success: false, error: "Nenhum arquivo de áudio encontrado." };
+    }
+    if (!newAudioFile.type.startsWith("audio/")) {
+      return { success: false, error: "Formato de áudio inválido." };
+    }
+
+    if (oldAudioFileName) {
+      await supabase.storage.from(AUDIO_BUCKET).remove([oldAudioFileName]);
+    }
+
+    const safeAudioName = newAudioFile.name.replace(/[^\w.\-]+/g, "_");
+    const newFilePath = `${episodeId}-${Date.now()}-${safeAudioName}`;
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from(AUDIO_BUCKET)
+      .upload(newFilePath, newAudioFile);
+    if (uploadError || !uploadData) {
+      return {
+        success: false,
+        error: uploadError?.message || "Falha no upload do áudio.",
+      };
+    }
+
+    const { data: urlData } = supabase.storage
+      .from(AUDIO_BUCKET)
+      .getPublicUrl(uploadData.path);
+    const publicUrl = urlData.publicUrl;
+
+    const { error: updateError } = await supabase
+      .from("episodes")
+      .update({
+        audio_url: publicUrl,
+        file_name: safeAudioName,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", episodeId);
+
+    if (updateError) {
+      await supabase.storage.from(AUDIO_BUCKET).remove([uploadData.path]);
+      return { success: false, error: updateError.message };
+    }
+
+    revalidatePath(ADMIN_LIST_REVALIDATE_PATH);
+    return { success: true, audio_url: publicUrl, file_name: safeAudioName };
+  } catch (e: any) {
+    return { success: false, error: e?.message || "Erro inesperado." };
   }
-  // Deleta o antigo
-  if (oldAudioFileName) {
-    await supabase.storage.from("episode-audios").remove([oldAudioFileName]);
-  }
-  // Upload do novo
-  const newFilePath = `${episodeId}-${Date.now()}-${newAudioFile.name}`;
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from("episode-audios")
-    .upload(newFilePath, newAudioFile);
-
-  if (uploadError) {
-    return { success: false, error: uploadError.message };
-  }
-
-  const { data: urlData } = supabase.storage
-    .from("episode-audios")
-    .getPublicUrl(uploadData.path);
-
-  // Atualiza o episódio
-  const { error: updateError } = await supabase
-    .from("episodes")
-    .update({
-      audio_url: urlData.publicUrl,
-      file_name: newAudioFile.name,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", episodeId);
-
-  if (updateError) {
-    return { success: false, error: updateError.message };
-  }
-
-  revalidatePath("/admin/episodes");
-  return { success: true };
 }

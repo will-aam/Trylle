@@ -17,7 +17,7 @@ import {
 import { EpisodeTable } from "./episode-table";
 import { EpisodeStats } from "./episode-stats";
 import { EpisodeFilters } from "./episode-filters";
-import { EditEpisodeDialog } from "./edit-episode-dialog";
+import { EditEpisodeDialog } from "./edit/edit-episode-dialog";
 import { EpisodeTablePagination } from "./episode-table-pagination";
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 import { Card, CardContent } from "@/src/components/ui/card";
