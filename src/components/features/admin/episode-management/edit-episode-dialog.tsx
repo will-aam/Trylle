@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogFooter,
   DialogHeader,
+  DialogPortal,
   DialogTitle,
 } from "@/src/components/ui/dialog";
 import { Input } from "@/src/components/ui/input";
@@ -50,6 +51,7 @@ import {
   uploadDocumentAction,
   updateAudioAction,
 } from "@/src/app/admin/episodes/documentActions"; // MUDANÇA IMPORTANTE
+import { DialogOverlay } from "@/src/components/ui/dialog-overlay";
 
 const updateEpisodeSchema = z.object({
   title: z.string().min(1, "O título é obrigatório."),
@@ -111,10 +113,14 @@ export function EditEpisodeDialog({
       reset({
         title: episode.title,
         description: episode.description ?? "",
-        program_id: episode.program_id ?? "",
+        // Convertendo IDs para string para garantir a correspondência no Select
+        // e tratando valores nulos de forma explícita.
+        program_id: episode.program_id ? String(episode.program_id) : null,
         episode_number: episode.episode_number ?? undefined,
-        category_id: episode.category_id ?? "",
-        subcategory_id: episode.subcategory_id ?? "",
+        category_id: String(episode.category_id), // Campo obrigatório
+        subcategory_id: episode.subcategory_id
+          ? String(episode.subcategory_id)
+          : null,
         tags:
           episode.tags?.map((t: any) => (typeof t === "object" ? t.id : t)) ||
           [],
@@ -180,307 +186,310 @@ export function EditEpisodeDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Editar Episódio: {episode.title}</DialogTitle>
-        </DialogHeader>
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="flex-1 flex flex-col overflow-hidden"
-        >
-          <ScrollArea className="flex-1 pr-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
-              <div className="md:col-span-2 space-y-6">
-                <div>
-                  <Label htmlFor="title">Título</Label>
-                  <Input id="title" {...register("title")} className="mt-1" />
-                  {errors.title?.message && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {String(errors.title.message)}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label>Descrição</Label>
-                  <Controller
-                    name="description"
-                    control={control}
-                    render={({ field }) => (
-                      <RichTextEditor
-                        content={field.value ?? ""}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  />
-                </div>
-                <div>
-                  <Label>Tags</Label>
-                  <Controller
-                    name="tags"
-                    control={control}
-                    render={({ field }) => (
-                      <TagSelector
-                        tags={allTags}
-                        selectedTags={allTags.filter((tag) =>
-                          field.value?.includes(tag.id)
-                        )}
-                        onSelectedTagsChange={(tags) =>
-                          field.onChange(tags.map((t) => t.id))
-                        }
-                      />
-                    )}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Programa</Label>
-                  <Controller
-                    name="program_id"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? ""}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Nenhum programa" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {programs.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="episode_number">Nº do Episódio</Label>
-                  <Input
-                    id="episode_number"
-                    type="number"
-                    {...register("episode_number")}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Categoria</Label>
-                  <Controller
-                    name="category_id"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? ""}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma categoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.category_id?.message && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {String(errors.category_id.message)}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Subcategoria</Label>
-                  <Controller
-                    name="subcategory_id"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? ""}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma subcategoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {subcategories.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Arquivo de Áudio</Label>
-                  <div className="flex items-center justify-between p-3 border rounded-md">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <FileAudio className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                      <span className="truncate text-sm">
-                        {newAudioFile ? newAudioFile.name : episode.file_name}
-                      </span>
-                    </div>
-                    <Input
-                      type="file"
-                      ref={audioInputRef}
-                      className="hidden"
-                      onChange={(e) =>
-                        setNewAudioFile(e.target.files?.[0] || null)
-                      }
-                      accept="audio/*"
-                    />
-                    {newAudioFile ? (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button type="button" variant="secondary" size="sm">
-                            Confirmar
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Confirmar mudança de áudio?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              O áudio antigo será deletado e substituído por{" "}
-                              <strong>{newAudioFile.name}</strong>.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel
-                              onClick={() => setNewAudioFile(null)}
-                            >
-                              Cancelar
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={handleConfirmAudioChange}
-                              disabled={isUpdatingAudio}
-                            >
-                              {isUpdatingAudio ? (
-                                <RefreshCw className="h-4 w-4 animate-spin" />
-                              ) : (
-                                "Confirmar"
-                              )}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => audioInputRef.current?.click()}
-                      >
-                        Mudar
-                      </Button>
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Editar Episódio: {episode.title}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex-1 flex flex-col overflow-hidden"
+          >
+            <ScrollArea className="flex-1 pr-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
+                <div className="md:col-span-2 space-y-6">
+                  <div>
+                    <Label htmlFor="title">Título</Label>
+                    <Input id="title" {...register("title")} className="mt-1" />
+                    {errors.title?.message && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {String(errors.title.message)}
+                      </p>
                     )}
                   </div>
+                  <div>
+                    <Label>Descrição</Label>
+                    <Controller
+                      name="description"
+                      control={control}
+                      render={({ field }) => (
+                        <RichTextEditor
+                          content={field.value ?? ""}
+                          onChange={field.onChange}
+                        />
+                      )}
+                    />
+                  </div>
+                  <div>
+                    <Label>Tags</Label>
+                    <Controller
+                      name="tags"
+                      control={control}
+                      render={({ field }) => (
+                        <TagSelector
+                          tags={allTags}
+                          selectedTags={allTags.filter((tag) =>
+                            field.value?.includes(tag.id)
+                          )}
+                          onSelectedTagsChange={(tags) =>
+                            field.onChange(tags.map((t) => t.id))
+                          }
+                        />
+                      )}
+                    />
+                  </div>
                 </div>
-                {/* Seção de Documento */}
-                <div className="space-y-2">
-                  <Label>Documento</Label>
-                  {currentDocument ? (
-                    <div className="flex items-center justify-between p-3 border rounded-md">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                        <a
-                          href={currentDocument.public_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="truncate text-sm hover:underline"
+
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label>Programa</Label>
+                    <Controller
+                      name="program_id"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value ?? ""}
                         >
-                          {currentDocument.file_name}
-                        </a>
-                      </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Confirmar exclusão?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação removerá o documento permanentemente.
-                              Deseja continuar?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteDocument}>
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  ) : (
+                          <SelectTrigger>
+                            <SelectValue placeholder="Nenhum programa" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {programs.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="episode_number">Nº do Episódio</Label>
+                    <Input
+                      id="episode_number"
+                      type="number"
+                      {...register("episode_number")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Categoria</Label>
+                    <Controller
+                      name="category_id"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value ?? ""}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma categoria" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.category_id?.message && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {String(errors.category_id.message)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Subcategoria</Label>
+                    <Controller
+                      name="subcategory_id"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value ?? ""}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma subcategoria" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {subcategories.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Arquivo de Áudio</Label>
                     <div className="flex items-center justify-between p-3 border rounded-md">
                       <div className="flex items-center gap-2 overflow-hidden">
-                        <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        <FileAudio className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                         <span className="truncate text-sm">
-                          {newDocumentFile
-                            ? newDocumentFile.name
-                            : "Nenhum documento"}
+                          {newAudioFile ? newAudioFile.name : episode.file_name}
                         </span>
                       </div>
                       <Input
                         type="file"
-                        id="document-upload"
+                        ref={audioInputRef}
                         className="hidden"
                         onChange={(e) =>
-                          setNewDocumentFile(e.target.files?.[0] || null)
+                          setNewAudioFile(e.target.files?.[0] || null)
                         }
-                        accept=".pdf,.doc,.docx"
+                        accept="audio/*"
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          document.getElementById("document-upload")?.click()
-                        }
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Anexar
-                      </Button>
+                      {newAudioFile ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button type="button" variant="secondary" size="sm">
+                              Confirmar
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Confirmar mudança de áudio?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                O áudio antigo será deletado e substituído por{" "}
+                                <strong>{newAudioFile.name}</strong>.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel
+                                onClick={() => setNewAudioFile(null)}
+                              >
+                                Cancelar
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={handleConfirmAudioChange}
+                                disabled={isUpdatingAudio}
+                              >
+                                {isUpdatingAudio ? (
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  "Confirmar"
+                                )}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => audioInputRef.current?.click()}
+                        >
+                          Mudar
+                        </Button>
+                      )}
                     </div>
-                  )}
+                  </div>
+                  {/* Seção de Documento */}
+                  <div className="space-y-2">
+                    <Label>Documento</Label>
+                    {currentDocument ? (
+                      <div className="flex items-center justify-between p-3 border rounded-md">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          <a
+                            href={currentDocument.public_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="truncate text-sm hover:underline"
+                          >
+                            {currentDocument.file_name}
+                          </a>
+                        </div>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Confirmar exclusão?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação removerá o documento permanentemente.
+                                Deseja continuar?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteDocument}>
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between p-3 border rounded-md">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate text-sm">
+                            {newDocumentFile
+                              ? newDocumentFile.name
+                              : "Nenhum documento"}
+                          </span>
+                        </div>
+                        <Input
+                          type="file"
+                          id="document-upload"
+                          className="hidden"
+                          onChange={(e) =>
+                            setNewDocumentFile(e.target.files?.[0] || null)
+                          }
+                          accept=".pdf,.doc,.docx"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document.getElementById("document-upload")?.click()
+                          }
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Anexar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </ScrollArea>
-          <DialogFooter className="mt-auto pt-4 border-t">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Salvando..." : "Salvar Alterações"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+            </ScrollArea>
+            <DialogFooter className="mt-auto pt-4 border-t">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </DialogPortal>
     </Dialog>
   );
 }
