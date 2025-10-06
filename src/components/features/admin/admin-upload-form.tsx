@@ -29,6 +29,10 @@ import { cn } from "@/src/lib/utils";
 import { revalidateAdminDashboard } from "@/src/app/admin/actions";
 import { getTags } from "@/src/services/tagService";
 import { createEpisodeAction } from "@/src/app/admin/episodes/createEpisodeAction";
+import {
+  uploadDocumentAction,
+  UploadDocumentResult,
+} from "@/src/app/admin/episodes/documentActions";
 
 interface FormState {
   title: string;
@@ -60,16 +64,15 @@ export function UploadForm() {
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
+
+  // Áudio
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
 
-  // Documentos (futuro: integrar server action)
-  const [documentFiles, setDocumentFiles] = useState<File[]>([]);
-  const [fileSize, setFileSize] = useState<number | null>(null);
-
-  // Metadados extras (caso use futuramente)
-  const [pageCount, setPageCount] = useState<string>("");
-  const [referenceCount, setReferenceCount] = useState<string>("");
+  // Documento (apenas um)
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [docPageCount, setDocPageCount] = useState<string>("");
+  const [docReferenceCount, setDocReferenceCount] = useState<string>("");
 
   const [formData, setFormData] = useState<FormState>({
     title: "",
@@ -169,6 +172,19 @@ export function UploadForm() {
     }
   };
 
+  /* --------- Handler de documento --------- */
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (file) {
+      // Você pode validar extensão aqui também se quiser (pdf/doc/docx)
+      setDocumentFile(file);
+    } else {
+      setDocumentFile(null);
+      setDocPageCount("");
+      setDocReferenceCount("");
+    }
+  };
+
   /* --------- Reset do formulário --------- */
   const resetForm = () => {
     setFormData({
@@ -182,10 +198,9 @@ export function UploadForm() {
     });
     setAudioFile(null);
     setAudioDuration(null);
-    setDocumentFiles([]);
-    setPageCount("");
-    setReferenceCount("");
-    setFileSize(null);
+    setDocumentFile(null);
+    setDocPageCount("");
+    setDocReferenceCount("");
     setSelectedTagIds([]);
     setSelectedCategory("");
     setSelectedProgram(null);
@@ -193,14 +208,15 @@ export function UploadForm() {
   };
 
   /* --------- Criação de tag a partir do TagSelector --------- */
-  const handleCreateTag = useCallback(
-    (newTag: Tag) => {
-      setAllTags((prev) =>
-        prev.some((t) => t.id === newTag.id) ? prev : [...prev, newTag]
-      );
-    },
-    [setAllTags]
-  );
+  const handleCreateTag = useCallback((newTag: Tag) => {
+    setAllTags((prev) =>
+      prev.some((t) => t.id === newTag.id) ? prev : [...prev, newTag]
+    );
+  }, []);
+
+  /* --------- Helper de tamanho legível --------- */
+  const readableSizeMB = (bytes: number) =>
+    (bytes / (1024 * 1024)).toFixed(2) + " MB";
 
   /* --------- Submit principal --------- */
   const handleSubmit = async (status: "draft" | "scheduled" | "published") => {
@@ -216,7 +232,7 @@ export function UploadForm() {
     setUploadStatus("uploading");
 
     try {
-      // 1. Obter URL pré-assinada (mantido seu fluxo atual)
+      // 1. Obter URL pré-assinada (upload do áudio)
       const presignedUrlResponse = await fetch("/api/generate-presigned-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -234,7 +250,7 @@ export function UploadForm() {
       const { signedUrl, publicUrl, originalFileName } =
         await presignedUrlResponse.json();
 
-      // 2. Upload binário direto para o storage
+      // 2. Upload binário do áudio
       const uploadResponse = await fetch(signedUrl, {
         method: "PUT",
         body: audioFile,
@@ -245,7 +261,7 @@ export function UploadForm() {
         throw new Error("Falha no upload do arquivo de áudio.");
       }
 
-      // 3. Chamar server action para criar o episódio
+      // 3. Cria episódio via server action
       const result = await createEpisodeAction({
         title: formData.title.trim(),
         description: formData.description.trim() || null,
@@ -267,9 +283,34 @@ export function UploadForm() {
         throw new Error(result.error || "Falha ao criar episódio.");
       }
 
-      // 4. (Futuro) Upload de documentos -> cada um poderia chamar uma server action
-      // if (documentFiles.length > 0) { ... }
+      const newEpisodeId = result.episode.id;
 
+      // 4. Se há documento selecionado, envia agora
+      if (documentFile) {
+        const docForm = new FormData();
+        docForm.append("file", documentFile);
+        if (docPageCount.trim()) docForm.append("page_count", docPageCount);
+        if (docReferenceCount.trim())
+          docForm.append("reference_count", docReferenceCount);
+
+        const docUpload: UploadDocumentResult = await uploadDocumentAction(
+          newEpisodeId,
+          docForm
+        );
+
+        if (!docUpload.success) {
+          // Não dá rollback no episódio; apenas avisa
+          toast({
+            title: "Documento não anexado",
+            description:
+              docUpload.error ||
+              "O episódio foi criado, mas o documento falhou.",
+            variant: "destructive",
+          });
+        }
+      }
+
+      // 5. Finaliza UI
       setUploadStatus("success");
       toast({
         title: "Sucesso!",
@@ -466,27 +507,67 @@ export function UploadForm() {
                 </div>
               </div>
 
-              {/* Documentos (placeholder futuro) */}
-              <div>
-                <Label htmlFor="document-files">Documentos de Apoio</Label>
+              {/* Documento Único */}
+              <div className="space-y-2">
+                <Label htmlFor="document-file">
+                  Documento de Apoio (único)
+                </Label>
                 <Input
-                  id="document-files"
+                  id="document-file"
                   type="file"
-                  multiple
-                  onChange={(e) => {
-                    const files = e.target.files;
-                    if (files) {
-                      const arr = Array.from(files);
-                      setDocumentFiles(arr);
-                      setFileSize(arr[0]?.size ?? null);
-                    } else {
-                      setDocumentFiles([]);
-                      setFileSize(null);
-                    }
-                  }}
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleDocumentChange}
                   className="mt-1"
                 />
-                {/* Exibição/gestão futura de docs */}
+                {documentFile && (
+                  <div className="mt-2 space-y-2 rounded-md border p-3">
+                    <div className="text-sm font-medium truncate">
+                      {documentFile.name}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Tamanho: {readableSizeMB(documentFile.size)} (
+                      {documentFile.size} bytes)
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium">
+                          Nº de Páginas (opcional)
+                        </label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={docPageCount}
+                          onChange={(e) => setDocPageCount(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-xs font-medium">
+                          Nº de Referências (opcional)
+                        </label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={docReferenceCount}
+                          onChange={(e) => setDocReferenceCount(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setDocumentFile(null);
+                          setDocPageCount("");
+                          setDocReferenceCount("");
+                        }}
+                      >
+                        Remover documento
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
