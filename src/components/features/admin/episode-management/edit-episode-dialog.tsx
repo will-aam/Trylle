@@ -385,6 +385,85 @@ export function EditEpisodeDialog({
                     )}
                   </div>
                 </div>
+                {/* Seção de Documento */}
+                <div className="space-y-2">
+                  <Label>Documento</Label>
+                  {currentDocument ? (
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        <a
+                          href={currentDocument.public_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate text-sm hover:underline"
+                        >
+                          {currentDocument.file_name}
+                        </a>
+                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Confirmar exclusão?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta ação removerá o documento permanentemente.
+                              Deseja continuar?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteDocument}>
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 border rounded-md">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                        <span className="truncate text-sm">
+                          {newDocumentFile
+                            ? newDocumentFile.name
+                            : "Nenhum documento"}
+                        </span>
+                      </div>
+                      <Input
+                        type="file"
+                        id="document-upload"
+                        className="hidden"
+                        onChange={(e) =>
+                          setNewDocumentFile(e.target.files?.[0] || null)
+                        }
+                        accept=".pdf,.doc,.docx"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          document.getElementById("document-upload")?.click()
+                        }
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Anexar
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </ScrollArea>
