@@ -25,7 +25,7 @@ export default async function AdminEpisodesPage({
   const status = searchParams.status || "all";
   const categoryId = searchParams.category || "all";
   const page = Number(searchParams.page) || 1;
-  const limit = Number(searchParams.limit) || 10;
+  const limit = Number(searchParams.limit) || 5;
   const sortBy = (searchParams.sortBy as any) || "published_at";
   const ascending = searchParams.order === "asc";
   const offset = (page - 1) * limit;

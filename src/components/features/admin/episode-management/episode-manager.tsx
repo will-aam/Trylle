@@ -1,4 +1,3 @@
-// src/components/features/admin/episode-management/episode-manager.tsx
 "use client";
 
 import { useState, useTransition } from "react";
@@ -24,6 +23,7 @@ import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { ListMusic } from "lucide-react";
 import { toast } from "sonner";
+import { BulkStatusBar } from "./bulk-status-bar"; // <-- novo import
 
 interface EpisodeManagerProps {
   initialEpisodes: Episode[];
@@ -49,24 +49,19 @@ export function EpisodeManager({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  // UI states
   const [episodeToEdit, setEpisodeToEdit] = useState<Episode | null>(null);
   const [episodeToDelete, setEpisodeToDelete] = useState<Episode | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedEpisodes, setSelectedEpisodes] = useState<string[]>([]);
 
-  // Funções para manipular a URL, que é a nova "fonte da verdade"
   const createQueryString = (
     params: Record<string, string | number | null>
   ) => {
     const newSearchParams = new URLSearchParams(searchParams?.toString());
     for (const [key, value] of Object.entries(params)) {
-      if (value === null) {
-        newSearchParams.delete(key);
-      } else {
-        newSearchParams.set(key, String(value));
-      }
+      if (value === null) newSearchParams.delete(key);
+      else newSearchParams.set(key, String(value));
     }
     return newSearchParams.toString();
   };
@@ -94,15 +89,13 @@ export function EpisodeManager({
   const handleSort = (column: keyof Episode | "") => {
     const currentSort = searchParams.get("sortBy");
     const currentOrder = searchParams.get("order");
-    let order = "asc";
-    if (currentSort === column && currentOrder === "asc") {
-      order = "desc";
-    }
+    let order: SortDirection = "asc";
+    if (currentSort === column && currentOrder === "asc") order = "desc";
     startTransition(() => {
       router.push(
         `${pathname}?${createQueryString({
           sortBy: column || null,
-          order: order,
+          order,
         })}`
       );
     });
@@ -110,15 +103,13 @@ export function EpisodeManager({
 
   const handlePageChange = (page: number) => {
     startTransition(() => {
-      router.push(`${pathname}?${createQueryString({ page: page })}`);
+      router.push(`${pathname}?${createQueryString({ page })}`);
     });
   };
 
   const handleItemsPerPageChange = (limit: number) => {
     startTransition(() => {
-      router.push(
-        `${pathname}?${createQueryString({ limit: limit, page: 1 })}`
-      );
+      router.push(`${pathname}?${createQueryString({ limit, page: 1 })}`);
     });
   };
 
@@ -169,81 +160,160 @@ export function EpisodeManager({
 
   const hasActiveFilters = searchParams.toString().length > 0;
 
+  const globalTotal =
+    initialStatusCounts.published +
+    initialStatusCounts.draft +
+    initialStatusCounts.scheduled;
+
+  // Bulk update
+  const bulkUpdateStatus = async (
+    ids: string[],
+    newStatus: Episode["status"]
+  ): Promise<{ ok: number; fail: number }> => {
+    const results = await Promise.all(
+      ids.map(async (id) => {
+        const r = await updateEpisodeAction(id, { status: newStatus });
+        return r.success;
+      })
+    );
+    const ok = results.filter(Boolean).length;
+    const fail = results.length - ok;
+
+    if (ok > 0) {
+      startTransition(() => {
+        router.refresh();
+      });
+    }
+    return { ok, fail };
+  };
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold">Gerenciador de Episódios</h2>
-      </div>
-      <EpisodeStats
-        totalCount={initialTotalEpisodes}
-        publishedCount={initialStatusCounts.published}
-        draftCount={initialStatusCounts.draft}
-        scheduledCount={initialStatusCounts.scheduled}
-      />
-      <EpisodeFilters
-        categories={initialCategories}
-        searchTerm={searchParams.get("q") || ""}
-        setSearchTerm={handleSearch}
-        statusFilter={searchParams.get("status")?.split(",") || []}
-        setStatusFilter={(value) => handleFilterChange("status", value)}
-        categoryFilter={searchParams.get("category")?.split(",") || []}
-        setCategoryFilter={(value) => handleFilterChange("category", value)}
-        onClearFilters={clearFilters}
-        hasActiveFilters={hasActiveFilters}
-      />
-      {initialEpisodes.length > 0 ? (
-        <>
-          <EpisodeTable
-            episodes={initialEpisodes}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onSort={handleSort}
-            sortColumn={
-              (searchParams.get("sortBy") as keyof Episode) || "published_at"
-            }
-            sortDirection={
-              (searchParams.get("order") as SortDirection) || "desc"
-            }
-            selectedEpisodes={selectedEpisodes}
-            onSelectEpisode={(id) =>
-              setSelectedEpisodes((prev) =>
-                prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-              )
-            }
-            onSelectAll={() => {}} // Lógica de selecionar todos precisa ser ajustada se necessário
-            onStatusChange={async (episodeId, newStatus) => {
-              const result = await updateEpisodeAction(episodeId, {
-                status: newStatus,
-              });
-              if (result.success) {
-                toast.success("Status atualizado com sucesso!");
-              } else {
-                toast.error("Erro ao atualizar status", {
-                  description: result.error,
-                });
-              }
-            }}
-          />
-          <EpisodeTablePagination
-            currentPage={Number(searchParams.get("page")) || 1}
+    <div className="w-full">
+      <div className="mx-auto max-w-screen-2xl px-4 py-6 lg:py-8">
+        <div className="mb-6 flex flex-col gap-2 lg:mb-8">
+          <h2 className="text-3xl font-bold tracking-tight">
+            Gerenciador de Episódios
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Busque, filtre, edite e gerencie a publicação dos episódios.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <EpisodeStats
             totalCount={initialTotalEpisodes}
-            itemsPerPage={Number(searchParams.get("limit")) || 10}
-            onPageChange={handlePageChange}
-            setItemsPerPage={handleItemsPerPageChange}
+            publishedCount={initialStatusCounts.published}
+            draftCount={initialStatusCounts.draft}
+            scheduledCount={initialStatusCounts.scheduled}
+            globalTotal={globalTotal}
+            showPercentages={false}
+            compact={false}
           />
-        </>
-      ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <ListMusic className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold">
-              {hasActiveFilters
-                ? "Nenhum episódio encontrado"
-                : "Nenhum episódio cadastrado"}
-            </h3>
-          </CardContent>
-        </Card>
-      )}
+
+          <EpisodeFilters
+            categories={initialCategories}
+            searchTerm={searchParams.get("q") || ""}
+            setSearchTerm={handleSearch}
+            statusFilter={searchParams.get("status")?.split(",") || []}
+            setStatusFilter={(value) => handleFilterChange("status", value)}
+            categoryFilter={searchParams.get("category")?.split(",") || []}
+            setCategoryFilter={(value) => handleFilterChange("category", value)}
+            onClearFilters={clearFilters}
+            hasActiveFilters={hasActiveFilters}
+          />
+
+          {selectedEpisodes.length > 0 && (
+            <BulkStatusBar
+              selectedCount={selectedEpisodes.length}
+              selectedIds={selectedEpisodes}
+              onClear={() => setSelectedEpisodes([])}
+              onBulkUpdate={bulkUpdateStatus}
+              isPending={isPending}
+              topOffsetClass="top-[72px]"
+            />
+          )}
+
+          {initialEpisodes.length > 0 ? (
+            <>
+              <EpisodeTable
+                episodes={initialEpisodes}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onSort={handleSort}
+                sortColumn={
+                  (searchParams.get("sortBy") as keyof Episode) ||
+                  "published_at"
+                }
+                sortDirection={
+                  (searchParams.get("order") as SortDirection) || "desc"
+                }
+                selectedEpisodes={selectedEpisodes}
+                onSelectEpisode={(id: string) =>
+                  setSelectedEpisodes((prev) =>
+                    prev.includes(id)
+                      ? prev.filter((i) => i !== id)
+                      : [...prev, id]
+                  )
+                }
+                onSelectAll={(selectAll: boolean) => {
+                  if (selectAll) {
+                    setSelectedEpisodes(initialEpisodes.map((e) => e.id));
+                  } else {
+                    setSelectedEpisodes([]);
+                  }
+                }}
+                onStatusChange={async (
+                  episodeId: string,
+                  newStatus: Episode["status"]
+                ) => {
+                  const result = await updateEpisodeAction(episodeId, {
+                    status: newStatus,
+                  });
+                  if (result.success) {
+                    toast.success("Status atualizado com sucesso!");
+                    startTransition(() => router.refresh());
+                  } else {
+                    toast.error("Erro ao atualizar status", {
+                      description: result.error,
+                    });
+                  }
+                }}
+                responsiveMode="auto"
+                actionsMode="inline-hover"
+                primaryAction="edit"
+                compactRows
+              />
+              <EpisodeTablePagination
+                currentPage={Number(searchParams.get("page")) || 1}
+                totalCount={initialTotalEpisodes}
+                itemsPerPage={Number(searchParams.get("limit")) || 5}
+                onPageChange={handlePageChange}
+                setItemsPerPage={handleItemsPerPageChange}
+              />
+            </>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <ListMusic className="mb-4 h-12 w-12 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">
+                  {hasActiveFilters
+                    ? "Nenhum episódio encontrado"
+                    : "Nenhum episódio cadastrado"}
+                </h3>
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="mt-4 text-sm font-medium text-primary hover:underline"
+                  >
+                    Limpar filtros
+                  </button>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+
       {isEditDialogOpen && episodeToEdit && (
         <EditEpisodeDialog
           episode={episodeToEdit}

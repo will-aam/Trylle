@@ -7,7 +7,6 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from "@/src/components/ui/pagination";
-
 import {
   Select,
   SelectContent,
@@ -15,6 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/components/ui/select";
+import { cn } from "@/src/lib/utils";
+import { Button } from "@/src/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import * as React from "react";
 
 interface EpisodeTablePaginationProps {
   currentPage: number;
@@ -22,6 +25,12 @@ interface EpisodeTablePaginationProps {
   itemsPerPage: number;
   onPageChange: (page: number) => void;
   setItemsPerPage: (value: number) => void;
+  className?: string;
+  isLoading?: boolean;
+  /**
+   * Se quiser exibir primeiro e último (atualmente mantive só prev/next)
+   */
+  showEdgeButtons?: boolean;
 }
 
 export function EpisodeTablePagination({
@@ -30,46 +39,83 @@ export function EpisodeTablePagination({
   itemsPerPage,
   onPageChange,
   setItemsPerPage,
+  className,
+  isLoading = false,
+  showEdgeButtons = false,
 }: EpisodeTablePaginationProps) {
-  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
 
   const handlePrevious = () => {
-    if (currentPage > 1) {
-      onPageChange(currentPage - 1);
-    }
+    if (currentPage > 1) onPageChange(currentPage - 1);
   };
 
   const handleNext = () => {
-    if (currentPage < totalPages) {
-      onPageChange(currentPage + 1);
-    }
+    if (currentPage < totalPages) onPageChange(currentPage + 1);
   };
 
-  if (totalPages <= 1) {
-    return null;
-  }
+  const handleFirst = () => onPageChange(1);
+  const handleLast = () => onPageChange(totalPages);
+
+  // Índices exibidos (1-based)
+  const startIndex =
+    totalCount === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const endIndex =
+    totalCount === 0 ? 0 : Math.min(currentPage * itemsPerPage, totalCount);
 
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center space-x-2">
-        <p className="text-sm text-muted-foreground">Itens por página</p>
+    <div
+      className={cn(
+        "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between",
+        className
+      )}
+      aria-label="Controle de paginação"
+    >
+      {/* Seleção de itens por página */}
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <label htmlFor="items-per-page" className="text-muted-foreground">
+          Itens por página
+        </label>
         <Select
           value={String(itemsPerPage)}
           onValueChange={(value) => setItemsPerPage(Number(value))}
+          disabled={isLoading}
         >
-          <SelectTrigger className="w-[80px]">
+          <SelectTrigger
+            id="items-per-page"
+            className="h-8 w-[90px]"
+            aria-label="Itens por página"
+          >
             <SelectValue placeholder={itemsPerPage} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="5">5</SelectItem>
-            <SelectItem value="10">10</SelectItem>
-            <SelectItem value="25">25</SelectItem>
-            <SelectItem value="50">50</SelectItem>
+            {[5, 10, 25, 50].map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {n}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
+        <span className="text-muted-foreground">
+          Exibindo {startIndex}-{endIndex} de {totalCount}
+        </span>
       </div>
+
+      {/* Navegação de páginas */}
       <Pagination>
-        <PaginationContent>
+        <PaginationContent className="flex items-center gap-1">
+          {showEdgeButtons && (
+            <PaginationItem>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={currentPage === 1 || isLoading}
+                onClick={handleFirst}
+                aria-label="Primeira página"
+              >
+                «
+              </Button>
+            </PaginationItem>
+          )}
           <PaginationItem>
             <PaginationPrevious
               href="#"
@@ -77,16 +123,23 @@ export function EpisodeTablePagination({
                 e.preventDefault();
                 handlePrevious();
               }}
-              className={
-                currentPage === 1 ? "pointer-events-none opacity-50" : ""
-              }
-            />
+              aria-label="Página anterior"
+              className={cn(
+                currentPage === 1 || isLoading
+                  ? "pointer-events-none opacity-50"
+                  : ""
+              )}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </PaginationPrevious>
           </PaginationItem>
+
           <PaginationItem>
-            <span className="text-sm p-2">
+            <span className="px-2 text-sm tabular-nums">
               Página {currentPage} de {totalPages}
             </span>
           </PaginationItem>
+
           <PaginationItem>
             <PaginationNext
               href="#"
@@ -94,13 +147,29 @@ export function EpisodeTablePagination({
                 e.preventDefault();
                 handleNext();
               }}
-              className={
-                currentPage === totalPages
+              aria-label="Próxima página"
+              className={cn(
+                currentPage === totalPages || isLoading
                   ? "pointer-events-none opacity-50"
                   : ""
-              }
-            />
+              )}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </PaginationNext>
           </PaginationItem>
+          {showEdgeButtons && (
+            <PaginationItem>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={currentPage === totalPages || isLoading}
+                onClick={handleLast}
+                aria-label="Última página"
+              >
+                »
+              </Button>
+            </PaginationItem>
+          )}
         </PaginationContent>
       </Pagination>
     </div>
