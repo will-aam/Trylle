@@ -10,7 +10,6 @@ import { getPrograms } from "@/src/services/programService";
 import { getTags } from "@/src/services/tagService";
 import { getEpisodeStatusCounts } from "@/src/services/adminService";
 
-// Define que esta página não deve usar cache
 export const revalidate = 0;
 
 export default async function AdminEpisodesPage({

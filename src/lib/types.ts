@@ -5,6 +5,7 @@
  * ATUALIZADO para incluir o caminho da imagem de capa.
  */
 export interface Program {
+  category: any;
   id: string;
   title: string;
   description: string;

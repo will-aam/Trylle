@@ -1,6 +1,6 @@
 // src/components/features/admin/episode-management/episode-table.tsx
 "use client";
-
+import React from "react";
 import { EpisodeActions } from "./episode-actions";
 import { Episode, SortDirection } from "@/src/lib/types";
 import { formatTime } from "@/src/lib/utils";

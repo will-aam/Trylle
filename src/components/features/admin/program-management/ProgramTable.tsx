@@ -44,7 +44,7 @@ export function ProgramTable({
             programs.map((program) => (
               <TableRow key={program.id}>
                 <TableCell className="font-medium">{program.title}</TableCell>
-                <TableCell>{program.categories?.name ?? "N/A"}</TableCell>
+                <TableCell>{program.category?.name ?? "N/A"}</TableCell>{" "}
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
