@@ -3,12 +3,16 @@ import { EpisodeManager } from "@/src/components/features/admin/episode-manageme
 import {
   getEpisodesWithRelations,
   getEpisodesCount,
-} from "@/src/services/episodeService";
-import { getCategories } from "@/src/services/categoryService";
-import { getSubcategories } from "@/src/services/subcategoryService";
-import { getPrograms } from "@/src/services/programService";
-import { getTags } from "@/src/services/tagService";
-import { getEpisodeStatusCounts } from "@/src/services/adminService";
+} from "@/src/services/episodeService"; // Mantemos este, pois é específico para episódios
+import { getEpisodeStatusCounts } from "@/src/services/adminService"; // E este para as contagens de status
+
+// IMPORTANTE: Importamos as novas funções do nosso serviço de servidor
+import {
+  getCategoriesForServer,
+  getSubcategoriesForServer,
+  getProgramsForServer,
+  getTagsForServer,
+} from "@/src/services/serverDataService";
 
 export const revalidate = 0;
 
@@ -26,7 +30,7 @@ export default async function AdminEpisodesPage({
   const ascending = searchParams.order === "asc";
   const offset = (page - 1) * limit;
 
-  // Busca todos os dados em paralelo no servidor
+  // Busca todos os dados em paralelo no servidor, usando as funções corretas
   const [
     episodesResult,
     count,
@@ -46,11 +50,12 @@ export default async function AdminEpisodesPage({
       ascending,
     }),
     getEpisodesCount({ searchTerm, status, categoryId }),
-    getCategories(),
-    getSubcategories(),
-    getPrograms(),
+    // Usando as novas funções de servidor
+    getCategoriesForServer(),
+    getSubcategoriesForServer(),
+    getProgramsForServer(),
     getEpisodeStatusCounts(),
-    getTags(),
+    getTagsForServer(),
   ]);
 
   return (
