@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Sua configuração de imagens (continua aqui, intacta)
+  // Sua configuração de imagens
   images: {
     remotePatterns: [
       {

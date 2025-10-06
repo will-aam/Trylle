@@ -6,8 +6,7 @@ import { createSupabaseServerClient } from "@/src/lib/supabase-server";
 import { Episode, Tag, EpisodeDocument } from "@/src/lib/types";
 
 /**
- * Schema de payload (espelha o usado no front, mas todos opcionais).
- * tags: string[] (IDs). Se não for enviado, não altera pivot.
+ * Schema de atualização (inclui status agora).
  */
 const updateEpisodeServerSchema = z.object({
   title: z.string().min(1).optional(),
@@ -16,19 +15,14 @@ const updateEpisodeServerSchema = z.object({
   episode_number: z.number().int().positive().optional(),
   category_id: z.string().optional(),
   subcategory_id: z.string().nullable().optional(),
-  tags: z.array(z.string()).optional(), // IDs
+  tags: z.array(z.string()).optional(),
+  status: z.enum(["draft", "scheduled", "published"]).optional(),
 });
 
-/**
- * Tipo inferido do schema.
- */
 export type UpdateEpisodeServerInput = z.infer<
   typeof updateEpisodeServerSchema
 >;
 
-/**
- * Tipo de retorno da action.
- */
 export type UpdateEpisodeResult =
   | { success: true; episode: Episode }
   | { success: false; error: string; code?: string };
@@ -49,8 +43,6 @@ interface RawEpisodeRow {
   view_count: number;
   program_id: string | null;
   episode_number: number | null;
-
-  // Relações (nomes dependem do select)
   episode_documents?: {
     id: string;
     episode_id: string;
@@ -62,8 +54,6 @@ interface RawEpisodeRow {
     page_count?: number | null;
     reference_count?: number | null;
   }[];
-
-  // Join pivot -> tags
   episode_tags?: {
     tag: {
       id: string;
@@ -73,9 +63,6 @@ interface RawEpisodeRow {
   }[];
 }
 
-/**
- * Função util para reconstruir o objeto Episode a partir do row cru (com join).
- */
 function mapRawToEpisode(row: RawEpisodeRow): Episode {
   const tags: Tag[] =
     row.episode_tags
@@ -124,18 +111,12 @@ function mapRawToEpisode(row: RawEpisodeRow): Episode {
   };
 }
 
-/**
- * Atualiza um episódio.
- * @param episodeId ID do episódio
- * @param partialUpdates Campos opcionais para atualizar
- */
 export async function updateEpisodeAction(
   episodeId: string,
   partialUpdates: Partial<UpdateEpisodeServerInput>
 ): Promise<UpdateEpisodeResult> {
   const supabase = await createSupabaseServerClient();
 
-  // 1. Validação do payload
   const parse = updateEpisodeServerSchema.safeParse(partialUpdates);
   if (!parse.success) {
     return {
@@ -146,26 +127,19 @@ export async function updateEpisodeAction(
   }
   const data = parse.data;
 
-  // 2. Separar tags de outros campos
   const { tags, ...episodeFieldUpdates } = data;
 
-  // 3. Limpar undefined (para não sobrescrever com undefined)
   const cleaned: Record<string, any> = {};
-  Object.entries(episodeFieldUpdates).forEach(([k, v]) => {
+  for (const [k, v] of Object.entries(episodeFieldUpdates)) {
     if (v !== undefined) cleaned[k] = v;
-  });
+  }
 
-  // Se nada além de tags mudou, podemos pular direto pro pivot
-  const shouldUpdateRow = Object.keys(cleaned).length > 0;
-
-  // 4. Atualizar row principal (se necessário)
-  if (shouldUpdateRow) {
+  if (Object.keys(cleaned).length > 0) {
     cleaned.updated_at = new Date().toISOString();
     const { error: updateError } = await supabase
       .from("episodes")
       .update(cleaned)
       .eq("id", episodeId);
-
     if (updateError) {
       return {
         success: false,
@@ -175,63 +149,57 @@ export async function updateEpisodeAction(
     }
   }
 
-  // 5. Atualizar pivot de tags (somente se 'tags' foi enviado)
   if (tags) {
-    // Buscar tags já vinculadas
-    const { data: existingPivot, error: pivotSelectError } = await supabase
+    const { data: existingPivot, error: pivotErr } = await supabase
       .from("episode_tags")
       .select("tag_id")
       .eq("episode_id", episodeId);
 
-    if (pivotSelectError) {
+    if (pivotErr) {
       return {
         success: false,
-        error: pivotSelectError.message,
-        code: pivotSelectError.code,
+        error: pivotErr.message,
+        code: pivotErr.code,
       };
     }
 
     const existingIds = (existingPivot || []).map((r) => r.tag_id as string);
-    const incomingIds = Array.from(new Set(tags)); // deduplicar
-
+    const incomingIds = Array.from(new Set(tags));
     const toAdd = incomingIds.filter((id) => !existingIds.includes(id));
     const toRemove = existingIds.filter((id) => !incomingIds.includes(id));
 
     if (toAdd.length > 0) {
-      const insertPayload = toAdd.map((tagId) => ({
-        episode_id: episodeId,
-        tag_id: tagId,
-      }));
-      const { error: insertError } = await supabase
+      const { error: addErr } = await supabase
         .from("episode_tags")
-        .insert(insertPayload);
-      if (insertError) {
+        .insert(
+          toAdd.map((tagId) => ({ episode_id: episodeId, tag_id: tagId }))
+        );
+      if (addErr) {
         return {
           success: false,
-          error: insertError.message,
-          code: insertError.code,
+          error: addErr.message,
+          code: addErr.code,
         };
       }
     }
 
     if (toRemove.length > 0) {
-      const { error: deleteError } = await supabase
+      const { error: remErr } = await supabase
         .from("episode_tags")
         .delete()
         .eq("episode_id", episodeId)
         .in("tag_id", toRemove);
-      if (deleteError) {
+      if (remErr) {
         return {
           success: false,
-          error: deleteError.message,
-          code: deleteError.code,
+          error: remErr.message,
+          code: remErr.code,
         };
       }
     }
   }
 
-  // 6. Buscar episódio atualizado + joins
-  const { data: updatedRow, error: fetchError } = await supabase
+  const { data: updatedRow, error: fetchErr } = await supabase
     .from("episodes")
     .select(
       `
@@ -273,18 +241,72 @@ export async function updateEpisodeAction(
     .eq("id", episodeId)
     .single<RawEpisodeRow>();
 
-  if (fetchError || !updatedRow) {
+  if (fetchErr || !updatedRow) {
     return {
       success: false,
-      error: fetchError?.message || "Falha ao carregar episódio atualizado.",
-      code: fetchError?.code,
+      error: fetchErr?.message || "Falha ao carregar episódio atualizado.",
+      code: fetchErr?.code,
     };
   }
 
-  // 7. Revalidar a página de listagem/admin
   revalidatePath("/admin/episodes");
+  return { success: true, episode: mapRawToEpisode(updatedRow) };
+}
 
-  // 8. Mapear e retornar
-  const episode = mapRawToEpisode(updatedRow);
-  return { success: true, episode };
+/**
+ * Server action para deletar episódio + mídia associada.
+ */
+export async function deleteEpisodeAction(
+  episodeId: string
+): Promise<
+  { success: true } | { success: false; error: string; code?: string }
+> {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    // Buscar metadados (arquivo de áudio + docs)
+    const { data: ep, error: fetchErr } = await supabase
+      .from("episodes")
+      .select("id,file_name,episode_documents(id,storage_path)")
+      .eq("id", episodeId)
+      .single();
+
+    if (fetchErr || !ep) {
+      return {
+        success: false,
+        error: fetchErr?.message || "Episódio não encontrado.",
+        code: fetchErr?.code,
+      };
+    }
+
+    // Remover documentos
+    if (ep.episode_documents?.length) {
+      const paths = ep.episode_documents.map((d: any) => d.storage_path);
+      await supabase.storage.from("episode-documents").remove(paths);
+    }
+
+    // Remover áudio
+    if (ep.file_name) {
+      await supabase.storage.from("episode-audios").remove([ep.file_name]);
+    }
+
+    // Remover episódio
+    const { error: delErr } = await supabase
+      .from("episodes")
+      .delete()
+      .eq("id", episodeId);
+
+    if (delErr) {
+      return {
+        success: false,
+        error: delErr.message,
+        code: delErr.code,
+      };
+    }
+
+    revalidatePath("/admin/episodes");
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e?.message || "Erro inesperado." };
+  }
 }

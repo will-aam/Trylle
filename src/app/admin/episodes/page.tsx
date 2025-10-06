@@ -1,12 +1,9 @@
-// src/app/admin/episodes/page.tsx
 import { EpisodeManager } from "@/src/components/features/admin/episode-management/episode-manager";
 import {
   getEpisodesWithRelations,
   getEpisodesCount,
-} from "@/src/services/episodeService"; // Mantemos este, pois é específico para episódios
-import { getEpisodeStatusCounts } from "@/src/services/adminService"; // E este para as contagens de status
-
-// IMPORTANTE: Importamos as novas funções do nosso serviço de servidor
+} from "@/src/services/episodeService";
+import { getEpisodeStatusCounts } from "@/src/services/adminService";
 import {
   getCategoriesForServer,
   getSubcategoriesForServer,
@@ -19,21 +16,22 @@ export const revalidate = 0;
 export default async function AdminEpisodesPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | undefined };
+  searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
-  const searchTerm = searchParams.q || "";
-  const status = searchParams.status || "all";
-  const categoryId = searchParams.category || "all";
-  const page = Number(searchParams.page) || 1;
-  const limit = Number(searchParams.limit) || 5;
-  const sortBy = (searchParams.sortBy as any) || "published_at";
-  const ascending = searchParams.order === "asc";
+  const sp = await searchParams;
+
+  const searchTerm = sp.q?.trim() || "";
+  const status = sp.status || "all";
+  const categoryId = sp.category || "all";
+  const page = safePositiveInt(sp.page, 1);
+  const limit = safePositiveInt(sp.limit, 5);
+  const sortBy = (sp.sortBy as any) || "published_at";
+  const ascending = sp.order === "asc";
   const offset = (page - 1) * limit;
 
-  // Busca todos os dados em paralelo no servidor, usando as funções corretas
   const [
     episodesResult,
-    count,
+    totalCount,
     categoriesResult,
     subcategoriesResult,
     programsResult,
@@ -50,7 +48,6 @@ export default async function AdminEpisodesPage({
       ascending,
     }),
     getEpisodesCount({ searchTerm, status, categoryId }),
-    // Usando as novas funções de servidor
     getCategoriesForServer(),
     getSubcategoriesForServer(),
     getProgramsForServer(),
@@ -61,7 +58,7 @@ export default async function AdminEpisodesPage({
   return (
     <EpisodeManager
       initialEpisodes={episodesResult}
-      initialTotalEpisodes={count}
+      initialTotalEpisodes={totalCount}
       initialCategories={categoriesResult}
       initialSubcategories={subcategoriesResult}
       initialPrograms={programsResult}
@@ -69,4 +66,10 @@ export default async function AdminEpisodesPage({
       initialAllTags={tagsResult}
     />
   );
+}
+
+function safePositiveInt(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : fallback;
 }

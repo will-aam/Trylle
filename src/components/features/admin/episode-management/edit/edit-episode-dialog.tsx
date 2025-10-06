@@ -38,7 +38,7 @@ import {
 } from "@/src/components/ui/alert-dialog";
 import { useToast } from "@/src/hooks/use-toast";
 
-import { updateAudioAction } from "@/src/app/admin/episodes/documentActions";
+// import { updateAudioAction } from "@/src/app/admin/episodes/documentActions";
 
 import {
   Episode,
@@ -502,8 +502,13 @@ export function EditEpisodeDialog({
 
                     {/* Áudio */}
                     <AudioField
+                      episodeId={episode.id}
                       currentFileName={episode.file_name || null}
-                      onUploadReplace={handleReplaceAudio}
+                      currentAudioUrl={episode.audio_url}
+                      onReplaced={(info) => {
+                        setValue("file_name", info.file_name);
+                        setValue("audio_url", info.audio_url);
+                      }}
                     />
 
                     {/* Documento (usa actions internas no próprio componente) */}

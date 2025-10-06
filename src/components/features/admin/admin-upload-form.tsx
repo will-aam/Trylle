@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "../../ui/select";
 import { useToast } from "@/src/hooks/use-toast";
-import { Upload, CheckCircle } from "lucide-react";
+import { Upload, CheckCircle, StopCircle, Music } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Program, Category, Subcategory, Tag } from "@/src/lib/types";
 import { TagSelector } from "../admin/TagSelector";
@@ -33,6 +33,7 @@ import {
   uploadDocumentAction,
   UploadDocumentResult,
 } from "@/src/app/admin/episodes/documentActions";
+import { getAudioSignedUploadUrlForCreation } from "@/src/app/admin/episodes/audioCreationActions";
 
 interface FormState {
   title: string;
@@ -44,15 +45,23 @@ interface FormState {
   publishedAt: string; // yyyy-mm-dd
 }
 
+type UploadPhase =
+  | "idle"
+  | "audio-preparing"
+  | "audio-uploading"
+  | "audio-done"
+  | "episode-creating"
+  | "document-uploading"
+  | "finished"
+  | "error";
+
 export function UploadForm() {
   const supabase = createSupabaseBrowserClient();
   const { toast } = useToast();
   const router = useRouter();
 
-  const [uploadStatus, setUploadStatus] = useState<
-    "idle" | "uploading" | "success"
-  >("idle");
   const [formKey, setFormKey] = useState(Date.now());
+  const [uploadPhase, setUploadPhase] = useState<UploadPhase>("idle");
 
   // Dados carregados
   const [categories, setCategories] = useState<Category[]>([]);
@@ -68,8 +77,10 @@ export function UploadForm() {
   // Áudio
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
+  const [audioProgress, setAudioProgress] = useState<number>(0);
+  const audioXhrRef = useRef<XMLHttpRequest | null>(null);
 
-  // Documento (apenas um)
+  // Documento
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [docPageCount, setDocPageCount] = useState<string>("");
   const [docReferenceCount, setDocReferenceCount] = useState<string>("");
@@ -89,7 +100,7 @@ export function UploadForm() {
     const loadInitialData = async () => {
       const [catRes, tagRes, programRes] = await Promise.all([
         supabase.from("categories").select("*").order("name"),
-        getTags(), // deve retornar Tag[]
+        getTags(),
         supabase.from("programs").select("*, categories(*)").order("title"),
       ]);
 
@@ -141,7 +152,7 @@ export function UploadForm() {
     }
   }, [selectedProgram, categories]);
 
-  /* --------- Handler de arquivo de áudio --------- */
+  /* --------- Audio select --------- */
   const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     if (file) {
@@ -172,20 +183,29 @@ export function UploadForm() {
     }
   };
 
-  /* --------- Handler de documento --------- */
+  /* --------- Documento --------- */
   const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
-    if (file) {
-      // Você pode validar extensão aqui também se quiser (pdf/doc/docx)
-      setDocumentFile(file);
-    } else {
+    if (!file) {
       setDocumentFile(null);
       setDocPageCount("");
       setDocReferenceCount("");
+      return;
     }
+    const allowed = [".pdf", ".doc", ".docx"];
+    const lower = file.name.toLowerCase();
+    if (!allowed.some((ext) => lower.endsWith(ext))) {
+      toast({
+        title: "Formato inválido",
+        description: `Use: ${allowed.join(", ")}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setDocumentFile(file);
   };
 
-  /* --------- Reset do formulário --------- */
+  /* --------- Reset --------- */
   const resetForm = () => {
     setFormData({
       title: "",
@@ -198,27 +218,27 @@ export function UploadForm() {
     });
     setAudioFile(null);
     setAudioDuration(null);
+    setAudioProgress(0);
     setDocumentFile(null);
     setDocPageCount("");
     setDocReferenceCount("");
     setSelectedTagIds([]);
     setSelectedCategory("");
     setSelectedProgram(null);
+    setUploadPhase("idle");
     setFormKey(Date.now());
+    audioXhrRef.current?.abort();
+    audioXhrRef.current = null;
   };
 
-  /* --------- Criação de tag a partir do TagSelector --------- */
+  /* --------- Criar tag no seletor --------- */
   const handleCreateTag = useCallback((newTag: Tag) => {
     setAllTags((prev) =>
       prev.some((t) => t.id === newTag.id) ? prev : [...prev, newTag]
     );
   }, []);
 
-  /* --------- Helper de tamanho legível --------- */
-  const readableSizeMB = (bytes: number) =>
-    (bytes / (1024 * 1024)).toFixed(2) + " MB";
-
-  /* --------- Submit principal --------- */
+  /* --------- Fluxo principal (com progresso real de áudio) --------- */
   const handleSubmit = async (status: "draft" | "scheduled" | "published") => {
     if (!audioFile || !formData.title.trim()) {
       toast({
@@ -229,44 +249,58 @@ export function UploadForm() {
       return;
     }
 
-    setUploadStatus("uploading");
-
     try {
-      // 1. Obter URL pré-assinada (upload do áudio)
-      const presignedUrlResponse = await fetch("/api/generate-presigned-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName: audioFile.name,
-          fileType: audioFile.type,
-        }),
-      });
-
-      if (!presignedUrlResponse.ok) {
-        const errorData = await presignedUrlResponse.json();
-        throw new Error(errorData.error || "Falha ao preparar o upload.");
+      // 1. Gerar Signed URL para áudio
+      setUploadPhase("audio-preparing");
+      const signed = await getAudioSignedUploadUrlForCreation(audioFile.name);
+      if (!signed.success) {
+        setUploadPhase("error");
+        toast({
+          title: "Falha ao preparar upload",
+          description: signed.error || "Erro desconhecido.",
+          variant: "destructive",
+        });
+        return;
       }
 
-      const { signedUrl, publicUrl, originalFileName } =
-        await presignedUrlResponse.json();
-
-      // 2. Upload binário do áudio
-      const uploadResponse = await fetch(signedUrl, {
-        method: "PUT",
-        body: audioFile,
-        headers: { "Content-Type": audioFile.type },
+      // Aqui o TS já sabe que tudo é string:
+      const { signedUrl, storagePath, publicUrl, sanitizedFileName } = signed;
+      // 2. Upload via XHR com progresso real
+      setUploadPhase("audio-uploading");
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        audioXhrRef.current = xhr;
+        xhr.upload.onprogress = (evt) => {
+          if (evt.lengthComputable) {
+            const pct = (evt.loaded / evt.total) * 100;
+            setAudioProgress(pct);
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setAudioProgress(100);
+            resolve();
+          } else {
+            reject(new Error(`Status HTTP ${xhr.status}`));
+          }
+        };
+        xhr.onerror = () =>
+          reject(new Error("Falha de rede durante upload do áudio."));
+        xhr.onabort = () => reject(new Error("Upload cancelado."));
+        xhr.open("PUT", signedUrl, true);
+        xhr.setRequestHeader("Content-Type", audioFile.type);
+        xhr.send(audioFile);
       });
 
-      if (!uploadResponse.ok) {
-        throw new Error("Falha no upload do arquivo de áudio.");
-      }
+      setUploadPhase("audio-done");
 
-      // 3. Cria episódio via server action
-      const result = await createEpisodeAction({
+      // 3. Criar episódio (usa publicUrl e sanitizedFileName)
+      setUploadPhase("episode-creating");
+      const createResult = await createEpisodeAction({
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         audio_url: publicUrl,
-        file_name: originalFileName,
+        file_name: sanitizedFileName,
         program_id: formData.programId || null,
         episode_number: formData.episodeNumber
           ? Number(formData.episodeNumber)
@@ -279,14 +313,21 @@ export function UploadForm() {
         tagIds: selectedTagIds,
       });
 
-      if (!result.success) {
-        throw new Error(result.error || "Falha ao criar episódio.");
+      if (!createResult.success) {
+        setUploadPhase("error");
+        toast({
+          title: "Falha ao criar episódio",
+          description: createResult.error || "Erro desconhecido.",
+          variant: "destructive",
+        });
+        return;
       }
 
-      const newEpisodeId = result.episode.id;
+      const newEpisodeId = createResult.episode.id;
 
-      // 4. Se há documento selecionado, envia agora
+      // 4. Documento (opcional)
       if (documentFile) {
+        setUploadPhase("document-uploading");
         const docForm = new FormData();
         docForm.append("file", documentFile);
         if (docPageCount.trim()) docForm.append("page_count", docPageCount);
@@ -299,7 +340,6 @@ export function UploadForm() {
         );
 
         if (!docUpload.success) {
-          // Não dá rollback no episódio; apenas avisa
           toast({
             title: "Documento não anexado",
             description:
@@ -310,28 +350,35 @@ export function UploadForm() {
         }
       }
 
-      // 5. Finaliza UI
-      setUploadStatus("success");
+      setUploadPhase("finished");
       toast({
         title: "Sucesso!",
         description: "Episódio criado com sucesso.",
       });
-
       revalidateAdminDashboard();
       resetForm();
       router.refresh();
-
-      setTimeout(() => {
-        setUploadStatus("idle");
-      }, 2500);
-    } catch (error: any) {
-      console.error("Erro no processo de upload:", error);
+    } catch (e: any) {
+      setUploadPhase("error");
       toast({
-        title: "Erro no upload",
-        description: error.message || "Falha inesperada.",
+        title: "Erro no processo",
+        description: e?.message || "Falha inesperada.",
         variant: "destructive",
       });
-      setUploadStatus("idle");
+    }
+  };
+
+  const isBusy =
+    uploadPhase !== "idle" &&
+    uploadPhase !== "finished" &&
+    uploadPhase !== "error";
+
+  const cancelAudioUpload = () => {
+    if (audioXhrRef.current && uploadPhase === "audio-uploading") {
+      audioXhrRef.current.abort();
+      toast({ description: "Upload de áudio cancelado." });
+      setUploadPhase("idle");
+      setAudioProgress(0);
     }
   };
 
@@ -357,6 +404,7 @@ export function UploadForm() {
                   }
                   placeholder="Digite o título do episódio"
                   className="mt-1"
+                  disabled={isBusy}
                 />
               </div>
               <div>
@@ -382,24 +430,121 @@ export function UploadForm() {
 
             {/* Coluna Direita */}
             <div className="space-y-6">
-              <div>
-                <Label htmlFor="audio-file">Arquivo de Áudio *</Label>
-                <Input
-                  id="audio-file"
-                  type="file"
-                  accept="audio/*"
-                  onChange={handleAudioChange}
-                  className="mt-1"
-                />
-                {audioFile && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {audioFile.name}{" "}
-                    {audioDuration != null &&
-                      `(${Math.floor(audioDuration / 60)}:${String(
-                        audioDuration % 60
-                      ).padStart(2, "0")})`}
-                  </p>
-                )}
+              {/* Áudio */}
+              <div className="space-y-2">
+                <Label>Arquivo de Áudio *</Label>
+                <div className="rounded-md border p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Music className="h-5 w-5 text-muted-foreground" />
+                      <div className="truncate text-sm">
+                        {audioFile
+                          ? audioFile.name
+                          : "Nenhum arquivo selecionado"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        id="audio-file"
+                        disabled={isBusy}
+                        onChange={handleAudioChange}
+                      />
+                      {!audioFile && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={isBusy}
+                          onClick={() =>
+                            document.getElementById("audio-file")?.click()
+                          }
+                        >
+                          Selecionar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {audioFile && (
+                    <>
+                      {uploadPhase === "audio-uploading" && (
+                        <div>
+                          <div className="w-full h-2 rounded bg-muted overflow-hidden mb-1">
+                            <div
+                              className="h-full bg-primary transition-all"
+                              style={{
+                                width: `${Math.min(audioProgress, 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">
+                            Enviando áudio: {Math.floor(audioProgress)}%
+                          </div>
+                        </div>
+                      )}
+                      {uploadPhase === "audio-preparing" && (
+                        <div className="text-[11px] text-muted-foreground">
+                          Preparando upload...
+                        </div>
+                      )}
+                      {uploadPhase === "episode-creating" && (
+                        <div className="text-[11px] text-muted-foreground">
+                          Criando episódio...
+                        </div>
+                      )}
+                      {uploadPhase === "document-uploading" && (
+                        <div className="text-[11px] text-muted-foreground">
+                          Enviando documento...
+                        </div>
+                      )}
+                      {uploadPhase === "finished" && (
+                        <div className="text-[11px] text-green-600">
+                          Concluído!
+                        </div>
+                      )}
+                      {uploadPhase === "error" && (
+                        <div className="text-[11px] text-red-600">
+                          Ocorreu um erro.
+                        </div>
+                      )}
+
+                      {uploadPhase === "audio-uploading" ? (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={cancelAudioUpload}
+                        >
+                          <StopCircle className="h-4 w-4 mr-1" />
+                          Cancelar
+                        </Button>
+                      ) : audioFile ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={isBusy}
+                          onClick={() => {
+                            setAudioFile(null);
+                            setAudioProgress(0);
+                          }}
+                        >
+                          Remover seleção
+                        </Button>
+                      ) : null}
+
+                      {audioFile && audioDuration != null && (
+                        <p className="text-xs text-muted-foreground">
+                          Duração: {Math.floor(audioDuration / 60)}:
+                          {String(audioDuration % 60).padStart(2, "0")}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Programa / Nº Episódio */}
@@ -419,6 +564,7 @@ export function UploadForm() {
                         setFormData({ ...formData, programId: value });
                       }
                     }}
+                    disabled={isBusy}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Selecione um programa" />
@@ -447,7 +593,7 @@ export function UploadForm() {
                     }
                     placeholder="Ex: 1"
                     className="mt-1"
-                    disabled={!formData.programId}
+                    disabled={!formData.programId || isBusy}
                   />
                 </div>
               </div>
@@ -466,7 +612,7 @@ export function UploadForm() {
                       });
                       setSelectedCategory(value);
                     }}
-                    disabled={!!selectedProgram}
+                    disabled={!!selectedProgram || isBusy}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Selecione" />
@@ -487,7 +633,9 @@ export function UploadForm() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, subcategoryId: value })
                     }
-                    disabled={!selectedCategory || subcategories.length === 0}
+                    disabled={
+                      !selectedCategory || subcategories.length === 0 || isBusy
+                    }
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue
@@ -507,26 +655,21 @@ export function UploadForm() {
                 </div>
               </div>
 
-              {/* Documento Único */}
+              {/* Documento */}
               <div className="space-y-2">
-                <Label htmlFor="document-file">
-                  Documento de Apoio (único)
-                </Label>
+                <Label htmlFor="document-file">Documento de Apoio</Label>
                 <Input
                   id="document-file"
                   type="file"
                   accept=".pdf,.doc,.docx"
                   onChange={handleDocumentChange}
                   className="mt-1"
+                  disabled={isBusy}
                 />
                 {documentFile && (
                   <div className="mt-2 space-y-2 rounded-md border p-3">
                     <div className="text-sm font-medium truncate">
                       {documentFile.name}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground">
-                      Tamanho: {readableSizeMB(documentFile.size)} (
-                      {documentFile.size} bytes)
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col">
@@ -538,6 +681,7 @@ export function UploadForm() {
                           min={0}
                           value={docPageCount}
                           onChange={(e) => setDocPageCount(e.target.value)}
+                          disabled={isBusy}
                         />
                       </div>
                       <div className="flex flex-col">
@@ -549,27 +693,28 @@ export function UploadForm() {
                           min={0}
                           value={docReferenceCount}
                           onChange={(e) => setDocReferenceCount(e.target.value)}
+                          disabled={isBusy}
                         />
                       </div>
                     </div>
-                    <div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setDocumentFile(null);
-                          setDocPageCount("");
-                          setDocReferenceCount("");
-                        }}
-                      >
-                        Remover documento
-                      </Button>
-                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={isBusy}
+                      onClick={() => {
+                        setDocumentFile(null);
+                        setDocPageCount("");
+                        setDocReferenceCount("");
+                      }}
+                    >
+                      Remover documento
+                    </Button>
                   </div>
                 )}
               </div>
 
+              {/* Publicação */}
               <div>
                 <Label htmlFor="published-at">Data de Publicação</Label>
                 <Input
@@ -580,6 +725,7 @@ export function UploadForm() {
                     setFormData({ ...formData, publishedAt: e.target.value })
                   }
                   className="mt-1"
+                  disabled={isBusy}
                 />
               </div>
             </div>
@@ -591,33 +737,56 @@ export function UploadForm() {
               type="button"
               variant="outline"
               onClick={() => handleSubmit("draft")}
-              disabled={uploadStatus !== "idle"}
+              disabled={isBusy || !audioFile || !formData.title.trim()}
             >
-              Criar rascunho
+              {uploadPhase === "audio-preparing" && "Preparando..."}
+              {uploadPhase === "audio-uploading" && "Enviando áudio..."}
+              {uploadPhase === "episode-creating" && "Criando..."}
+              {uploadPhase === "document-uploading" && "Anexando doc..."}
+              {uploadPhase === "finished" && (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" /> Feito
+                </>
+              )}
+              {uploadPhase === "idle" && "Criar rascunho"}
+              {uploadPhase === "error" && "Tentar novamente"}
             </Button>
             <Button
               type="button"
               variant="secondary"
               onClick={() => handleSubmit("scheduled")}
-              disabled={uploadStatus !== "idle"}
+              disabled={isBusy || !audioFile || !formData.title.trim()}
             >
-              Agendar
+              {uploadPhase === "idle" && "Agendar"}
+              {uploadPhase !== "idle" &&
+                uploadPhase !== "finished" &&
+                "Processando..."}
+              {uploadPhase === "finished" && (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" /> Sucesso
+                </>
+              )}
             </Button>
             <Button
               type="button"
               onClick={() => handleSubmit("published")}
-              disabled={uploadStatus !== "idle"}
+              disabled={isBusy || !audioFile || !formData.title.trim()}
               className={cn({
-                "bg-green-600 hover:bg-green-700": uploadStatus === "success",
+                "bg-green-600 hover:bg-green-700": uploadPhase === "finished",
               })}
             >
-              {uploadStatus === "uploading" && "Enviando..."}
-              {uploadStatus === "success" && (
+              {uploadPhase === "idle" && "Publicar"}
+              {uploadPhase === "audio-preparing" && "Preparando..."}
+              {uploadPhase === "audio-uploading" &&
+                `Áudio ${Math.floor(audioProgress)}%`}
+              {uploadPhase === "episode-creating" && "Criando episódio..."}
+              {uploadPhase === "document-uploading" && "Anexando documento..."}
+              {uploadPhase === "finished" && (
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" /> Sucesso!
                 </>
               )}
-              {uploadStatus === "idle" && "Publicar"}
+              {uploadPhase === "error" && "Tentar novamente"}
             </Button>
           </div>
         </CardFooter>

@@ -13,6 +13,7 @@ import {
 import {
   updateEpisodeAction,
   deleteEpisodeAction,
+  type UpdateEpisodeServerInput,
 } from "@/src/app/admin/episodes/actions";
 import { EpisodeTable } from "./episode-table";
 import { EpisodeStats } from "./episode-stats";
@@ -23,7 +24,7 @@ import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { ListMusic } from "lucide-react";
 import { toast } from "sonner";
-import { BulkStatusBar } from "./bulk-status-bar"; // <-- novo import
+import { BulkStatusBar } from "./bulk-status-bar";
 
 interface EpisodeManagerProps {
   initialEpisodes: Episode[];
@@ -55,10 +56,13 @@ export function EpisodeManager({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedEpisodes, setSelectedEpisodes] = useState<string[]>([]);
 
+  /* --------------------------------------------------
+   * Utils
+   * -------------------------------------------------- */
   const createQueryString = (
     params: Record<string, string | number | null>
   ) => {
-    const newSearchParams = new URLSearchParams(searchParams?.toString());
+    const newSearchParams = new URLSearchParams(searchParams.toString());
     for (const [key, value] of Object.entries(params)) {
       if (value === null) newSearchParams.delete(key);
       else newSearchParams.set(key, String(value));
@@ -66,53 +70,38 @@ export function EpisodeManager({
     return newSearchParams.toString();
   };
 
-  const handleSearch = (term: string) => {
+  const pushWithParams = (nextParams: Record<string, string | number | null>) =>
     startTransition(() => {
-      router.push(
-        `${pathname}?${createQueryString({ q: term || null, page: 1 })}`
-      );
+      router.push(`${pathname}?${createQueryString(nextParams)}`);
     });
-  };
+
+  /* --------------------------------------------------
+   * Handlers: Filtros / Ordenação / Paginação
+   * -------------------------------------------------- */
+  const handleSearch = (term: string) =>
+    pushWithParams({ q: term || null, page: 1 });
 
   const handleFilterChange = (key: string, value: string[] | string) => {
-    startTransition(() => {
-      const filterValue = Array.isArray(value) ? value.join(",") : value;
-      router.push(
-        `${pathname}?${createQueryString({
-          [key]: filterValue || null,
-          page: 1,
-        })}`
-      );
-    });
+    const filterValue = Array.isArray(value) ? value.join(",") : value;
+    pushWithParams({ [key]: filterValue || null, page: 1 });
   };
 
   const handleSort = (column: keyof Episode | "") => {
     const currentSort = searchParams.get("sortBy");
-    const currentOrder = searchParams.get("order");
+    const currentOrder = (searchParams.get("order") as SortDirection) || "desc";
     let order: SortDirection = "asc";
     if (currentSort === column && currentOrder === "asc") order = "desc";
-    startTransition(() => {
-      router.push(
-        `${pathname}?${createQueryString({
-          sortBy: column || null,
-          order,
-        })}`
-      );
-    });
+    pushWithParams({ sortBy: column || null, order });
   };
 
-  const handlePageChange = (page: number) => {
-    startTransition(() => {
-      router.push(`${pathname}?${createQueryString({ page })}`);
-    });
-  };
+  const handlePageChange = (page: number) => pushWithParams({ page });
 
-  const handleItemsPerPageChange = (limit: number) => {
-    startTransition(() => {
-      router.push(`${pathname}?${createQueryString({ limit, page: 1 })}`);
-    });
-  };
+  const handleItemsPerPageChange = (limit: number) =>
+    pushWithParams({ limit, page: 1 });
 
+  /* --------------------------------------------------
+   * CRUD UI
+   * -------------------------------------------------- */
   const handleEdit = (episode: Episode) => {
     setEpisodeToEdit(episode);
     setIsEditDialogOpen(true);
@@ -128,6 +117,11 @@ export function EpisodeManager({
     const result = await deleteEpisodeAction(episodeToDelete.id);
     if (result.success) {
       toast.success("Episódio deletado com sucesso.");
+      // Atualiza seleção local removendo o id deletado
+      setSelectedEpisodes((prev) =>
+        prev.filter((id) => id !== episodeToDelete.id)
+      );
+      startTransition(() => router.refresh());
     } else {
       toast.error("Erro ao deletar", { description: result.error });
     }
@@ -135,14 +129,19 @@ export function EpisodeManager({
     setEpisodeToDelete(null);
   };
 
+  /**
+   * Recebe diff parcial (já calculado no EditEpisodeDialog) e repassa para a server action.
+   * A tipagem agora está alinhada com o schema do backend (UpdateEpisodeServerInput).
+   */
   const handleUpdateEpisode = async (
     episodeId: string,
-    updates: Partial<Episode>
+    updates: Partial<UpdateEpisodeServerInput>
   ): Promise<boolean> => {
     const result = await updateEpisodeAction(episodeId, updates);
     if (result.success) {
       toast.success("Episódio atualizado com sucesso!");
       setIsEditDialogOpen(false);
+      startTransition(() => router.refresh());
       return true;
     } else {
       toast.error("Erro ao atualizar o episódio", {
@@ -165,7 +164,9 @@ export function EpisodeManager({
     initialStatusCounts.draft +
     initialStatusCounts.scheduled;
 
-  // Bulk update
+  /* --------------------------------------------------
+   * Bulk status update
+   * -------------------------------------------------- */
   const bulkUpdateStatus = async (
     ids: string[],
     newStatus: Episode["status"]
@@ -183,10 +184,25 @@ export function EpisodeManager({
       startTransition(() => {
         router.refresh();
       });
+      toast.success(
+        `${ok} episódio${ok > 1 ? "s" : ""} atualizado${
+          ok > 1 ? "s" : ""
+        } para ${newStatus}.`
+      );
+    }
+    if (fail > 0) {
+      toast.error(
+        `${fail} episódio${fail > 1 ? "s" : ""} não pôde${
+          fail > 1 ? "m" : ""
+        } ser atualizado${fail > 1 ? "s" : ""}.`
+      );
     }
     return { ok, fail };
   };
 
+  /* --------------------------------------------------
+   * Render
+   * -------------------------------------------------- */
   return (
     <div className="w-full">
       <div className="mx-auto max-w-screen-2xl px-4 py-6 lg:py-8">
@@ -332,7 +348,7 @@ export function EpisodeManager({
           onOpenChange={setIsDeleteDialogOpen}
           onConfirm={confirmDelete}
           title="Confirmar Exclusão"
-          description={`Tem certeza que deseja deletar o episódio "${episodeToDelete?.title}"?`}
+          description={`Tem certeza que deseja deletar o episódio "${episodeToDelete.title}"?`}
         />
       )}
     </div>
