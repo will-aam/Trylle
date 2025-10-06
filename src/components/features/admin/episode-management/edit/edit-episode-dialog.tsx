@@ -38,11 +38,7 @@ import {
 } from "@/src/components/ui/alert-dialog";
 import { useToast } from "@/src/hooks/use-toast";
 
-import {
-  updateAudioAction,
-  uploadDocumentAction,
-  deleteDocumentAction,
-} from "@/src/app/admin/episodes/documentActions";
+import { updateAudioAction } from "@/src/app/admin/episodes/documentActions";
 
 import {
   Episode,
@@ -55,11 +51,7 @@ import {
 
 import { AudioField } from "./fields/audio-field";
 import { DocumentField } from "./fields/document-field";
-import { TagSelector } from "@/src/components/features/admin/TagSelector"; // nova API (value: string[])
-/**
- * Se você mantiver o TagsField ainda com a API antiga, atualize-o para usar TagSelector
- * diretamente ou remova a intermediação. Abaixo usamos TagSelector direto para simplificar.
- */
+import { TagSelector } from "@/src/components/features/admin/TagSelector";
 
 /* Lazy load do editor com skeleton */
 const RichTextEditor = dynamic(
@@ -126,7 +118,7 @@ function computeDiff(
 }
 
 /**
- * Normaliza tags caso ainda chegue formato legado:
+ * Normaliza tags caso chegue formato legado:
  * - string ID
  * - { tag: { ... } } (join intermediário)
  * - Tag já normalizada
@@ -163,9 +155,9 @@ export function EditEpisodeDialog({
   const [currentDocument, setCurrentDocument] =
     useState<EpisodeDocument | null>(null);
   const [unsavedAlertOpen, setUnsavedAlertOpen] = useState(false);
-  const [allTagsState, setAllTagsState] = useState<Tag[]>(allTags); // para receber novas tags criadas
+  const [allTagsState, setAllTagsState] = useState<Tag[]>(allTags);
 
-  // Se a lista global de tags mudar externamente, sincroniza:
+  // Sincroniza tags externas quando mudam
   useEffect(() => {
     setAllTagsState(allTags);
   }, [allTags]);
@@ -190,12 +182,10 @@ export function EditEpisodeDialog({
     reset,
     watch,
     formState: { errors, isDirty, isSubmitting },
-    setValue,
     getValues,
   } = form;
 
   const categoryId = watch("category_id");
-
   const filteredSubcategories = useMemo(
     () => subcategories.filter((s) => s.category_id === categoryId),
     [categoryId, subcategories]
@@ -222,7 +212,7 @@ export function EditEpisodeDialog({
       reset(original, { keepDirty: false });
       setCurrentDocument(episode.episode_documents?.[0] ?? null);
 
-      // Garante que tags normais também estejam no estado global (caso contenham novas)
+      // Garante tags novas no estado local
       setAllTagsState((prev) => {
         const map = new Map(prev.map((t) => [t.id, t]));
         normalizedTags.forEach((t) => {
@@ -265,11 +255,8 @@ export function EditEpisodeDialog({
   }, [getValues]);
 
   const attemptClose = () => {
-    if (hasRealChanges()) {
-      setUnsavedAlertOpen(true);
-    } else {
-      onOpenChange(false);
-    }
+    if (hasRealChanges()) setUnsavedAlertOpen(true);
+    else onOpenChange(false);
   };
 
   /* ------------- Submit ------------- */
@@ -285,45 +272,6 @@ export function EditEpisodeDialog({
       toast({ description: "Episódio atualizado com sucesso." });
       onOpenChange(false);
     }
-  };
-
-  /* ------------- Upload Documento ------------- */
-  const handleUploadDocument = async (file: File): Promise<boolean> => {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const result = await uploadDocumentAction(episode.id, formData);
-      if (result.success) {
-        toast({ description: "Documento anexado." });
-        setCurrentDocument(result.document);
-        return true;
-      }
-      toast({
-        description: result.error || "Falha ao anexar documento.",
-        variant: "destructive",
-      });
-      return false;
-    } catch (e: any) {
-      toast({
-        description: e?.message || "Erro inesperado no upload.",
-        variant: "destructive",
-      });
-      return false;
-    }
-  };
-
-  /* ------------- Delete Documento ------------- */
-  const handleDeleteDocument = async (
-    doc: EpisodeDocument
-  ): Promise<boolean> => {
-    const result = await deleteDocumentAction(doc.id, doc.storage_path);
-    if (result.success) {
-      toast({ description: "Documento removido." });
-      setCurrentDocument(null);
-      return true;
-    }
-    toast({ description: result.error, variant: "destructive" });
-    return false;
   };
 
   /* ------------- Replace Áudio ------------- */
@@ -558,11 +506,13 @@ export function EditEpisodeDialog({
                       onUploadReplace={handleReplaceAudio}
                     />
 
-                    {/* Documento */}
+                    {/* Documento (usa actions internas no próprio componente) */}
                     <DocumentField
+                      episodeId={episode.id}
                       document={currentDocument}
-                      onUpload={handleUploadDocument}
-                      onDelete={handleDeleteDocument}
+                      onUpload={(doc) => setCurrentDocument(doc)}
+                      onDelete={() => setCurrentDocument(null)}
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>

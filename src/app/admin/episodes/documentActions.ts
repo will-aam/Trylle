@@ -3,7 +3,9 @@
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
 import { revalidatePath } from "next/cache";
 
-/* ------------- Tipos base ------------- */
+/**
+ * Tipos base
+ */
 interface BaseResult {
   success: boolean;
   error?: string;
@@ -19,9 +21,12 @@ export interface EpisodeDocumentRecord {
   file_size: number | null;
   page_count: number | null;
   reference_count: number | null;
-  created_at: string; // agora obrigatório
+  created_at: string;
 }
 
+/**
+ * Upload
+ */
 export interface UploadDocumentSuccess extends BaseResult {
   success: true;
   document: EpisodeDocumentRecord;
@@ -33,6 +38,23 @@ export type UploadDocumentResult =
   | UploadDocumentSuccess
   | UploadDocumentFailure;
 
+/**
+ * Update metadata
+ */
+export interface UpdateMetadataSuccess extends BaseResult {
+  success: true;
+  document: EpisodeDocumentRecord;
+}
+export interface UpdateMetadataFailure extends BaseResult {
+  success: false;
+}
+export type UpdateDocumentMetadataResult =
+  | UpdateMetadataSuccess
+  | UpdateMetadataFailure;
+
+/**
+ * Update Audio
+ */
 export interface UpdateAudioSuccess extends BaseResult {
   success: true;
   audio_url: string;
@@ -43,14 +65,12 @@ export interface UpdateAudioFailure extends BaseResult {
 }
 export type UpdateAudioResult = UpdateAudioSuccess | UpdateAudioFailure;
 
-/* ------------- Constantes ------------- */
 const DOCUMENT_BUCKET = "episode-documents";
 const AUDIO_BUCKET = "episode-audios";
-const MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_DOCUMENT_SIZE_BYTES = 25 * 1024 * 1024; // 25MB (ajuste se quiser)
 const ALLOWED_DOC_EXT = [".pdf", ".doc", ".docx"];
-const ADMIN_LIST_REVALIDATE_PATH = "/admin/episodes";
 
-/* ------------- Delete ------------- */
+/* ---------------- DELETE DOCUMENT ---------------- */
 export async function deleteDocumentAction(
   documentId: string,
   storagePath: string
@@ -72,15 +92,21 @@ export async function deleteDocumentAction(
     .from("episode_documents")
     .delete()
     .eq("id", documentId);
+
   if (dbError) {
     return { success: false, error: dbError.message, code: dbError.code };
   }
 
-  revalidatePath(ADMIN_LIST_REVALIDATE_PATH);
+  revalidatePath("/admin/episodes");
   return { success: true };
 }
 
-/* ------------- Upload Document ------------- */
+/* ---------------- UPLOAD DOCUMENT + METADADOS ----------------
+   Espera FormData com:
+   - file: File
+   - page_count (opcional)
+   - reference_count (opcional)
+*/
 export async function uploadDocumentAction(
   episodeId: string,
   formData: FormData
@@ -88,14 +114,41 @@ export async function uploadDocumentAction(
   try {
     const supabase = await createSupabaseServerClient();
     const documentFile = formData.get("file") as File | null;
+
     if (!documentFile) {
       return { success: false, error: "Nenhum arquivo encontrado." };
+    }
+
+    // Captura dos metadados opcionais
+    const pageCountRaw = formData.get("page_count");
+    const referenceCountRaw = formData.get("reference_count");
+
+    const page_count =
+      pageCountRaw != null && pageCountRaw !== "" ? Number(pageCountRaw) : null;
+    const reference_count =
+      referenceCountRaw != null && referenceCountRaw !== ""
+        ? Number(referenceCountRaw)
+        : null;
+
+    if (
+      (page_count != null && (isNaN(page_count) || page_count < 0)) ||
+      (reference_count != null &&
+        (isNaN(reference_count) || reference_count < 0))
+    ) {
+      return {
+        success: false,
+        error: "Valores inválidos em page_count/reference_count.",
+        code: "INVALID_METADATA",
+      };
     }
 
     if (documentFile.size > MAX_DOCUMENT_SIZE_BYTES) {
       return {
         success: false,
-        error: `Arquivo excede ${MAX_DOCUMENT_SIZE_BYTES / (1024 * 1024)}MB.`,
+        error: `Arquivo excede ${(
+          MAX_DOCUMENT_SIZE_BYTES /
+          (1024 * 1024)
+        ).toFixed(0)}MB.`,
         code: "FILE_TOO_LARGE",
       };
     }
@@ -115,6 +168,7 @@ export async function uploadDocumentAction(
     const { error: storageError } = await supabase.storage
       .from(DOCUMENT_BUCKET)
       .upload(filePath, documentFile);
+
     if (storageError) {
       return {
         success: false,
@@ -136,8 +190,8 @@ export async function uploadDocumentAction(
         public_url: publicUrl,
         storage_path: filePath,
         file_size: documentFile.size,
-        page_count: null,
-        reference_count: 0,
+        page_count,
+        reference_count,
       })
       .select(
         `
@@ -160,12 +214,12 @@ export async function uploadDocumentAction(
         success: false,
         error:
           dbError?.message ||
-          "Falha ao salvar registro do documento após upload.",
+          "Falha ao salvar registro de documento após upload.",
         code: dbError?.code,
       };
     }
 
-    revalidatePath(ADMIN_LIST_REVALIDATE_PATH);
+    revalidatePath("/admin/episodes");
 
     return {
       success: true,
@@ -178,7 +232,7 @@ export async function uploadDocumentAction(
         file_size: inserted.file_size,
         page_count: inserted.page_count,
         reference_count: inserted.reference_count,
-        created_at: inserted.created_at || new Date().toISOString(),
+        created_at: inserted.created_at,
       },
     };
   } catch (e: any) {
@@ -190,7 +244,84 @@ export async function uploadDocumentAction(
   }
 }
 
-/* ------------- Update Audio ------------- */
+/* ---------------- UPDATE METADATA (page_count, reference_count) ---------------- */
+export async function updateDocumentMetadataAction(
+  documentId: string,
+  {
+    page_count,
+    reference_count,
+  }: { page_count: number | null; reference_count: number | null }
+): Promise<UpdateDocumentMetadataResult> {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    if (
+      (page_count != null && (isNaN(page_count) || page_count < 0)) ||
+      (reference_count != null &&
+        (isNaN(reference_count) || reference_count < 0))
+    ) {
+      return {
+        success: false,
+        error: "Valores inválidos em page_count/reference_count.",
+        code: "INVALID_METADATA",
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("episode_documents")
+      .update({
+        page_count,
+        reference_count,
+      })
+      .eq("id", documentId)
+      .select(
+        `
+        id,
+        episode_id,
+        file_name,
+        public_url,
+        storage_path,
+        file_size,
+        page_count,
+        reference_count,
+        created_at
+      `
+      )
+      .single();
+
+    if (error || !data) {
+      return {
+        success: false,
+        error: error?.message || "Falha ao atualizar metadados do documento.",
+        code: error?.code,
+      };
+    }
+
+    revalidatePath("/admin/episodes");
+    return {
+      success: true,
+      document: {
+        id: data.id,
+        episode_id: data.episode_id,
+        file_name: data.file_name,
+        public_url: data.public_url,
+        storage_path: data.storage_path,
+        file_size: data.file_size,
+        page_count: data.page_count,
+        reference_count: data.reference_count,
+        created_at: data.created_at,
+      },
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      error: e?.message || "Erro inesperado ao atualizar metadados.",
+      code: "UNEXPECTED",
+    };
+  }
+}
+
+/* ---------------- UPDATE AUDIO ---------------- */
 export async function updateAudioAction(
   episodeId: string,
   formData: FormData
@@ -203,6 +334,7 @@ export async function updateAudioAction(
     if (!newAudioFile) {
       return { success: false, error: "Nenhum arquivo de áudio encontrado." };
     }
+
     if (!newAudioFile.type.startsWith("audio/")) {
       return { success: false, error: "Formato de áudio inválido." };
     }
@@ -243,7 +375,7 @@ export async function updateAudioAction(
       return { success: false, error: updateError.message };
     }
 
-    revalidatePath(ADMIN_LIST_REVALIDATE_PATH);
+    revalidatePath("/admin/episodes");
     return { success: true, audio_url: publicUrl, file_name: safeAudioName };
   } catch (e: any) {
     return { success: false, error: e?.message || "Erro inesperado." };
