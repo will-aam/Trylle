@@ -1,27 +1,21 @@
 // src/lib/types.ts
 
-/**
- * Representa a estrutura de um programa.
- * ATUALIZADO para incluir o caminho da imagem de capa.
- */
 export interface Program {
-  category: any;
+  category: any; // TODO: tipar quando souber a estrutura exata
   id: string;
   title: string;
   description: string;
   category_id: string;
   created_at: string;
   updated_at: string;
-  cover_image_path?: string | null;
+
   // Relacionamentos
   categories?: Category;
   episodes?: Episode[];
 }
 
 /**
- * Representa a estrutura de um documento de episódio.
- * Tornamos campos opcionais porque nem sempre o documento existe
- * ou algumas colunas podem não ser retornadas em todos os selects.
+ * Documento (opcional) de um episódio.
  */
 export interface EpisodeDocument {
   id: string;
@@ -29,15 +23,14 @@ export interface EpisodeDocument {
   file_name: string;
   public_url: string;
   storage_path: string;
-  created_at?: string; // Agora opcional
+  created_at?: string;
   file_size?: number | null;
   page_count?: number | null;
   reference_count?: number | null;
 }
 
 /**
- * Representa a estrutura de uma tag.
- * (Se você quiser vincular metadados extras, expanda aqui)
+ * Tag de classificação.
  */
 export interface Tag {
   id: string;
@@ -46,11 +39,7 @@ export interface Tag {
 }
 
 /**
- * Representa a estrutura de um episódio.
- * Ajustes:
- * - category_id pode ser null (mantido)
- * - episode_documents agora opcional (ou pode ser null) para refletir ausência de documento.
- * - tags tipado como Tag[] (se o backend às vezes retorna só ids, ajuste para (Tag | string)[] ou mantenha any[]).
+ * Episódio.
  */
 export interface Episode {
   id: string;
@@ -66,18 +55,18 @@ export interface Episode {
   updated_at: string;
   duration_in_seconds: number | null;
   view_count: number;
-  tags: Tag[] | any[]; // Ajuste para Tag[] se garantir formato consistente
+  tags: Tag[];
   program_id: string | null;
   episode_number: number | null;
-  // Relacionamentos (podem não vir em todas as queries)
+
   categories?: { name: string } | null;
   subcategories?: { name: string } | null;
   programs?: Program | null;
-  episode_documents?: EpisodeDocument[] | null; // <- Tornado opcional/null
+  episode_documents?: EpisodeDocument[] | null;
 }
 
 /**
- * Representa a estrutura de uma categoria.
+ * Categoria.
  */
 export interface Category {
   id: string;
@@ -90,7 +79,7 @@ export interface Category {
 }
 
 /**
- * Representa a estrutura de uma subcategoria.
+ * Subcategoria.
  */
 export interface Subcategory {
   id: string;

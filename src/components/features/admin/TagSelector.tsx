@@ -1,7 +1,6 @@
-// src/components/features/admin/TagSelector.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Command,
   CommandEmpty,
@@ -22,159 +21,210 @@ import { X, ChevronsUpDown } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Tag } from "@/src/lib/types";
 
+/**
+ * NOVA API
+ * - allTags: universo total carregado (objetos Tag)
+ * - value: IDs selecionados
+ * - onChange: retorna nova lista de IDs
+ * - onCreateTag: chamado quando uma tag nova é criada com sucesso (para o pai atualizar allTags)
+ *
+ * Observação: Ao criar uma tag, este componente NÂO muta allTags internamente,
+ * delegando essa responsabilidade ao chamador via onCreateTag.
+ */
 interface TagSelectorProps {
-  tags: Tag[]; // MUDANÇA: Renomeado de allTags para tags para compatibilidade
-  selectedTags: Tag[];
-  onSelectedTagsChange: (tags: Tag[]) => void;
+  allTags: Tag[];
+  value: string[]; // IDs selecionados
+  onChange: (ids: string[]) => void;
+  onCreateTag?: (tag: Tag) => void;
+  disabled?: boolean;
+  maxVisibleBadges?: number; // opcional: compactar visual
+  className?: string;
+  placeholder?: string;
+  allowCreate?: boolean; // default true
 }
 
 export function TagSelector({
-  tags: allTags, // MUDANÇA: Recebe a lista de tags como prop
-  selectedTags,
-  onSelectedTagsChange,
+  allTags,
+  value,
+  onChange,
+  onCreateTag,
+  disabled = false,
+  maxVisibleBadges,
+  className,
+  placeholder = "Selecione ou crie tags...",
+  allowCreate = true,
 }: TagSelectorProps) {
   const supabase = createSupabaseBrowserClient();
-  const [tagInputValue, setTagInputValue] = useState("");
-  const [popoverOpen, setPopoverOpen] = useState(false);
   const { toast } = useToast();
-  // REMOVIDO: O useEffect que buscava as tags foi removido.
 
-  const handleTagSelect = (tag: Tag) => {
-    if (!selectedTags.some((t) => t.id === tag.id)) {
-      onSelectedTagsChange([...selectedTags, tag]);
-    }
-    setTagInputValue("");
-    setPopoverOpen(false);
-  };
+  const [inputValue, setInputValue] = useState("");
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  const handleTagRemove = (tagId: string) => {
-    onSelectedTagsChange(selectedTags.filter((t) => t.id !== tagId));
-  };
+  /* Resolve objetos selecionados a partir dos IDs */
+  const selectedTagObjects = useMemo(
+    () => allTags.filter((t) => value.includes(t.id)),
+    [allTags, value]
+  );
 
-  const handleCreateTag = async (tagName: string) => {
-    const trimmedName = tagName.trim();
-    if (!trimmedName) return;
+  /* Tags disponíves para seleção filtradas por input */
+  const filteredAvailable = useMemo(() => {
+    const lower = inputValue.toLowerCase();
+    return allTags
+      .filter((t) => !value.includes(t.id))
+      .filter((t) => (lower ? t.name.toLowerCase().includes(lower) : true));
+  }, [allTags, value, inputValue]);
 
-    const existingTag = allTags.find(
-      (t) => t.name.toLowerCase() === trimmedName.toLowerCase()
+  /* Verifica se deve exibir opção de criar */
+  const canCreate =
+    allowCreate &&
+    inputValue.trim().length > 0 &&
+    !allTags.some(
+      (t) => t.name.toLowerCase() === inputValue.trim().toLowerCase()
     );
 
-    if (existingTag) {
-      toast({
-        title: "Tag já existente",
-        description: `A tag "${existingTag.name}" foi adicionada à sua seleção.`,
-      });
-      handleTagSelect(existingTag);
-      return;
+  const closePopover = useCallback(() => {
+    setPopoverOpen(false);
+    setInputValue("");
+  }, []);
+
+  const handleSelectTag = (tag: Tag) => {
+    if (disabled) return;
+    if (!value.includes(tag.id)) {
+      onChange([...value, tag.id]);
     }
+    closePopover();
+  };
 
-    const { data, error } = await supabase
-      .from("tags")
-      .insert([{ name: trimmedName }])
-      .select()
-      .single();
+  const handleRemoveTag = (tagId: string) => {
+    if (disabled) return;
+    onChange(value.filter((id) => id !== tagId));
+  };
 
-    if (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar a tag.",
-        variant: "destructive",
-      });
-    } else {
-      // A atualização da lista de tags agora será gerenciada pelo componente pai
-      handleTagSelect(data);
+  const handleCreateTag = async () => {
+    if (!canCreate || disabled) return;
+    const name = inputValue.trim();
+    setCreating(true);
+    try {
+      const { data, error } = await supabase
+        .from("tags")
+        .insert([{ name }])
+        .select()
+        .single();
+
+      if (error || !data) {
+        toast({
+          title: "Erro",
+          description: error?.message || "Não foi possível criar a tag.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const newTag: Tag = data;
+      onCreateTag?.(newTag);
+      onChange([...value, newTag.id]);
+
       toast({
         title: "Tag criada",
-        description: `A tag "${data.name}" foi criada e selecionada.`,
+        description: `A tag "${newTag.name}" foi adicionada.`,
       });
+      closePopover();
+    } finally {
+      setCreating(false);
     }
-    setTagInputValue("");
-    setPopoverOpen(false);
   };
 
-  const filteredTags = useMemo(() => {
-    if (!tagInputValue) return allTags;
-    return allTags.filter((tag) =>
-      tag.name.toLowerCase().includes(tagInputValue.toLowerCase())
-    );
-  }, [tagInputValue, allTags]);
-
-  const availableTags = useMemo(() => {
-    return filteredTags.filter(
-      (tag) => !selectedTags.some((s) => s.id === tag.id)
-    );
-  }, [filteredTags, selectedTags]);
-
-  const showCreateOption =
-    tagInputValue &&
-    !availableTags.some(
-      (t) => t.name.toLowerCase() === tagInputValue.toLowerCase()
-    ) &&
-    !selectedTags.some(
-      (t) => t.name.toLowerCase() === tagInputValue.toLowerCase()
-    );
+  /* Renderização compactada das badges (opcional) */
+  const badgesToRender = useMemo(() => {
+    if (!maxVisibleBadges || selectedTagObjects.length <= maxVisibleBadges) {
+      return { visible: selectedTagObjects, overflow: 0 };
+    }
+    const visible = selectedTagObjects.slice(0, maxVisibleBadges);
+    const overflow = selectedTagObjects.length - maxVisibleBadges;
+    return { visible, overflow };
+  }, [selectedTagObjects, maxVisibleBadges]);
 
   return (
-    <div>
+    <div className={className}>
       <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             role="combobox"
             aria-expanded={popoverOpen}
+            disabled={disabled}
             className="w-full justify-between font-normal"
           >
-            <span className="truncate">
-              {selectedTags.length > 0
-                ? selectedTags.map((t) => t.name).join(", ")
-                : "Selecione ou crie tags..."}
+            <span className="truncate text-left">
+              {selectedTagObjects.length > 0
+                ? selectedTagObjects.map((t) => t.name).join(", ")
+                : placeholder}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-          <Command>
+        <PopoverContent
+          className="w-[--radix-popover-trigger-width] p-0"
+          align="start"
+        >
+          <Command shouldFilter={false}>
             <CommandInput
-              placeholder="Buscar ou criar tag..."
-              value={tagInputValue}
-              onValueChange={setTagInputValue}
+              placeholder="Buscar ou criar..."
+              value={inputValue}
+              onValueChange={setInputValue}
+              disabled={disabled || creating}
             />
             <CommandList>
-              {availableTags.length === 0 && !showCreateOption ? (
+              {filteredAvailable.length === 0 && !canCreate && (
                 <CommandEmpty>Nenhuma tag encontrada.</CommandEmpty>
-              ) : null}
-              <CommandGroup>
-                {availableTags.map((tag) => (
+              )}
+              <CommandGroup heading="Tags">
+                {filteredAvailable.map((tag) => (
                   <CommandItem
                     key={tag.id}
-                    onSelect={() => handleTagSelect(tag)}
+                    onSelect={() => handleSelectTag(tag)}
                   >
                     {tag.name}
                   </CommandItem>
                 ))}
-                {showCreateOption ? (
-                  <CommandItem onSelect={() => handleCreateTag(tagInputValue)}>
-                    Criar nova tag: "{tagInputValue}"
+                {canCreate && (
+                  <CommandItem
+                    disabled={creating}
+                    onSelect={() => {
+                      void handleCreateTag();
+                    }}
+                  >
+                    {creating
+                      ? "Criando..."
+                      : `Criar nova tag: "${inputValue.trim()}"`}
                   </CommandItem>
-                ) : null}
+                )}
               </CommandGroup>
             </CommandList>
           </Command>
         </PopoverContent>
       </Popover>
+
       <div className="flex flex-wrap gap-2 mt-2">
-        {selectedTags.map((tag) => (
-          <Badge key={tag.id} variant="secondary">
+        {badgesToRender.visible.map((tag) => (
+          <Badge key={tag.id} variant="secondary" className="flex items-center">
             {tag.name}
-            <button
-              type="button"
-              onClick={() => handleTagRemove(tag.id)}
-              className="ml-2 rounded-full outline-none hover:bg-destructive/80 p-0.5"
-            >
-              <X className="h-3 w-3" />
-            </button>
+            {!disabled && (
+              <button
+                type="button"
+                aria-label={`Remover tag ${tag.name}`}
+                onClick={() => handleRemoveTag(tag.id)}
+                className="ml-2 rounded-full outline-none hover:bg-destructive/80 p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </Badge>
         ))}
+        {badgesToRender.overflow > 0 && (
+          <Badge variant="outline">+{badgesToRender.overflow} outras</Badge>
+        )}
       </div>
     </div>
   );

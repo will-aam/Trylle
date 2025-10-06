@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -55,7 +55,11 @@ import {
 
 import { AudioField } from "./fields/audio-field";
 import { DocumentField } from "./fields/document-field";
-import { TagsField } from "./fields/tags-field";
+import { TagSelector } from "@/src/components/features/admin/TagSelector"; // nova API (value: string[])
+/**
+ * Se você mantiver o TagsField ainda com a API antiga, atualize-o para usar TagSelector
+ * diretamente ou remova a intermediação. Abaixo usamos TagSelector direto para simplificar.
+ */
 
 /* Lazy load do editor com skeleton */
 const RichTextEditor = dynamic(
@@ -85,7 +89,7 @@ const updateEpisodeSchema = z
       .optional(),
     category_id: z.string().min(1, "A categoria é obrigatória."),
     subcategory_id: z.string().optional().nullable(),
-    tags: z.array(z.string()).optional().default([]),
+    tags: z.array(z.string()).optional().default([]), // IDs das tags
   })
   .strict();
 
@@ -121,6 +125,29 @@ function computeDiff(
   return changed;
 }
 
+/**
+ * Normaliza tags caso ainda chegue formato legado:
+ * - string ID
+ * - { tag: { ... } } (join intermediário)
+ * - Tag já normalizada
+ */
+function normalizeEpisodeTags(raw: any): Tag[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((t) => {
+      if (!t) return null;
+      if (typeof t === "string") {
+        return { id: t, name: t, created_at: "" } as Tag;
+      }
+      if ("tag" in t && t.tag && typeof t.tag === "object") {
+        return t.tag;
+      }
+      if (t.id && t.name) return t as Tag;
+      return null;
+    })
+    .filter(Boolean) as Tag[];
+}
+
 export function EditEpisodeDialog({
   episode,
   categories,
@@ -133,10 +160,15 @@ export function EditEpisodeDialog({
 }: EditEpisodeDialogProps) {
   const { toast } = useToast();
 
-  /* Documento agora pode ser null */
   const [currentDocument, setCurrentDocument] =
     useState<EpisodeDocument | null>(null);
   const [unsavedAlertOpen, setUnsavedAlertOpen] = useState(false);
+  const [allTagsState, setAllTagsState] = useState<Tag[]>(allTags); // para receber novas tags criadas
+
+  // Se a lista global de tags mudar externamente, sincroniza:
+  useEffect(() => {
+    setAllTagsState(allTags);
+  }, [allTags]);
 
   const form = useForm<UpdateEpisodeInput>({
     resolver: zodResolver(updateEpisodeSchema),
@@ -158,9 +190,12 @@ export function EditEpisodeDialog({
     reset,
     watch,
     formState: { errors, isDirty, isSubmitting },
+    setValue,
+    getValues,
   } = form;
 
   const categoryId = watch("category_id");
+
   const filteredSubcategories = useMemo(
     () => subcategories.filter((s) => s.category_id === categoryId),
     [categoryId, subcategories]
@@ -171,6 +206,7 @@ export function EditEpisodeDialog({
   /* ------------- Carregar dados quando abre ------------- */
   useEffect(() => {
     if (isOpen && episode) {
+      const normalizedTags = normalizeEpisodeTags(episode.tags);
       const original: UpdateEpisodeInput = {
         title: episode.title,
         description: episode.description ?? "",
@@ -180,16 +216,20 @@ export function EditEpisodeDialog({
         subcategory_id: episode.subcategory_id
           ? String(episode.subcategory_id)
           : null,
-        tags:
-          episode.tags?.map((t: any) => (typeof t === "object" ? t.id : t)) ||
-          [],
+        tags: normalizedTags.map((t) => t.id),
       };
       originalRef.current = original;
       reset(original, { keepDirty: false });
       setCurrentDocument(episode.episode_documents?.[0] ?? null);
-    }
-    if (!isOpen) {
-      // limpar estados transitórios se quiser
+
+      // Garante que tags normais também estejam no estado global (caso contenham novas)
+      setAllTagsState((prev) => {
+        const map = new Map(prev.map((t) => [t.id, t]));
+        normalizedTags.forEach((t) => {
+          if (!map.has(t.id)) map.set(t.id, t);
+        });
+        return Array.from(map.values());
+      });
     }
   }, [episode, isOpen, reset]);
 
@@ -218,11 +258,11 @@ export function EditEpisodeDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen, handleSubmit]);
 
-  const hasRealChanges = (): boolean => {
+  const hasRealChanges = useCallback((): boolean => {
     if (!originalRef.current) return false;
-    const diff = computeDiff(originalRef.current, form.getValues());
+    const diff = computeDiff(originalRef.current, getValues());
     return Object.keys(diff).length > 0;
-  };
+  }, [getValues]);
 
   const attemptClose = () => {
     if (hasRealChanges()) {
@@ -255,7 +295,7 @@ export function EditEpisodeDialog({
       const result = await uploadDocumentAction(episode.id, formData);
       if (result.success) {
         toast({ description: "Documento anexado." });
-        setCurrentDocument(result.document); // agora compatível (campos opcionais no type global)
+        setCurrentDocument(result.document);
         return true;
       }
       toast({
@@ -313,6 +353,13 @@ export function EditEpisodeDialog({
     }
   };
 
+  /* ------------- Nova tag criada (callback) ------------- */
+  const handleCreateTagInSelector = (newTag: Tag) => {
+    setAllTagsState((prev) =>
+      prev.some((t) => t.id === newTag.id) ? prev : [...prev, newTag]
+    );
+  };
+
   return (
     <>
       <Dialog
@@ -366,12 +413,25 @@ export function EditEpisodeDialog({
                       />
                     </div>
 
-                    {/* Tags */}
+                    {/* Tags (IDs) */}
                     <Controller
                       name="tags"
                       control={control}
                       render={({ field }) => (
-                        <TagsField allTags={allTags} field={field} />
+                        <div className="space-y-2">
+                          <Label>Tags</Label>
+                          <TagSelector
+                            allTags={allTagsState}
+                            value={field.value || []}
+                            onChange={field.onChange}
+                            onCreateTag={handleCreateTagInSelector}
+                          />
+                          {errors.tags && (
+                            <p className="text-xs text-red-500">
+                              {(errors.tags as any).message}
+                            </p>
+                          )}
+                        </div>
                       )}
                     />
                   </div>
