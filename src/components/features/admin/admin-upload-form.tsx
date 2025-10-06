@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -24,39 +24,54 @@ import { useToast } from "@/src/hooks/use-toast";
 import { Upload, CheckCircle } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Program, Category, Subcategory, Tag } from "@/src/lib/types";
-import { TagSelector } from "./TagSelector";
+import { TagSelector } from "../admin/TagSelector";
 import { cn } from "@/src/lib/utils";
 import { revalidateAdminDashboard } from "@/src/app/admin/actions";
 import { getTags } from "@/src/services/tagService";
+import { createEpisodeAction } from "@/src/app/admin/episodes/createEpisodeAction";
+
+interface FormState {
+  title: string;
+  description: string;
+  programId: string;
+  episodeNumber: string;
+  categoryId: string;
+  subcategoryId: string;
+  publishedAt: string; // yyyy-mm-dd
+}
 
 export function UploadForm() {
   const supabase = createSupabaseBrowserClient();
+  const { toast } = useToast();
+  const router = useRouter();
+
   const [uploadStatus, setUploadStatus] = useState<
     "idle" | "uploading" | "success"
   >("idle");
   const [formKey, setFormKey] = useState(Date.now());
 
-  // States para os dados
+  // Dados carregados
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
 
-  // States para controle do formulário
-  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  // Estados do formulário
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
+
+  // Documentos (futuro: integrar server action)
   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
-  const [pageCount, setPageCount] = useState<string>("");
-  const [referenceCount, setReferenceCount] = useState<string>("");
   const [fileSize, setFileSize] = useState<number | null>(null);
 
-  const { toast } = useToast();
-  const router = useRouter();
+  // Metadados extras (caso use futuramente)
+  const [pageCount, setPageCount] = useState<string>("");
+  const [referenceCount, setReferenceCount] = useState<string>("");
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormState>({
     title: "",
     description: "",
     programId: "",
@@ -66,26 +81,26 @@ export function UploadForm() {
     publishedAt: new Date().toISOString().split("T")[0],
   });
 
-  // Carrega dados iniciais (Categorias, Tags, Programas)
+  /* --------- Carregar dados iniciais --------- */
   useEffect(() => {
     const loadInitialData = async () => {
-      const [catData, tagsData, programsData] = await Promise.all([
+      const [catRes, tagRes, programRes] = await Promise.all([
         supabase.from("categories").select("*").order("name"),
-        getTags(),
+        getTags(), // deve retornar Tag[]
         supabase.from("programs").select("*, categories(*)").order("title"),
       ]);
 
-      setCategories(catData.data || []);
-      setTags(tagsData || []);
-      setPrograms(programsData.data || []);
+      setCategories(catRes.data || []);
+      setAllTags(tagRes || []);
+      setPrograms(programRes.data || []);
     };
     loadInitialData();
   }, [supabase, formKey]);
 
-  // Carrega subcategorias quando uma categoria é selecionada
+  /* --------- Carregar subcategorias ao mudar categoria --------- */
   useEffect(() => {
     if (selectedCategory) {
-      const loadSubcategories = async () => {
+      const run = async () => {
         const { data } = await supabase
           .from("subcategories")
           .select("*")
@@ -93,13 +108,13 @@ export function UploadForm() {
           .order("name");
         setSubcategories(data || []);
       };
-      loadSubcategories();
+      run();
     } else {
       setSubcategories([]);
     }
   }, [selectedCategory, supabase, formKey]);
 
-  // Preenche a categoria automaticamente ao selecionar um programa
+  /* --------- Preencher categoria a partir do programa --------- */
   useEffect(() => {
     if (selectedProgram) {
       const programCategory = categories.find(
@@ -114,19 +129,23 @@ export function UploadForm() {
         setSelectedCategory(programCategory.id);
       }
     } else {
-      // Opcional: Limpar a categoria se o programa for desmarcado
-      setFormData((prev) => ({ ...prev, categoryId: "", subcategoryId: "" }));
+      setFormData((prev) => ({
+        ...prev,
+        categoryId: "",
+        subcategoryId: "",
+      }));
       setSelectedCategory("");
     }
   }, [selectedProgram, categories]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  /* --------- Handler de arquivo de áudio --------- */
+  const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
     if (file) {
       if (!file.type.startsWith("audio/")) {
         toast({
           title: "Arquivo inválido",
-          description: "Por favor, selecione um arquivo de áudio.",
+          description: "Selecione um arquivo de áudio válido.",
           variant: "destructive",
         });
         setAudioFile(null);
@@ -135,16 +154,22 @@ export function UploadForm() {
       }
       setAudioFile(file);
       if (!formData.title) {
-        setFormData({ ...formData, title: file.name.replace(/\.[^/.]+$/, "") });
+        setFormData((prev) => ({
+          ...prev,
+          title: file.name.replace(/\.[^/.]+$/, ""),
+        }));
       }
-
       const audio = new Audio(URL.createObjectURL(file));
       audio.onloadedmetadata = () => {
         setAudioDuration(Math.round(audio.duration));
       };
+    } else {
+      setAudioFile(null);
+      setAudioDuration(null);
     }
   };
 
+  /* --------- Reset do formulário --------- */
   const resetForm = () => {
     setFormData({
       title: "",
@@ -161,12 +186,23 @@ export function UploadForm() {
     setPageCount("");
     setReferenceCount("");
     setFileSize(null);
-    setSelectedTags([]);
+    setSelectedTagIds([]);
     setSelectedCategory("");
     setSelectedProgram(null);
     setFormKey(Date.now());
   };
 
+  /* --------- Criação de tag a partir do TagSelector --------- */
+  const handleCreateTag = useCallback(
+    (newTag: Tag) => {
+      setAllTags((prev) =>
+        prev.some((t) => t.id === newTag.id) ? prev : [...prev, newTag]
+      );
+    },
+    [setAllTags]
+  );
+
+  /* --------- Submit principal --------- */
   const handleSubmit = async (status: "draft" | "scheduled" | "published") => {
     if (!audioFile || !formData.title.trim()) {
       toast({
@@ -176,9 +212,11 @@ export function UploadForm() {
       });
       return;
     }
+
     setUploadStatus("uploading");
 
     try {
+      // 1. Obter URL pré-assinada (mantido seu fluxo atual)
       const presignedUrlResponse = await fetch("/api/generate-presigned-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -196,6 +234,7 @@ export function UploadForm() {
       const { signedUrl, publicUrl, originalFileName } =
         await presignedUrlResponse.json();
 
+      // 2. Upload binário direto para o storage
       const uploadResponse = await fetch(signedUrl, {
         method: "PUT",
         body: audioFile,
@@ -203,60 +242,52 @@ export function UploadForm() {
       });
 
       if (!uploadResponse.ok) {
-        throw new Error("Falha no upload do arquivo para o armazenamento.");
+        throw new Error("Falha no upload do arquivo de áudio.");
       }
 
-      const { data: episodeData, error: insertError } = await supabase
-        .from("episodes")
-        .insert([
-          {
-            title: formData.title.trim(),
-            description: formData.description.trim() || null,
-            audio_url: publicUrl,
-            file_name: originalFileName,
-            program_id: formData.programId || null,
-            episode_number: formData.episodeNumber
-              ? parseInt(formData.episodeNumber, 10)
-              : null,
-            category_id: formData.categoryId || null,
-            subcategory_id: formData.subcategoryId || null,
-            published_at: new Date(formData.publishedAt).toISOString(),
-            duration_in_seconds: audioDuration,
-            status: status,
-          },
-        ])
-        .select()
-        .single();
+      // 3. Chamar server action para criar o episódio
+      const result = await createEpisodeAction({
+        title: formData.title.trim(),
+        description: formData.description.trim() || null,
+        audio_url: publicUrl,
+        file_name: originalFileName,
+        program_id: formData.programId || null,
+        episode_number: formData.episodeNumber
+          ? Number(formData.episodeNumber)
+          : null,
+        category_id: formData.categoryId || null,
+        subcategory_id: formData.subcategoryId || null,
+        published_at: new Date(formData.publishedAt).toISOString(),
+        status,
+        duration_in_seconds: audioDuration ?? null,
+        tagIds: selectedTagIds,
+      });
 
-      if (insertError) throw insertError;
-
-      if (selectedTags.length > 0) {
-        const episodeTags = selectedTags.map((tag) => ({
-          episode_id: episodeData.id,
-          tag_id: tag.id,
-        }));
-        await supabase.from("episode_tags").insert(episodeTags);
+      if (!result.success) {
+        throw new Error(result.error || "Falha ao criar episódio.");
       }
 
-      // ... (lógica de upload de documentos permanece a mesma)
+      // 4. (Futuro) Upload de documentos -> cada um poderia chamar uma server action
+      // if (documentFiles.length > 0) { ... }
 
       setUploadStatus("success");
       toast({
         title: "Sucesso!",
-        description: "Episódio e anexos enviados com sucesso!",
+        description: "Episódio criado com sucesso.",
       });
+
       revalidateAdminDashboard();
       resetForm();
       router.refresh();
 
       setTimeout(() => {
         setUploadStatus("idle");
-      }, 3000);
+      }, 2500);
     } catch (error: any) {
       console.error("Erro no processo de upload:", error);
       toast({
         title: "Erro no upload",
-        description: error.message,
+        description: error.message || "Falha inesperada.",
         variant: "destructive",
       });
       setUploadStatus("idle");
@@ -273,6 +304,7 @@ export function UploadForm() {
         </CardHeader>
         <CardContent className="overflow-y-auto p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Coluna Esquerda */}
             <div className="space-y-6">
               <div>
                 <Label htmlFor="title">Título *</Label>
@@ -295,7 +327,19 @@ export function UploadForm() {
                   }
                 />
               </div>
+              <div>
+                <Label>Tags</Label>
+                <TagSelector
+                  allTags={allTags}
+                  value={selectedTagIds}
+                  onChange={setSelectedTagIds}
+                  onCreateTag={handleCreateTag}
+                  placeholder="Selecione ou crie tags..."
+                />
+              </div>
             </div>
+
+            {/* Coluna Direita */}
             <div className="space-y-6">
               <div>
                 <Label htmlFor="audio-file">Arquivo de Áudio *</Label>
@@ -303,13 +347,13 @@ export function UploadForm() {
                   id="audio-file"
                   type="file"
                   accept="audio/*"
-                  onChange={handleFileChange}
+                  onChange={handleAudioChange}
                   className="mt-1"
                 />
                 {audioFile && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Arquivo: {audioFile.name}{" "}
-                    {audioDuration &&
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {audioFile.name}{" "}
+                    {audioDuration != null &&
                       `(${Math.floor(audioDuration / 60)}:${String(
                         audioDuration % 60
                       ).padStart(2, "0")})`}
@@ -317,7 +361,7 @@ export function UploadForm() {
                 )}
               </div>
 
-              {/* Seção de Programa e Número do Episódio */}
+              {/* Programa / Nº Episódio */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Programa</Label>
@@ -328,8 +372,9 @@ export function UploadForm() {
                         setSelectedProgram(null);
                         setFormData({ ...formData, programId: "" });
                       } else {
-                        const program = programs.find((p) => p.id === value);
-                        setSelectedProgram(program || null);
+                        const prog =
+                          programs.find((p) => p.id === value) || null;
+                        setSelectedProgram(prog);
                         setFormData({ ...formData, programId: value });
                       }
                     }}
@@ -366,7 +411,7 @@ export function UploadForm() {
                 </div>
               </div>
 
-              {/* Seção de Categoria e Subcategoria */}
+              {/* Categoria / Subcategoria */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Categoria</Label>
@@ -380,7 +425,7 @@ export function UploadForm() {
                       });
                       setSelectedCategory(value);
                     }}
-                    disabled={!!selectedProgram} // Desabilitado se um programa foi selecionado
+                    disabled={!!selectedProgram}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Selecione" />
@@ -420,14 +465,8 @@ export function UploadForm() {
                   </Select>
                 </div>
               </div>
-              <div>
-                <Label>Tags</Label>
-                <TagSelector
-                  selectedTags={selectedTags}
-                  onSelectedTagsChange={setSelectedTags}
-                  tags={tags}
-                />
-              </div>
+
+              {/* Documentos (placeholder futuro) */}
               <div>
                 <Label htmlFor="document-files">Documentos de Apoio</Label>
                 <Input
@@ -437,21 +476,19 @@ export function UploadForm() {
                   onChange={(e) => {
                     const files = e.target.files;
                     if (files) {
-                      const fileArray = Array.from(files);
-                      setDocumentFiles(fileArray);
-                      if (fileArray.length > 0) {
-                        setFileSize(fileArray[0].size);
-                      } else {
-                        setFileSize(null);
-                      }
+                      const arr = Array.from(files);
+                      setDocumentFiles(arr);
+                      setFileSize(arr[0]?.size ?? null);
+                    } else {
+                      setDocumentFiles([]);
+                      setFileSize(null);
                     }
                   }}
                   className="mt-1"
                 />
-                {/* ... (lógica de exibição de documentos) */}
+                {/* Exibição/gestão futura de docs */}
               </div>
 
-              {/* ... (campos de documentos e data de publicação) ... */}
               <div>
                 <Label htmlFor="published-at">Data de Publicação</Label>
                 <Input
