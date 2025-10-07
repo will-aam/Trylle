@@ -38,8 +38,6 @@ import {
 } from "@/src/components/ui/alert-dialog";
 import { useToast } from "@/src/hooks/use-toast";
 
-// import { updateAudioAction } from "@/src/app/admin/episodes/documentActions";
-
 import {
   Episode,
   Category,
@@ -81,7 +79,7 @@ const updateEpisodeSchema = z
       .optional(),
     category_id: z.string().min(1, "A categoria é obrigatória."),
     subcategory_id: z.string().optional().nullable(),
-    tags: z.array(z.string()).optional().default([]), // IDs das tags
+    tags: z.array(z.string()).optional().default([]),
   })
   .strict();
 
@@ -118,10 +116,7 @@ function computeDiff(
 }
 
 /**
- * Normaliza tags caso chegue formato legado:
- * - string ID
- * - { tag: { ... } } (join intermediário)
- * - Tag já normalizada
+ * Normaliza tags para formato consistente
  */
 function normalizeEpisodeTags(raw: any): Tag[] {
   if (!Array.isArray(raw)) return [];
@@ -157,7 +152,6 @@ export function EditEpisodeDialog({
   const [unsavedAlertOpen, setUnsavedAlertOpen] = useState(false);
   const [allTagsState, setAllTagsState] = useState<Tag[]>(allTags);
 
-  // Sincroniza tags externas quando mudam
   useEffect(() => {
     setAllTagsState(allTags);
   }, [allTags]);
@@ -212,7 +206,7 @@ export function EditEpisodeDialog({
       reset(original, { keepDirty: false });
       setCurrentDocument(episode.episode_documents?.[0] ?? null);
 
-      // Garante tags novas no estado local
+      // Garantir tags recém associadas
       setAllTagsState((prev) => {
         const map = new Map(prev.map((t) => [t.id, t]));
         normalizedTags.forEach((t) => {
@@ -271,33 +265,6 @@ export function EditEpisodeDialog({
     if (ok) {
       toast({ description: "Episódio atualizado com sucesso." });
       onOpenChange(false);
-    }
-  };
-
-  /* ------------- Replace Áudio ------------- */
-  const handleReplaceAudio = async (file: File): Promise<boolean> => {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("oldFile", episode.file_name || "");
-      const result = await updateAudioAction(episode.id, formData);
-      if (result.success) {
-        toast({ description: "Áudio atualizado." });
-        return true;
-      }
-      toast({
-        title: "Erro ao atualizar áudio",
-        description: result.error,
-        variant: "destructive",
-      });
-      return false;
-    } catch (e: any) {
-      toast({
-        title: "Erro inesperado",
-        description: e?.message || "Falha ao enviar áudio.",
-        variant: "destructive",
-      });
-      return false;
     }
   };
 
@@ -500,18 +467,17 @@ export function EditEpisodeDialog({
                       )}
                     </div>
 
-                    {/* Áudio */}
+                    {/* Áudio (substituição não mexe no form diff) */}
                     <AudioField
                       episodeId={episode.id}
                       currentFileName={episode.file_name || null}
                       currentAudioUrl={episode.audio_url}
-                      onReplaced={(info) => {
-                        setValue("file_name", info.file_name);
-                        setValue("audio_url", info.audio_url);
+                      onReplaced={() => {
+                        toast({ description: "Áudio substituído." });
                       }}
                     />
 
-                    {/* Documento (usa actions internas no próprio componente) */}
+                    {/* Documento */}
                     <DocumentField
                       episodeId={episode.id}
                       document={currentDocument}
