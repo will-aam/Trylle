@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -20,213 +19,66 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../ui/select";
-import { useToast } from "@/src/hooks/use-toast";
-import { Upload, CheckCircle, StopCircle, Music, FileText } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
-import { Program, Category, Subcategory, Tag } from "@/src/lib/types";
 import { TagSelector } from "../admin/TagSelector";
+import { Upload, CheckCircle, StopCircle, Music, FileText } from "lucide-react";
+import { useToast } from "@/src/hooks/use-toast";
 import { cn } from "@/src/lib/utils";
-import { revalidateAdminDashboard } from "@/src/app/admin/actions";
-import { getTags } from "@/src/services/tagService";
-import { createEpisodeAction } from "@/src/app/admin/episodes/createEpisodeAction";
-import {
-  getDocumentSignedUploadUrl,
-  registerUploadedDocumentAction,
-} from "@/src/app/admin/episodes/documentActions";
-import { getAudioSignedUploadUrlForCreation } from "@/src/app/admin/episodes/audioCreationActions";
-
-interface FormState {
-  title: string;
-  description: string;
-  programId: string;
-  episodeNumber: string;
-  categoryId: string;
-  subcategoryId: string;
-  publishedAt: string;
-}
-
-type UploadPhase =
-  | "idle"
-  | "audio-preparing"
-  | "audio-uploading"
-  | "audio-done"
-  | "episode-creating"
-  | "document-preparing"
-  | "document-uploading"
-  | "document-registering"
-  | "finished"
-  | "error";
-
-// Type guards para signed URL results
-type AudioSignedSuccess = {
-  success: true;
-  signedUrl: string;
-  storagePath: string;
-  sanitizedFileName: string;
-  publicUrl: string;
-};
-type AudioSignedResult =
-  | AudioSignedSuccess
-  | { success: false; error: string; code?: string };
-
-type DocSignedSuccess = {
-  success: true;
-  signedUrl: string;
-  storagePath: string;
-  sanitizedFileName: string;
-};
-type DocSignedResult =
-  | DocSignedSuccess
-  | { success: false; error: string; code?: string };
-
-function assertAudioSuccess(
-  r: AudioSignedResult
-): asserts r is AudioSignedSuccess {
-  if (!r.success) {
-    throw new Error(r.error || "Falha ao gerar signed URL de áudio.");
-  }
-}
-
-function assertDocSuccess(r: DocSignedResult): asserts r is DocSignedSuccess {
-  if (!r.success) {
-    throw new Error(r.error || "Falha ao gerar signed URL de documento.");
-  }
-}
+import { useEpisodeUpload } from "@/src/hooks/useEpisodeUpload";
 
 export function UploadForm() {
-  const supabase = createSupabaseBrowserClient();
   const { toast } = useToast();
   const router = useRouter();
 
-  const [formKey, setFormKey] = useState(Date.now());
-  const [uploadPhase, setUploadPhase] = useState<UploadPhase>("idle");
-
-  // Dados carregados
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [allTags, setAllTags] = useState<Tag[]>([]);
-
-  // Estados do formulário
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
-
-  // Áudio
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [audioDuration, setAudioDuration] = useState<number | null>(null);
-  const [audioProgress, setAudioProgress] = useState<number>(0);
-  const audioXhrRef = useRef<XMLHttpRequest | null>(null);
-
-  // Documento
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
-  const [docPageCount, setDocPageCount] = useState<string>("");
-  const [docReferenceCount, setDocReferenceCount] = useState<string>("");
-  const [documentProgress, setDocumentProgress] = useState<number>(0);
-  const documentXhrRef = useRef<XMLHttpRequest | null>(null);
-
-  // ID do episódio criado
-  const [createdEpisodeId, setCreatedEpisodeId] = useState<string | null>(null);
-
-  const [formData, setFormData] = useState<FormState>({
-    title: "",
-    description: "",
-    programId: "",
-    episodeNumber: "",
-    categoryId: "",
-    subcategoryId: "",
-    publishedAt: new Date().toISOString().split("T")[0],
+  const {
+    form,
+    setForm,
+    audioFile,
+    setAudioFile,
+    documentFile,
+    setDocumentFile,
+    docPageCount,
+    setDocPageCount,
+    docReferenceCount,
+    setDocReferenceCount,
+    data: { categories, programs, tags, subcategories },
+    selectedCategory,
+    setSelectedCategory,
+    selectedProgram,
+    setSelectedProgram,
+    filteredSubcategories,
+    selectedTagIds,
+    setSelectedTagIds,
+    createAndSelectTag,
+    upload: { phase, audioProgress, documentProgress, audioDuration },
+    submit,
+    cancelAudioUpload,
+    cancelDocumentUpload,
+    resetAll,
+    isBusy,
+    readablePhaseMessage,
+  } = useEpisodeUpload({
+    onSuccess: (episode) => {
+      toast({
+        title: "Sucesso!",
+        description: `Episódio "${episode.title}" criado.`,
+      });
+      router.refresh();
+      resetAll();
+    },
+    onError: (msg) => {
+      toast({
+        title: "Erro",
+        description: msg,
+        variant: "destructive",
+      });
+    },
   });
 
-  /* ---------------- Carregar dados iniciais ---------------- */
-  useEffect(() => {
-    const loadInitialData = async () => {
-      const [catRes, tagRes, programRes] = await Promise.all([
-        supabase.from("categories").select("*").order("name"),
-        getTags(),
-        supabase.from("programs").select("*, categories(*)").order("title"),
-      ]);
-
-      setCategories(catRes.data || []);
-      setAllTags(tagRes || []);
-      setPrograms(programRes.data || []);
-    };
-    loadInitialData();
-  }, [supabase, formKey]);
-
-  /* ---------------- Subcategorias ---------------- */
-  useEffect(() => {
-    if (selectedCategory) {
-      const run = async () => {
-        const { data } = await supabase
-          .from("subcategories")
-          .select("*")
-          .eq("category_id", selectedCategory)
-          .order("name");
-        setSubcategories(data || []);
-      };
-      void run();
-    } else {
-      setSubcategories([]);
-    }
-  }, [selectedCategory, supabase, formKey]);
-
-  /* ---------------- Programa define categoria ---------------- */
-  useEffect(() => {
-    if (selectedProgram) {
-      const programCategory = categories.find(
-        (c) => c.id === selectedProgram.category_id
-      );
-      if (programCategory) {
-        setFormData((prev) => ({
-          ...prev,
-          categoryId: programCategory.id,
-          subcategoryId: "",
-        }));
-        setSelectedCategory(programCategory.id);
-      }
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        categoryId: "",
-        subcategoryId: "",
-      }));
-      setSelectedCategory("");
-    }
-  }, [selectedProgram, categories]);
-
-  /* ---------------- Áudio ---------------- */
   const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
-    if (file) {
-      if (!file.type.startsWith("audio/")) {
-        toast({
-          title: "Arquivo inválido",
-          description: "Selecione um arquivo de áudio válido.",
-          variant: "destructive",
-        });
-        setAudioFile(null);
-        setAudioDuration(null);
-        return;
-      }
-      setAudioFile(file);
-      if (!formData.title) {
-        setFormData((prev) => ({
-          ...prev,
-          title: file.name.replace(/\.[^/.]+$/, ""),
-        }));
-      }
-      const audio = new Audio(URL.createObjectURL(file));
-      audio.onloadedmetadata = () => {
-        setAudioDuration(Math.round(audio.duration));
-      };
-    } else {
-      setAudioFile(null);
-      setAudioDuration(null);
-    }
+    setAudioFile(file);
   };
 
-  /* ---------------- Documento ---------------- */
   const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     if (!file) {
@@ -248,306 +100,11 @@ export function UploadForm() {
     setDocumentFile(file);
   };
 
-  /* ---------------- Reset completo ---------------- */
-  const resetForm = () => {
-    setFormData({
-      title: "",
-      description: "",
-      programId: "",
-      episodeNumber: "",
-      categoryId: "",
-      subcategoryId: "",
-      publishedAt: new Date().toISOString().split("T")[0],
-    });
-    setAudioFile(null);
-    setAudioDuration(null);
-    setAudioProgress(0);
-    setDocumentFile(null);
-    setDocPageCount("");
-    setDocReferenceCount("");
-    setDocumentProgress(0);
-    setSelectedTagIds([]);
-    setSelectedCategory("");
-    setSelectedProgram(null);
-    setUploadPhase("idle");
-    setCreatedEpisodeId(null);
-    setFormKey(Date.now());
-    audioXhrRef.current?.abort();
-    documentXhrRef.current?.abort();
-  };
+  const isFinished = phase === "finished";
+  const isError = phase === "error";
 
-  /* ---------------- Criar tag ---------------- */
-  const handleCreateTag = useCallback((newTag: Tag) => {
-    setAllTags((prev) =>
-      prev.some((t) => t.id === newTag.id) ? prev : [...prev, newTag]
-    );
-  }, []);
-
-  /* ---------------- Upload Documento (após criar episódio) ---------------- */
-  const performDocumentUpload = async (episodeId: string) => {
-    if (!documentFile) return;
-    try {
-      setUploadPhase("document-preparing");
-
-      const raw = (await getDocumentSignedUploadUrl(
-        episodeId,
-        documentFile.name
-      )) as DocSignedResult;
-
-      try {
-        assertDocSuccess(raw);
-      } catch (err: any) {
-        setUploadPhase("error");
-        toast({
-          title: "Falha ao preparar documento",
-          description: err?.message || "Erro desconhecido.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { signedUrl, storagePath, sanitizedFileName } = raw;
-
-      setUploadPhase("document-uploading");
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        documentXhrRef.current = xhr;
-        xhr.upload.onprogress = (evt) => {
-          if (evt.lengthComputable) {
-            setDocumentProgress((evt.loaded / evt.total) * 100);
-          }
-        };
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            setDocumentProgress(100);
-            resolve();
-          } else {
-            reject(new Error(`Status HTTP ${xhr.status}`));
-          }
-        };
-        xhr.onerror = () =>
-          reject(new Error("Falha de rede no upload do documento."));
-        xhr.onabort = () => reject(new Error("Upload de documento cancelado."));
-        xhr.open("PUT", signedUrl, true);
-        xhr.setRequestHeader(
-          "Content-Type",
-          documentFile.type || "application/octet-stream"
-        );
-        xhr.send(documentFile);
-      });
-
-      setUploadPhase("document-registering");
-      const register = await registerUploadedDocumentAction({
-        episodeId,
-        storagePath,
-        fileName: sanitizedFileName,
-        fileSize: documentFile.size,
-        pageCount: docPageCount ? Number(docPageCount) : null,
-        referenceCount: docReferenceCount ? Number(docReferenceCount) : null,
-      });
-
-      if (!register.success) {
-        setUploadPhase("error");
-        toast({
-          title: "Falha ao registrar documento",
-          description: register.error || "Erro desconhecido.",
-          variant: "destructive",
-        });
-        return;
-      }
-    } catch (e: any) {
-      toast({
-        title: "Erro no documento",
-        description: e?.message || "Falha durante upload.",
-        variant: "destructive",
-      });
-      // Não transiciona para error global para não invalidar episódio criado
-    }
-  };
-
-  const cancelDocumentUpload = () => {
-    if (
-      documentXhrRef.current &&
-      (uploadPhase === "document-uploading" ||
-        uploadPhase === "document-preparing")
-    ) {
-      documentXhrRef.current.abort();
-      toast({ description: "Upload de documento cancelado." });
-      setUploadPhase("audio-done");
-      setDocumentProgress(0);
-    }
-  };
-
-  /* ---------------- Fluxo principal ---------------- */
-  const handleSubmit = async (status: "draft" | "scheduled" | "published") => {
-    if (!audioFile || !formData.title.trim()) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Áudio e Título são necessários.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setUploadPhase("audio-preparing");
-      const raw = (await getAudioSignedUploadUrlForCreation(
-        audioFile.name
-      )) as AudioSignedResult;
-
-      try {
-        assertAudioSuccess(raw);
-      } catch (err: any) {
-        setUploadPhase("error");
-        toast({
-          title: "Falha ao preparar upload de áudio",
-          description: err?.message || "Erro desconhecido.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const {
-        signedUrl: audioSignedUrl,
-        publicUrl: audioPublicUrl,
-        sanitizedFileName: audioFileName,
-      } = raw;
-
-      setUploadPhase("audio-uploading");
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        audioXhrRef.current = xhr;
-        xhr.upload.onprogress = (evt) => {
-          if (evt.lengthComputable) {
-            setAudioProgress((evt.loaded / evt.total) * 100);
-          }
-        };
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            setAudioProgress(100);
-            resolve();
-          } else {
-            reject(new Error(`Status HTTP ${xhr.status}`));
-          }
-        };
-        xhr.onerror = () =>
-          reject(new Error("Falha de rede durante upload do áudio."));
-        xhr.onabort = () => reject(new Error("Upload de áudio cancelado."));
-        xhr.open("PUT", audioSignedUrl, true);
-        xhr.setRequestHeader("Content-Type", audioFile.type);
-        xhr.send(audioFile);
-      });
-
-      setUploadPhase("audio-done");
-
-      setUploadPhase("episode-creating");
-      const createResult = await createEpisodeAction({
-        title: formData.title.trim(),
-        description: formData.description.trim() || null,
-        audio_url: audioPublicUrl,
-        file_name: audioFileName,
-        program_id: formData.programId || null,
-        episode_number: formData.episodeNumber
-          ? Number(formData.episodeNumber)
-          : null,
-        category_id: formData.categoryId || null,
-        subcategory_id: formData.subcategoryId || null,
-        published_at: new Date(formData.publishedAt).toISOString(),
-        status,
-        duration_in_seconds: audioDuration ?? null,
-        tagIds: selectedTagIds,
-      });
-
-      if (!createResult.success) {
-        setUploadPhase("error");
-        toast({
-          title: "Falha ao criar episódio",
-          description: createResult.error || "Erro desconhecido.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const epId = createResult.episode.id;
-      setCreatedEpisodeId(epId);
-
-      if (documentFile) {
-        await performDocumentUpload(epId);
-      }
-
-      setUploadPhase("finished");
-      toast({
-        title: "Sucesso!",
-        description: "Episódio criado com sucesso.",
-      });
-      revalidateAdminDashboard();
-      resetForm();
-      router.refresh();
-    } catch (e: any) {
-      setUploadPhase("error");
-      toast({
-        title: "Erro no processo",
-        description: e?.message || "Falha inesperada.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const isBusy =
-    uploadPhase !== "idle" &&
-    uploadPhase !== "finished" &&
-    uploadPhase !== "error";
-
-  const cancelAudioUpload = () => {
-    if (audioXhrRef.current && uploadPhase === "audio-uploading") {
-      audioXhrRef.current.abort();
-      toast({ description: "Upload de áudio cancelado." });
-      setUploadPhase("idle");
-      setAudioProgress(0);
-    }
-  };
-
-  /* ---------------- Mensagens auxiliares ---------------- */
-  const renderAudioPhaseMessage = () => {
-    switch (uploadPhase) {
-      case "audio-preparing":
-        return "Preparando upload...";
-      case "audio-uploading":
-        return `Enviando áudio: ${Math.floor(audioProgress)}%`;
-      case "episode-creating":
-        return "Criando episódio...";
-      case "document-preparing":
-      case "document-uploading":
-        return "Processo de documento em andamento...";
-      case "document-registering":
-        return "Registrando documento...";
-      case "finished":
-        return "Concluído!";
-      case "error":
-        return "Ocorreu um erro.";
-      default:
-        return null;
-    }
-  };
-
-  const renderDocumentPhaseMessage = () => {
-    switch (uploadPhase) {
-      case "document-preparing":
-        return "Preparando...";
-      case "document-uploading":
-        return `Enviando doc: ${Math.floor(documentProgress)}%`;
-      case "document-registering":
-        return "Registrando...";
-      case "finished":
-        return "Concluído.";
-      default:
-        return null;
-    }
-  };
-
-  /* ---------------- JSX ---------------- */
   return (
-    <form key={formKey} className="h-full flex flex-col">
+    <form className="h-full flex flex-col">
       <Card className="flex-1 flex flex-col overflow-hidden">
         <CardHeader className="border-b">
           <CardTitle className="flex items-center gap-2">
@@ -562,9 +119,9 @@ export function UploadForm() {
                 <Label htmlFor="title">Título *</Label>
                 <Input
                   id="title"
-                  value={formData.title}
+                  value={form.title}
                   onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
+                    setForm((prev) => ({ ...prev, title: e.target.value }))
                   }
                   placeholder="Digite o título do episódio"
                   className="mt-1"
@@ -574,19 +131,19 @@ export function UploadForm() {
               <div>
                 <Label htmlFor="description">Descrição</Label>
                 <RichTextEditor
-                  content={formData.description}
+                  content={form.description}
                   onChange={(newContent) =>
-                    setFormData({ ...formData, description: newContent })
+                    setForm((prev) => ({ ...prev, description: newContent }))
                   }
                 />
               </div>
               <div>
                 <Label>Tags</Label>
                 <TagSelector
-                  allTags={allTags}
+                  allTags={tags}
                   value={selectedTagIds}
                   onChange={setSelectedTagIds}
-                  onCreateTag={handleCreateTag}
+                  onCreateTag={createAndSelectTag}
                   placeholder="Selecione ou crie tags..."
                 />
               </div>
@@ -634,7 +191,7 @@ export function UploadForm() {
 
                   {audioFile && (
                     <>
-                      {uploadPhase === "audio-uploading" && (
+                      {phase === "audio-uploading" && (
                         <div>
                           <div className="w-full h-2 rounded bg-muted overflow-hidden mb-1">
                             <div
@@ -647,13 +204,13 @@ export function UploadForm() {
                         </div>
                       )}
 
-                      {renderAudioPhaseMessage() && (
+                      {readablePhaseMessage() && (
                         <div className="text-[11px] text-muted-foreground">
-                          {renderAudioPhaseMessage()}
+                          {readablePhaseMessage()}
                         </div>
                       )}
 
-                      {uploadPhase === "audio-uploading" ? (
+                      {phase === "audio-uploading" ? (
                         <Button
                           type="button"
                           variant="destructive"
@@ -669,10 +226,7 @@ export function UploadForm() {
                           variant="ghost"
                           size="sm"
                           disabled={isBusy}
-                          onClick={() => {
-                            setAudioFile(null);
-                            setAudioProgress(0);
-                          }}
+                          onClick={() => setAudioFile(null)}
                         >
                           Remover seleção
                         </Button>
@@ -694,16 +248,16 @@ export function UploadForm() {
                 <div>
                   <Label>Programa</Label>
                   <Select
-                    value={formData.programId}
+                    value={form.programId}
                     onValueChange={(value) => {
                       if (value === "nenhum") {
                         setSelectedProgram(null);
-                        setFormData({ ...formData, programId: "" });
+                        setForm((prev) => ({ ...prev, programId: "" }));
                       } else {
                         const prog =
                           programs.find((p) => p.id === value) || null;
                         setSelectedProgram(prog);
-                        setFormData({ ...formData, programId: value });
+                        setForm((prev) => ({ ...prev, programId: value }));
                       }
                     }}
                     disabled={isBusy}
@@ -726,16 +280,16 @@ export function UploadForm() {
                   <Input
                     id="episode-number"
                     type="number"
-                    value={formData.episodeNumber}
+                    value={form.episodeNumber}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
+                      setForm((prev) => ({
+                        ...prev,
                         episodeNumber: e.target.value,
-                      })
+                      }))
                     }
                     placeholder="Ex: 1"
                     className="mt-1"
-                    disabled={!formData.programId || isBusy}
+                    disabled={!form.programId || isBusy}
                   />
                 </div>
               </div>
@@ -745,13 +299,13 @@ export function UploadForm() {
                 <div>
                   <Label>Categoria</Label>
                   <Select
-                    value={formData.categoryId}
+                    value={form.categoryId}
                     onValueChange={(value) => {
-                      setFormData({
-                        ...formData,
+                      setForm((prev) => ({
+                        ...prev,
                         categoryId: value,
                         subcategoryId: "",
-                      });
+                      }));
                       setSelectedCategory(value);
                     }}
                     disabled={!!selectedProgram || isBusy}
@@ -771,12 +325,14 @@ export function UploadForm() {
                 <div>
                   <Label>Subcategoria</Label>
                   <Select
-                    value={formData.subcategoryId}
+                    value={form.subcategoryId}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, subcategoryId: value })
+                      setForm((prev) => ({ ...prev, subcategoryId: value }))
                     }
                     disabled={
-                      !selectedCategory || subcategories.length === 0 || isBusy
+                      !selectedCategory ||
+                      filteredSubcategories.length === 0 ||
+                      isBusy
                     }
                   >
                     <SelectTrigger className="mt-1">
@@ -787,7 +343,7 @@ export function UploadForm() {
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {subcategories.map((s) => (
+                      {filteredSubcategories.map((s) => (
                         <SelectItem key={s.id} value={String(s.id)}>
                           {s.name}
                         </SelectItem>
@@ -819,13 +375,8 @@ export function UploadForm() {
                         onChange={handleDocumentChange}
                         disabled={
                           isBusy &&
-                          !(
-                            uploadPhase === "audio-done" ||
-                            uploadPhase === "document-preparing" ||
-                            uploadPhase === "document-uploading" ||
-                            uploadPhase === "document-registering" ||
-                            uploadPhase === "finished"
-                          )
+                          phase !== "audio-done" &&
+                          phase !== "finished"
                         }
                       />
                       {!documentFile && (
@@ -834,8 +385,9 @@ export function UploadForm() {
                           variant="outline"
                           size="sm"
                           disabled={
-                            uploadPhase !== "idle" &&
-                            uploadPhase !== "audio-done"
+                            isBusy &&
+                            phase !== "audio-done" &&
+                            phase !== "finished"
                           }
                           onClick={() =>
                             document.getElementById("document-file")?.click()
@@ -849,8 +401,8 @@ export function UploadForm() {
 
                   {documentFile && (
                     <>
-                      {(uploadPhase === "document-uploading" ||
-                        uploadPhase === "document-registering" ||
+                      {(phase === "document-uploading" ||
+                        phase === "document-registering" ||
                         documentProgress > 0) && (
                         <div>
                           <div className="w-full h-2 rounded bg-muted overflow-hidden mb-1">
@@ -858,18 +410,21 @@ export function UploadForm() {
                               className="h-full bg-primary transition-all"
                               style={{
                                 width: `${
-                                  uploadPhase === "document-registering"
+                                  phase === "document-registering"
                                     ? 100
                                     : Math.min(documentProgress, 100)
                                 }%`,
                               }}
                             />
                           </div>
-                          {renderDocumentPhaseMessage() && (
-                            <div className="text-[11px] text-muted-foreground">
-                              {renderDocumentPhaseMessage()}
-                            </div>
-                          )}
+                          <div className="text-[11px] text-muted-foreground">
+                            {phase === "document-preparing" && "Preparando..."}
+                            {phase === "document-uploading" &&
+                              `Enviando doc: ${Math.floor(documentProgress)}%`}
+                            {phase === "document-registering" &&
+                              "Registrando..."}
+                            {phase === "finished" && "Concluído"}
+                          </div>
                         </div>
                       )}
 
@@ -885,8 +440,9 @@ export function UploadForm() {
                             onChange={(e) => setDocPageCount(e.target.value)}
                             disabled={
                               !(
-                                uploadPhase === "idle" ||
-                                uploadPhase === "audio-done"
+                                phase === "idle" ||
+                                phase === "audio-done" ||
+                                phase === "error"
                               )
                             }
                           />
@@ -904,15 +460,16 @@ export function UploadForm() {
                             }
                             disabled={
                               !(
-                                uploadPhase === "idle" ||
-                                uploadPhase === "audio-done"
+                                phase === "idle" ||
+                                phase === "audio-done" ||
+                                phase === "error"
                               )
                             }
                           />
                         </div>
                       </div>
 
-                      {uploadPhase === "document-uploading" ? (
+                      {phase === "document-uploading" ? (
                         <Button
                           type="button"
                           variant="destructive"
@@ -928,29 +485,23 @@ export function UploadForm() {
                           variant="ghost"
                           size="sm"
                           disabled={
-                            isBusy &&
-                            uploadPhase !== "audio-done" &&
-                            uploadPhase !== "finished"
+                            isBusy && phase !== "audio-done" && !isFinished
                           }
                           onClick={() => {
                             setDocumentFile(null);
                             setDocPageCount("");
                             setDocReferenceCount("");
-                            setDocumentProgress(0);
                           }}
                         >
                           Remover seleção
                         </Button>
                       )}
 
-                      {createdEpisodeId &&
-                        uploadPhase === "audio-done" &&
-                        documentFile && (
-                          <p className="text-[11px] text-muted-foreground">
-                            O documento será enviado automaticamente durante o
-                            fluxo de criação.
-                          </p>
-                        )}
+                      {phase === "audio-done" && documentFile && (
+                        <p className="text-[11px] text-muted-foreground">
+                          O documento será enviado após criar o episódio.
+                        </p>
+                      )}
                     </>
                   )}
                 </div>
@@ -962,9 +513,12 @@ export function UploadForm() {
                 <Input
                   id="published-at"
                   type="date"
-                  value={formData.publishedAt}
+                  value={form.publishedAt}
                   onChange={(e) =>
-                    setFormData({ ...formData, publishedAt: e.target.value })
+                    setForm((prev) => ({
+                      ...prev,
+                      publishedAt: e.target.value,
+                    }))
                   }
                   className="mt-1"
                   disabled={isBusy}
@@ -978,63 +532,58 @@ export function UploadForm() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => handleSubmit("draft")}
-              disabled={isBusy || !audioFile || !formData.title.trim()}
+              onClick={() => submit("draft")}
+              disabled={isBusy || !audioFile || !form.title.trim()}
             >
-              {uploadPhase === "idle" && "Criar rascunho"}
-              {uploadPhase === "audio-preparing" && "Preparando..."}
-              {uploadPhase === "audio-uploading" && "Enviando áudio..."}
-              {uploadPhase === "episode-creating" && "Criando..."}
-              {uploadPhase === "document-preparing" && "Prep. doc..."}
-              {uploadPhase === "document-uploading" &&
-                `Doc ${Math.floor(documentProgress)}%`}
-              {uploadPhase === "document-registering" && "Registrando doc..."}
-              {uploadPhase === "finished" && (
+              {phase === "idle" && "Criar rascunho"}
+              {phase === "finished" && (
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" /> Feito
                 </>
               )}
-              {uploadPhase === "error" && "Tentar novamente"}
+              {phase !== "idle" &&
+                phase !== "finished" &&
+                !isError &&
+                "Processando..."}
+              {isError && "Tentar novamente"}
             </Button>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => handleSubmit("scheduled")}
-              disabled={isBusy || !audioFile || !formData.title.trim()}
+              onClick={() => submit("scheduled")}
+              disabled={isBusy || !audioFile || !form.title.trim()}
             >
-              {uploadPhase === "idle" && "Agendar"}
-              {uploadPhase !== "idle" &&
-                uploadPhase !== "finished" &&
-                "Processando..."}
-              {uploadPhase === "finished" && (
+              {phase === "idle" && "Agendar"}
+              {phase === "finished" && (
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" /> Sucesso
                 </>
               )}
+              {phase !== "idle" &&
+                phase !== "finished" &&
+                !isError &&
+                "Processando..."}
+              {isError && "Retry"}
             </Button>
             <Button
               type="button"
-              onClick={() => handleSubmit("published")}
-              disabled={isBusy || !audioFile || !formData.title.trim()}
+              onClick={() => submit("published")}
+              disabled={isBusy || !audioFile || !form.title.trim()}
               className={cn({
-                "bg-green-600 hover:bg-green-700": uploadPhase === "finished",
+                "bg-green-600 hover:bg-green-700": isFinished,
               })}
             >
-              {uploadPhase === "idle" && "Publicar"}
-              {uploadPhase === "audio-preparing" && "Preparando..."}
-              {uploadPhase === "audio-uploading" &&
-                `Áudio ${Math.floor(audioProgress)}%`}
-              {uploadPhase === "episode-creating" && "Criando episódio..."}
-              {uploadPhase === "document-preparing" && "Prep. doc..."}
-              {uploadPhase === "document-uploading" &&
-                `Doc ${Math.floor(documentProgress)}%`}
-              {uploadPhase === "document-registering" && "Finalizando..."}
-              {uploadPhase === "finished" && (
+              {phase === "idle" && "Publicar"}
+              {phase === "finished" && (
                 <>
-                  <CheckCircle className="mr-2 h-4 w-4" /> Sucesso!
+                  <CheckCircle className="mr-2 h-4 w-4" /> Publicado
                 </>
               )}
-              {uploadPhase === "error" && "Tentar novamente"}
+              {phase !== "idle" &&
+                phase !== "finished" &&
+                !isError &&
+                "Processando..."}
+              {isError && "Tentar novamente"}
             </Button>
           </div>
         </CardFooter>
