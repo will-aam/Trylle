@@ -1,6 +1,9 @@
+// src/hooks/useEpisodeUpload.ts
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { getTags } from "@/src/services/tagService";
+import { getLastEpisodeNumber } from "@/src/services/episodeService.client"; // <-- IMPORTAÇÃO CORRIGIDA
 import { getAudioSignedUploadUrlForCreation } from "@/src/app/admin/episodes/audioCreationActions";
 import {
   getDocumentSignedUploadUrl,
@@ -289,28 +292,44 @@ export function useEpisodeUpload(
     }
   }, [selectedCategory, supabase]);
 
-  // Bind category from program if applicable
+  // Bind category from program and fetch next episode number
   useEffect(() => {
-    if (selectedProgram) {
-      const programCategory = categories.find(
-        (c) => c.id === selectedProgram.category_id
-      );
-      if (programCategory) {
-        setForm((prev) => ({
-          ...prev,
-          categoryId: programCategory.id,
-          subcategoryId: "",
-        }));
-        setSelectedCategory(programCategory.id);
-      }
-    } else {
+    if (!selectedProgram) {
       setForm((prev) => ({
         ...prev,
         categoryId: "",
         subcategoryId: "",
+        episodeNumber: "",
       }));
       setSelectedCategory("");
+      return;
     }
+
+    const programCategory = categories.find(
+      (c) => c.id === selectedProgram.category_id
+    );
+
+    if (programCategory) {
+      setForm((prev) => ({
+        ...prev,
+        categoryId: programCategory.id,
+        subcategoryId: "",
+      }));
+      setSelectedCategory(programCategory.id);
+    }
+
+    const fetchAndSetNextEpisodeNumber = async () => {
+      if (selectedProgram.id) {
+        const lastNumber = await getLastEpisodeNumber(selectedProgram.id);
+        const nextNumber = lastNumber + 1;
+        setForm((prev) => ({
+          ...prev,
+          episodeNumber: String(nextNumber),
+        }));
+      }
+    };
+
+    fetchAndSetNextEpisodeNumber();
   }, [selectedProgram, categories]);
 
   // External phase watcher
