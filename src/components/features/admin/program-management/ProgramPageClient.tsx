@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { useToast } from "@/src/hooks/use-toast";
 import { Program, Category } from "@/src/lib/types";
@@ -16,7 +17,7 @@ import { deleteProgram } from "@/src/app/admin/programs/actions";
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 
 interface ProgramPageClientProps {
-  initialPrograms: Program[];
+  initialPrograms: Program[]; // Renomeado para refletir que é a prop inicial
   categories: Category[];
 }
 
@@ -24,24 +25,24 @@ export function ProgramPageClient({
   initialPrograms,
   categories,
 }: ProgramPageClientProps) {
-  const [programs, setPrograms] = useState<Program[]>(initialPrograms);
+  const router = useRouter();
+  // VAMOS REMOVER O ESTADO 'programs' e usar a prop 'initialPrograms' diretamente.
+  // const [programs, setPrograms] = useState<Program[]>(initialPrograms);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const { toast } = useToast();
 
-  const handleSuccess = (updatedProgram: Program) => {
-    if (selectedProgram) {
-      // Edit
-      setPrograms(
-        programs.map((p) => (p.id === updatedProgram.id ? updatedProgram : p))
-      );
-    } else {
-      // Create
-      setPrograms([updatedProgram, ...programs]);
-    }
+  const handleSuccess = () => {
+    // Não precisamos mais do argumento 'updatedProgram'
     setIsFormOpen(false);
     setSelectedProgram(null);
+    toast({
+      description: selectedProgram
+        ? "Programa atualizado com sucesso!"
+        : "Programa criado com sucesso!",
+    });
+    router.refresh();
   };
 
   const handleAddNew = () => {
@@ -65,8 +66,9 @@ export function ProgramPageClient({
     const result = await deleteProgram(selectedProgram.id);
 
     if (result.success) {
-      setPrograms(programs.filter((p) => p.id !== selectedProgram.id));
       toast({ description: result.message });
+      // APÓS DELETAR, TAMBÉM VAMOS USAR O router.refresh() para garantir consistência.
+      router.refresh();
     } else {
       toast({ description: result.message, variant: "destructive" });
     }
@@ -82,8 +84,9 @@ export function ProgramPageClient({
         <Button onClick={handleAddNew}>Adicionar Novo Programa</Button>
       </div>
 
+      {/* AQUI ESTÁ A MUDANÇA PRINCIPAL: PASSAR A PROP DIRETAMENTE */}
       <ProgramTable
-        programs={programs}
+        programs={initialPrograms}
         onEdit={handleEdit}
         onDelete={handleDelete}
       />
@@ -104,7 +107,7 @@ export function ProgramPageClient({
         </DialogContent>
       </Dialog>
 
-      <ConfirmationDialog 
+      <ConfirmationDialog
         isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={confirmDelete}

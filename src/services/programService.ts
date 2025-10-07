@@ -40,7 +40,7 @@ export async function createProgram(
   const { data, error } = await supabase
     .from("programs")
     .insert([program])
-    .select()
+    .select("*, category:categories(*)")
     .single();
   if (error) {
     console.error("Error creating program:", error);
@@ -55,7 +55,7 @@ export async function updateProgram(id: string, program: Partial<Program>) {
     .from("programs")
     .update(program)
     .eq("id", id)
-    .select()
+    .select("*, category:categories(*)")
     .single();
   if (error) {
     console.error("Error updating program:", error);
