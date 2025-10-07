@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Clock, Play, Sparkles } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import type React from "react";
 import { Button } from "@/src/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@/src/components/ui/separator";
 
 // Tipagem para um episódio
 type Episode = {
