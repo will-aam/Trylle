@@ -342,7 +342,7 @@ export function DocumentField({
         <div className="mt-2 space-y-3 rounded-md border p-3">
           <div className="flex items-center justify-between">
             <div className="flex min-w-0 items-center gap-2">
-              <FileText className="h-5 w-5 text-muted-foreground" />
+              {/* <FileText className="h-5 w-5 text-muted-foreground" /> */}
               <a
                 href={document.public_url}
                 target="_blank"

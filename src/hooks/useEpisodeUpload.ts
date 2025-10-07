@@ -213,6 +213,30 @@ export function useEpisodeUpload(
   );
 
   /* --------------------------------------------------
+   * Auto page count (PDF) via import dinâmico
+   * -------------------------------------------------- */
+  useEffect(() => {
+    (async () => {
+      if (!documentFile) return;
+      if (!documentFile.type.toLowerCase().includes("pdf")) return;
+      // Do not re-calculate if a value is already present
+      if (docPageCount.trim() !== "") return;
+
+      try {
+        const { extractPdfPageCount } = await import(
+          "@/src/lib/pdf/extract-pdf-page-count"
+        );
+        const count = await extractPdfPageCount(documentFile);
+        if (count && !isNaN(count)) {
+          setDocPageCount(String(count));
+        }
+      } catch (err) {
+        console.warn("Could not extract PDF page count", err);
+      }
+    })();
+  }, [documentFile, docPageCount]);
+
+  /* --------------------------------------------------
    * Phase Management
    * -------------------------------------------------- */
   function transitionPhase(next: EpisodeUploadPhase) {
