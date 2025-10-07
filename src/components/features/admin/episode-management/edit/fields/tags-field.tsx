@@ -7,16 +7,31 @@ import { TagSelector } from "@/src/components/features/admin/TagSelector";
 interface TagsFieldProps {
   allTags: Tag[];
   field: ControllerRenderProps<any, "tags">;
+  /**
+   * Callback opcional quando uma nova tag é criada no selector.
+   */
+  onCreateTag?: (tag: Tag) => void;
+  /**
+   * Placeholder opcional para o componente.
+   */
+  placeholder?: string;
 }
 
-export function TagsField({ allTags, field }: TagsFieldProps) {
+export function TagsField({
+  allTags,
+  field,
+  onCreateTag,
+  placeholder = "Selecione ou crie tags...",
+}: TagsFieldProps) {
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">Tags</label>
       <TagSelector
-        tags={allTags}
-        selectedTags={allTags.filter((t) => field.value?.includes(t.id))}
-        onSelectedTagsChange={(tags) => field.onChange(tags.map((t) => t.id))}
+        allTags={allTags}
+        value={field.value ?? []} // field.value deve ser string[] (ids)
+        onChange={(ids) => field.onChange(ids)} // garante passagem direta
+        onCreateTag={onCreateTag}
+        placeholder={placeholder}
       />
     </div>
   );
