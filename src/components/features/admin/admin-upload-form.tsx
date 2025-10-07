@@ -20,7 +20,14 @@ import {
   SelectValue,
 } from "../../ui/select";
 import { TagSelector } from "../admin/TagSelector";
-import { Upload, CheckCircle, StopCircle, Music, FileText } from "lucide-react";
+import {
+  Upload,
+  CheckCircle,
+  StopCircle,
+  Music,
+  FileText,
+  XCircle,
+} from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { cn } from "@/src/lib/utils";
 import { useEpisodeUpload } from "@/src/hooks/useEpisodeUpload";
@@ -56,6 +63,8 @@ export function UploadForm() {
     resetAll,
     isBusy,
     readablePhaseMessage,
+    lastError,
+    buildUserMessage,
   } = useEpisodeUpload({
     onSuccess: (episode) => {
       toast({
@@ -67,12 +76,15 @@ export function UploadForm() {
     },
     onError: (msg) => {
       toast({
-        title: "Erro",
+        title: "Falha",
         description: msg,
         variant: "destructive",
       });
     },
   });
+
+  const isFinished = phase === "finished";
+  const isError = phase === "error";
 
   const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -100,8 +112,15 @@ export function UploadForm() {
     setDocumentFile(file);
   };
 
-  const isFinished = phase === "finished";
-  const isError = phase === "error";
+  // Limpa apenas a exibição visual do erro (sem reset no fluxo)
+  // Caso deseje efetivamente resetar a fase, pode chamar resetAll().
+  function dismissError() {
+    // Hoje o hook não expõe setLastError diretamente; poderíamos evoluir o hook com clearError().
+    // Como workaround simples: reiniciar fase para 'idle' se não estiver em upload crítico.
+    if (!isBusy || phase === "error") {
+      resetAll();
+    }
+  }
 
   return (
     <form className="h-full flex flex-col">
@@ -111,7 +130,59 @@ export function UploadForm() {
             <Upload className="h-5 w-5" /> Novo Episódio
           </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-y-auto p-6">
+
+        <CardContent className="overflow-y-auto p-6 space-y-6">
+          {/* ALERTA DE ERRO / WARNING */}
+          {lastError && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className={cn(
+                "relative rounded-md border px-4 py-3 text-sm shadow-sm",
+                lastError.severity === "warning"
+                  ? "border-amber-300 bg-amber-50 text-amber-800"
+                  : "border-red-400 bg-red-50 text-red-700"
+              )}
+            >
+              <div className="flex items-start gap-3 pr-6">
+                <XCircle
+                  className={cn(
+                    "h-5 w-5 flex-shrink-0",
+                    lastError.severity === "warning"
+                      ? "text-amber-500"
+                      : "text-red-500"
+                  )}
+                />
+                <div className="flex-1 space-y-1">
+                  <p className="font-medium leading-none">
+                    {lastError.severity === "warning" ? "Aviso" : "Erro"}
+                  </p>
+                  <p>{buildUserMessage(lastError)}</p>
+                  {process.env.NODE_ENV === "development" &&
+                    lastError.technicalMessage && (
+                      <p className="mt-1 text-xs opacity-75">
+                        <strong>Dev:</strong>{" "}
+                        {lastError.technicalMessage.slice(0, 400)}
+                      </p>
+                    )}
+                  {lastError.meta && process.env.NODE_ENV === "development" && (
+                    <pre className="mt-2 max-h-40 overflow-auto rounded bg-black/5 p-2 text-[10px]">
+                      {JSON.stringify(lastError.meta, null, 2)}
+                    </pre>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={dismissError}
+                  className="absolute right-2 top-2 rounded p-1 text-xs text-current hover:bg-black/10 focus:outline-none"
+                  aria-label="Fechar alerta"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Coluna Esquerda */}
             <div className="space-y-6">
@@ -128,6 +199,7 @@ export function UploadForm() {
                   disabled={isBusy}
                 />
               </div>
+
               <div>
                 <Label htmlFor="description">Descrição</Label>
                 <RichTextEditor
@@ -137,6 +209,7 @@ export function UploadForm() {
                   }
                 />
               </div>
+
               <div>
                 <Label>Tags</Label>
                 <TagSelector
@@ -376,7 +449,8 @@ export function UploadForm() {
                         disabled={
                           isBusy &&
                           phase !== "audio-done" &&
-                          phase !== "finished"
+                          phase !== "finished" &&
+                          phase !== "error"
                         }
                       />
                       {!documentFile && (
@@ -387,7 +461,8 @@ export function UploadForm() {
                           disabled={
                             isBusy &&
                             phase !== "audio-done" &&
-                            phase !== "finished"
+                            phase !== "finished" &&
+                            phase !== "error"
                           }
                           onClick={() =>
                             document.getElementById("document-file")?.click()
@@ -485,7 +560,10 @@ export function UploadForm() {
                           variant="ghost"
                           size="sm"
                           disabled={
-                            isBusy && phase !== "audio-done" && !isFinished
+                            isBusy &&
+                            phase !== "audio-done" &&
+                            phase !== "finished" &&
+                            phase !== "error"
                           }
                           onClick={() => {
                             setDocumentFile(null);
@@ -499,7 +577,7 @@ export function UploadForm() {
 
                       {phase === "audio-done" && documentFile && (
                         <p className="text-[11px] text-muted-foreground">
-                          O documento será enviado após criar o episódio.
+                          O documento será enviado após o episódio ser criado.
                         </p>
                       )}
                     </>
@@ -527,6 +605,7 @@ export function UploadForm() {
             </div>
           </div>
         </CardContent>
+
         <CardFooter className="border-t pt-6">
           <div className="w-full md:w-auto ml-auto flex flex-col md:flex-row gap-2">
             <Button
@@ -547,6 +626,7 @@ export function UploadForm() {
                 "Processando..."}
               {isError && "Tentar novamente"}
             </Button>
+
             <Button
               type="button"
               variant="secondary"
@@ -565,6 +645,7 @@ export function UploadForm() {
                 "Processando..."}
               {isError && "Retry"}
             </Button>
+
             <Button
               type="button"
               onClick={() => submit("published")}
