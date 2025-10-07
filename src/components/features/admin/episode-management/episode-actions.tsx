@@ -2,14 +2,7 @@
 
 import { Episode } from "@/src/lib/types";
 import { Button } from "@/src/components/ui/button";
-import {
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  Code2,
-  Download,
-  Link2,
-} from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Code2, Link2 } from "lucide-react";
 import { useState, useCallback, useMemo } from "react";
 import {
   DropdownMenu,
@@ -23,22 +16,17 @@ import { EpisodeJsonDialog } from "./episode-json-dialog";
 import { toast } from "sonner";
 import { cn } from "@/src/lib/utils";
 
-type ActionKey = "edit" | "copyAudio" | "downloadAudio" | "viewJson" | "delete";
+type ActionKey = "edit" | "copyAudio" | "viewJson" | "delete";
 
 export interface EpisodeActionsProps {
   episode: Episode;
   onEdit: (episode: Episode) => void;
   onDelete: (episode: Episode) => void;
-  /** Herdado (ainda funciona) */
   size?: "default" | "icon" | "sm";
-  /** Novo modo de densidade visual */
   mode?: "menu" | "primary+menu" | "inline-hover" | "auto";
-  /** Ação primária quando mode=primary+menu */
   primaryAction?: "edit" | "viewJson" | "none";
-  /** Deixar padding / ícones mais compactos */
   dense?: boolean;
   className?: string;
-  /** Linha está selecionada? (para inline-hover mostrar mesmo sem hover) */
   active?: boolean;
 }
 
@@ -57,7 +45,6 @@ export function EpisodeActions({
   episode,
   onEdit,
   onDelete,
-  size, // ainda aceito, mas sobreposto por mode
   mode = "auto",
   primaryAction = "edit",
   dense = true,
@@ -80,19 +67,6 @@ export function EpisodeActions({
       toast.error("Falha ao copiar URL.");
     }
   }, [audioUrl]);
-
-  const handleDownloadAudio = useCallback(() => {
-    if (!audioUrl) {
-      toast.error("Sem URL de áudio.");
-      return;
-    }
-    const a = document.createElement("a");
-    a.href = audioUrl;
-    a.download = (episode.title?.replace(/\s+/g, "_") || "episodio") + ".mp3";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }, [audioUrl, episode.title]);
 
   const openJson = () => setJsonOpen(true);
 
@@ -117,12 +91,6 @@ export function EpisodeActions({
       onClick: handleCopyAudio,
       disabled: !audioUrl,
     },
-    downloadAudio: {
-      label: "Baixar Áudio",
-      icon: Download,
-      onClick: handleDownloadAudio,
-      disabled: !audioUrl,
-    },
     viewJson: {
       label: "Ver JSON",
       icon: Code2,
@@ -143,12 +111,8 @@ export function EpisodeActions({
     return null;
   }, [mode, primaryAction]);
 
-  // Se mode=auto, decide baseado em largura (CSS) — aqui simplifico:
-  // (Você pode evoluir com um hook de media query)
+  // Modo AUTO: delega para variações concretas conforme breakpoint
   if (mode === "auto") {
-    // Em mobile (preferir menu único) — usaremos uma classe CSS de estratégia
-    // Para simplificar: sempre usa primary+menu em >= md
-    // Delega para variação concreta:
     return (
       <div
         className={cn(
@@ -187,7 +151,7 @@ export function EpisodeActions({
     );
   }
 
-  // Modo MENU único
+  // Modo MENU
   if (mode === "menu") {
     return (
       <>
@@ -208,9 +172,7 @@ export function EpisodeActions({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuLabel>Ações</DropdownMenuLabel>
-            {(
-              ["edit", "copyAudio", "downloadAudio", "viewJson"] as ActionKey[]
-            ).map((key) => {
+            {(["edit", "copyAudio", "viewJson"] as ActionKey[]).map((key) => {
               const A = ACTIONS[key];
               const Icon = A.icon;
               return (
@@ -250,7 +212,6 @@ export function EpisodeActions({
   // Modo PRIMARY + MENU
   if (mode === "primary+menu") {
     const primaryActionConfig = primary ? ACTIONS[primary] : undefined;
-
     return (
       <>
         <div className={cn("inline-flex items-center gap-1", className)}>
@@ -328,7 +289,7 @@ export function EpisodeActions({
     );
   }
 
-  // Modo INLINE-HOVER (aparece só em hover ou linha ativa)
+  // Modo INLINE-HOVER
   if (mode === "inline-hover") {
     return (
       <>
@@ -340,36 +301,30 @@ export function EpisodeActions({
             className
           )}
         >
-          {(
-            [
-              "edit",
-              "copyAudio",
-              "downloadAudio",
-              "viewJson",
-              "delete",
-            ] as ActionKey[]
-          ).map((k) => {
-            const A = ACTIONS[k];
-            const Icon = A.icon;
-            const destructive = A.destructive;
-            return (
-              <Button
-                key={k}
-                variant="ghost"
-                size="icon"
-                aria-label={A.label}
-                disabled={A.disabled}
-                onClick={A.onClick}
-                className={cn(
-                  dense ? "h-7 w-7" : "h-8 w-8",
-                  "border border-transparent hover:border-border",
-                  destructive && "text-destructive hover:text-destructive/90"
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />
-              </Button>
-            );
-          })}
+          {(["edit", "copyAudio", "viewJson", "delete"] as ActionKey[]).map(
+            (k) => {
+              const A = ACTIONS[k];
+              const Icon = A.icon;
+              const destructive = A.destructive;
+              return (
+                <Button
+                  key={k}
+                  variant="ghost"
+                  size="icon"
+                  aria-label={A.label}
+                  disabled={A.disabled}
+                  onClick={A.onClick}
+                  className={cn(
+                    dense ? "h-7 w-7" : "h-8 w-8",
+                    "border border-transparent hover:border-border",
+                    destructive && "text-destructive hover:text-destructive/90"
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </Button>
+              );
+            }
+          )}
         </div>
         <EpisodeJsonDialog
           episode={episode}
@@ -380,6 +335,5 @@ export function EpisodeActions({
     );
   }
 
-  // fallback
   return null;
 }
