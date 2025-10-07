@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "../../ui/select";
 import { useToast } from "@/src/hooks/use-toast";
-import { Upload, CheckCircle, StopCircle, Music } from "lucide-react";
+import { Upload, CheckCircle, StopCircle, Music, FileText } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Program, Category, Subcategory, Tag } from "@/src/lib/types";
 import { TagSelector } from "../admin/TagSelector";
@@ -30,8 +30,8 @@ import { revalidateAdminDashboard } from "@/src/app/admin/actions";
 import { getTags } from "@/src/services/tagService";
 import { createEpisodeAction } from "@/src/app/admin/episodes/createEpisodeAction";
 import {
-  uploadDocumentAction,
-  UploadDocumentResult,
+  getDocumentSignedUploadUrl,
+  registerUploadedDocumentAction,
 } from "@/src/app/admin/episodes/documentActions";
 import { getAudioSignedUploadUrlForCreation } from "@/src/app/admin/episodes/audioCreationActions";
 
@@ -42,7 +42,7 @@ interface FormState {
   episodeNumber: string;
   categoryId: string;
   subcategoryId: string;
-  publishedAt: string; // yyyy-mm-dd
+  publishedAt: string;
 }
 
 type UploadPhase =
@@ -51,9 +51,47 @@ type UploadPhase =
   | "audio-uploading"
   | "audio-done"
   | "episode-creating"
+  | "document-preparing"
   | "document-uploading"
+  | "document-registering"
   | "finished"
   | "error";
+
+// Type guards para signed URL results
+type AudioSignedSuccess = {
+  success: true;
+  signedUrl: string;
+  storagePath: string;
+  sanitizedFileName: string;
+  publicUrl: string;
+};
+type AudioSignedResult =
+  | AudioSignedSuccess
+  | { success: false; error: string; code?: string };
+
+type DocSignedSuccess = {
+  success: true;
+  signedUrl: string;
+  storagePath: string;
+  sanitizedFileName: string;
+};
+type DocSignedResult =
+  | DocSignedSuccess
+  | { success: false; error: string; code?: string };
+
+function assertAudioSuccess(
+  r: AudioSignedResult
+): asserts r is AudioSignedSuccess {
+  if (!r.success) {
+    throw new Error(r.error || "Falha ao gerar signed URL de áudio.");
+  }
+}
+
+function assertDocSuccess(r: DocSignedResult): asserts r is DocSignedSuccess {
+  if (!r.success) {
+    throw new Error(r.error || "Falha ao gerar signed URL de documento.");
+  }
+}
 
 export function UploadForm() {
   const supabase = createSupabaseBrowserClient();
@@ -84,6 +122,11 @@ export function UploadForm() {
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [docPageCount, setDocPageCount] = useState<string>("");
   const [docReferenceCount, setDocReferenceCount] = useState<string>("");
+  const [documentProgress, setDocumentProgress] = useState<number>(0);
+  const documentXhrRef = useRef<XMLHttpRequest | null>(null);
+
+  // ID do episódio criado
+  const [createdEpisodeId, setCreatedEpisodeId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<FormState>({
     title: "",
@@ -95,7 +138,7 @@ export function UploadForm() {
     publishedAt: new Date().toISOString().split("T")[0],
   });
 
-  /* --------- Carregar dados iniciais --------- */
+  /* ---------------- Carregar dados iniciais ---------------- */
   useEffect(() => {
     const loadInitialData = async () => {
       const [catRes, tagRes, programRes] = await Promise.all([
@@ -111,7 +154,7 @@ export function UploadForm() {
     loadInitialData();
   }, [supabase, formKey]);
 
-  /* --------- Carregar subcategorias ao mudar categoria --------- */
+  /* ---------------- Subcategorias ---------------- */
   useEffect(() => {
     if (selectedCategory) {
       const run = async () => {
@@ -122,13 +165,13 @@ export function UploadForm() {
           .order("name");
         setSubcategories(data || []);
       };
-      run();
+      void run();
     } else {
       setSubcategories([]);
     }
   }, [selectedCategory, supabase, formKey]);
 
-  /* --------- Preencher categoria a partir do programa --------- */
+  /* ---------------- Programa define categoria ---------------- */
   useEffect(() => {
     if (selectedProgram) {
       const programCategory = categories.find(
@@ -152,7 +195,7 @@ export function UploadForm() {
     }
   }, [selectedProgram, categories]);
 
-  /* --------- Audio select --------- */
+  /* ---------------- Áudio ---------------- */
   const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     if (file) {
@@ -183,7 +226,7 @@ export function UploadForm() {
     }
   };
 
-  /* --------- Documento --------- */
+  /* ---------------- Documento ---------------- */
   const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     if (!file) {
@@ -205,7 +248,7 @@ export function UploadForm() {
     setDocumentFile(file);
   };
 
-  /* --------- Reset --------- */
+  /* ---------------- Reset completo ---------------- */
   const resetForm = () => {
     setFormData({
       title: "",
@@ -222,23 +265,120 @@ export function UploadForm() {
     setDocumentFile(null);
     setDocPageCount("");
     setDocReferenceCount("");
+    setDocumentProgress(0);
     setSelectedTagIds([]);
     setSelectedCategory("");
     setSelectedProgram(null);
     setUploadPhase("idle");
+    setCreatedEpisodeId(null);
     setFormKey(Date.now());
     audioXhrRef.current?.abort();
-    audioXhrRef.current = null;
+    documentXhrRef.current?.abort();
   };
 
-  /* --------- Criar tag no seletor --------- */
+  /* ---------------- Criar tag ---------------- */
   const handleCreateTag = useCallback((newTag: Tag) => {
     setAllTags((prev) =>
       prev.some((t) => t.id === newTag.id) ? prev : [...prev, newTag]
     );
   }, []);
 
-  /* --------- Fluxo principal (com progresso real de áudio) --------- */
+  /* ---------------- Upload Documento (após criar episódio) ---------------- */
+  const performDocumentUpload = async (episodeId: string) => {
+    if (!documentFile) return;
+    try {
+      setUploadPhase("document-preparing");
+
+      const raw = (await getDocumentSignedUploadUrl(
+        episodeId,
+        documentFile.name
+      )) as DocSignedResult;
+
+      try {
+        assertDocSuccess(raw);
+      } catch (err: any) {
+        setUploadPhase("error");
+        toast({
+          title: "Falha ao preparar documento",
+          description: err?.message || "Erro desconhecido.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { signedUrl, storagePath, sanitizedFileName } = raw;
+
+      setUploadPhase("document-uploading");
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        documentXhrRef.current = xhr;
+        xhr.upload.onprogress = (evt) => {
+          if (evt.lengthComputable) {
+            setDocumentProgress((evt.loaded / evt.total) * 100);
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setDocumentProgress(100);
+            resolve();
+          } else {
+            reject(new Error(`Status HTTP ${xhr.status}`));
+          }
+        };
+        xhr.onerror = () =>
+          reject(new Error("Falha de rede no upload do documento."));
+        xhr.onabort = () => reject(new Error("Upload de documento cancelado."));
+        xhr.open("PUT", signedUrl, true);
+        xhr.setRequestHeader(
+          "Content-Type",
+          documentFile.type || "application/octet-stream"
+        );
+        xhr.send(documentFile);
+      });
+
+      setUploadPhase("document-registering");
+      const register = await registerUploadedDocumentAction({
+        episodeId,
+        storagePath,
+        fileName: sanitizedFileName,
+        fileSize: documentFile.size,
+        pageCount: docPageCount ? Number(docPageCount) : null,
+        referenceCount: docReferenceCount ? Number(docReferenceCount) : null,
+      });
+
+      if (!register.success) {
+        setUploadPhase("error");
+        toast({
+          title: "Falha ao registrar documento",
+          description: register.error || "Erro desconhecido.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } catch (e: any) {
+      toast({
+        title: "Erro no documento",
+        description: e?.message || "Falha durante upload.",
+        variant: "destructive",
+      });
+      // Não transiciona para error global para não invalidar episódio criado
+    }
+  };
+
+  const cancelDocumentUpload = () => {
+    if (
+      documentXhrRef.current &&
+      (uploadPhase === "document-uploading" ||
+        uploadPhase === "document-preparing")
+    ) {
+      documentXhrRef.current.abort();
+      toast({ description: "Upload de documento cancelado." });
+      setUploadPhase("audio-done");
+      setDocumentProgress(0);
+    }
+  };
+
+  /* ---------------- Fluxo principal ---------------- */
   const handleSubmit = async (status: "draft" | "scheduled" | "published") => {
     if (!audioFile || !formData.title.trim()) {
       toast({
@@ -250,30 +390,36 @@ export function UploadForm() {
     }
 
     try {
-      // 1. Gerar Signed URL para áudio
       setUploadPhase("audio-preparing");
-      const signed = await getAudioSignedUploadUrlForCreation(audioFile.name);
-      if (!signed.success) {
+      const raw = (await getAudioSignedUploadUrlForCreation(
+        audioFile.name
+      )) as AudioSignedResult;
+
+      try {
+        assertAudioSuccess(raw);
+      } catch (err: any) {
         setUploadPhase("error");
         toast({
-          title: "Falha ao preparar upload",
-          description: signed.error || "Erro desconhecido.",
+          title: "Falha ao preparar upload de áudio",
+          description: err?.message || "Erro desconhecido.",
           variant: "destructive",
         });
         return;
       }
 
-      // Aqui o TS já sabe que tudo é string:
-      const { signedUrl, storagePath, publicUrl, sanitizedFileName } = signed;
-      // 2. Upload via XHR com progresso real
+      const {
+        signedUrl: audioSignedUrl,
+        publicUrl: audioPublicUrl,
+        sanitizedFileName: audioFileName,
+      } = raw;
+
       setUploadPhase("audio-uploading");
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         audioXhrRef.current = xhr;
         xhr.upload.onprogress = (evt) => {
           if (evt.lengthComputable) {
-            const pct = (evt.loaded / evt.total) * 100;
-            setAudioProgress(pct);
+            setAudioProgress((evt.loaded / evt.total) * 100);
           }
         };
         xhr.onload = () => {
@@ -286,21 +432,20 @@ export function UploadForm() {
         };
         xhr.onerror = () =>
           reject(new Error("Falha de rede durante upload do áudio."));
-        xhr.onabort = () => reject(new Error("Upload cancelado."));
-        xhr.open("PUT", signedUrl, true);
+        xhr.onabort = () => reject(new Error("Upload de áudio cancelado."));
+        xhr.open("PUT", audioSignedUrl, true);
         xhr.setRequestHeader("Content-Type", audioFile.type);
         xhr.send(audioFile);
       });
 
       setUploadPhase("audio-done");
 
-      // 3. Criar episódio (usa publicUrl e sanitizedFileName)
       setUploadPhase("episode-creating");
       const createResult = await createEpisodeAction({
         title: formData.title.trim(),
         description: formData.description.trim() || null,
-        audio_url: publicUrl,
-        file_name: sanitizedFileName,
+        audio_url: audioPublicUrl,
+        file_name: audioFileName,
         program_id: formData.programId || null,
         episode_number: formData.episodeNumber
           ? Number(formData.episodeNumber)
@@ -323,31 +468,11 @@ export function UploadForm() {
         return;
       }
 
-      const newEpisodeId = createResult.episode.id;
+      const epId = createResult.episode.id;
+      setCreatedEpisodeId(epId);
 
-      // 4. Documento (opcional)
       if (documentFile) {
-        setUploadPhase("document-uploading");
-        const docForm = new FormData();
-        docForm.append("file", documentFile);
-        if (docPageCount.trim()) docForm.append("page_count", docPageCount);
-        if (docReferenceCount.trim())
-          docForm.append("reference_count", docReferenceCount);
-
-        const docUpload: UploadDocumentResult = await uploadDocumentAction(
-          newEpisodeId,
-          docForm
-        );
-
-        if (!docUpload.success) {
-          toast({
-            title: "Documento não anexado",
-            description:
-              docUpload.error ||
-              "O episódio foi criado, mas o documento falhou.",
-            variant: "destructive",
-          });
-        }
+        await performDocumentUpload(epId);
       }
 
       setUploadPhase("finished");
@@ -382,6 +507,45 @@ export function UploadForm() {
     }
   };
 
+  /* ---------------- Mensagens auxiliares ---------------- */
+  const renderAudioPhaseMessage = () => {
+    switch (uploadPhase) {
+      case "audio-preparing":
+        return "Preparando upload...";
+      case "audio-uploading":
+        return `Enviando áudio: ${Math.floor(audioProgress)}%`;
+      case "episode-creating":
+        return "Criando episódio...";
+      case "document-preparing":
+      case "document-uploading":
+        return "Processo de documento em andamento...";
+      case "document-registering":
+        return "Registrando documento...";
+      case "finished":
+        return "Concluído!";
+      case "error":
+        return "Ocorreu um erro.";
+      default:
+        return null;
+    }
+  };
+
+  const renderDocumentPhaseMessage = () => {
+    switch (uploadPhase) {
+      case "document-preparing":
+        return "Preparando...";
+      case "document-uploading":
+        return `Enviando doc: ${Math.floor(documentProgress)}%`;
+      case "document-registering":
+        return "Registrando...";
+      case "finished":
+        return "Concluído.";
+      default:
+        return null;
+    }
+  };
+
+  /* ---------------- JSX ---------------- */
   return (
     <form key={formKey} className="h-full flex flex-col">
       <Card className="flex-1 flex flex-col overflow-hidden">
@@ -480,34 +644,12 @@ export function UploadForm() {
                               }}
                             />
                           </div>
-                          <div className="text-[11px] text-muted-foreground">
-                            Enviando áudio: {Math.floor(audioProgress)}%
-                          </div>
                         </div>
                       )}
-                      {uploadPhase === "audio-preparing" && (
+
+                      {renderAudioPhaseMessage() && (
                         <div className="text-[11px] text-muted-foreground">
-                          Preparando upload...
-                        </div>
-                      )}
-                      {uploadPhase === "episode-creating" && (
-                        <div className="text-[11px] text-muted-foreground">
-                          Criando episódio...
-                        </div>
-                      )}
-                      {uploadPhase === "document-uploading" && (
-                        <div className="text-[11px] text-muted-foreground">
-                          Enviando documento...
-                        </div>
-                      )}
-                      {uploadPhase === "finished" && (
-                        <div className="text-[11px] text-green-600">
-                          Concluído!
-                        </div>
-                      )}
-                      {uploadPhase === "error" && (
-                        <div className="text-[11px] text-red-600">
-                          Ocorreu um erro.
+                          {renderAudioPhaseMessage()}
                         </div>
                       )}
 
@@ -658,60 +800,160 @@ export function UploadForm() {
               {/* Documento */}
               <div className="space-y-2">
                 <Label htmlFor="document-file">Documento de Apoio</Label>
-                <Input
-                  id="document-file"
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleDocumentChange}
-                  className="mt-1"
-                  disabled={isBusy}
-                />
-                {documentFile && (
-                  <div className="mt-2 space-y-2 rounded-md border p-3">
-                    <div className="text-sm font-medium truncate">
-                      {documentFile.name}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col">
-                        <label className="text-xs font-medium">
-                          Nº de Páginas (opcional)
-                        </label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={docPageCount}
-                          onChange={(e) => setDocPageCount(e.target.value)}
-                          disabled={isBusy}
-                        />
-                      </div>
-                      <div className="flex flex-col">
-                        <label className="text-xs font-medium">
-                          Nº de Referências (opcional)
-                        </label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={docReferenceCount}
-                          onChange={(e) => setDocReferenceCount(e.target.value)}
-                          disabled={isBusy}
-                        />
+                <div className="rounded-md border p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                      <div className="truncate text-sm">
+                        {documentFile
+                          ? documentFile.name
+                          : "Nenhum documento selecionado"}
                       </div>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={isBusy}
-                      onClick={() => {
-                        setDocumentFile(null);
-                        setDocPageCount("");
-                        setDocReferenceCount("");
-                      }}
-                    >
-                      Remover documento
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="document-file"
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        className="hidden"
+                        onChange={handleDocumentChange}
+                        disabled={
+                          isBusy &&
+                          !(
+                            uploadPhase === "audio-done" ||
+                            uploadPhase === "document-preparing" ||
+                            uploadPhase === "document-uploading" ||
+                            uploadPhase === "document-registering" ||
+                            uploadPhase === "finished"
+                          )
+                        }
+                      />
+                      {!documentFile && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={
+                            uploadPhase !== "idle" &&
+                            uploadPhase !== "audio-done"
+                          }
+                          onClick={() =>
+                            document.getElementById("document-file")?.click()
+                          }
+                        >
+                          Selecionar
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                )}
+
+                  {documentFile && (
+                    <>
+                      {(uploadPhase === "document-uploading" ||
+                        uploadPhase === "document-registering" ||
+                        documentProgress > 0) && (
+                        <div>
+                          <div className="w-full h-2 rounded bg-muted overflow-hidden mb-1">
+                            <div
+                              className="h-full bg-primary transition-all"
+                              style={{
+                                width: `${
+                                  uploadPhase === "document-registering"
+                                    ? 100
+                                    : Math.min(documentProgress, 100)
+                                }%`,
+                              }}
+                            />
+                          </div>
+                          {renderDocumentPhaseMessage() && (
+                            <div className="text-[11px] text-muted-foreground">
+                              {renderDocumentPhaseMessage()}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col">
+                          <label className="text-xs font-medium">
+                            Nº de Páginas (opcional)
+                          </label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={docPageCount}
+                            onChange={(e) => setDocPageCount(e.target.value)}
+                            disabled={
+                              !(
+                                uploadPhase === "idle" ||
+                                uploadPhase === "audio-done"
+                              )
+                            }
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <label className="text-xs font-medium">
+                            Nº de Referências (opcional)
+                          </label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={docReferenceCount}
+                            onChange={(e) =>
+                              setDocReferenceCount(e.target.value)
+                            }
+                            disabled={
+                              !(
+                                uploadPhase === "idle" ||
+                                uploadPhase === "audio-done"
+                              )
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      {uploadPhase === "document-uploading" ? (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={cancelDocumentUpload}
+                        >
+                          <StopCircle className="h-4 w-4 mr-1" />
+                          Cancelar
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={
+                            isBusy &&
+                            uploadPhase !== "audio-done" &&
+                            uploadPhase !== "finished"
+                          }
+                          onClick={() => {
+                            setDocumentFile(null);
+                            setDocPageCount("");
+                            setDocReferenceCount("");
+                            setDocumentProgress(0);
+                          }}
+                        >
+                          Remover seleção
+                        </Button>
+                      )}
+
+                      {createdEpisodeId &&
+                        uploadPhase === "audio-done" &&
+                        documentFile && (
+                          <p className="text-[11px] text-muted-foreground">
+                            O documento será enviado automaticamente durante o
+                            fluxo de criação.
+                          </p>
+                        )}
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Publicação */}
@@ -739,16 +981,19 @@ export function UploadForm() {
               onClick={() => handleSubmit("draft")}
               disabled={isBusy || !audioFile || !formData.title.trim()}
             >
+              {uploadPhase === "idle" && "Criar rascunho"}
               {uploadPhase === "audio-preparing" && "Preparando..."}
               {uploadPhase === "audio-uploading" && "Enviando áudio..."}
               {uploadPhase === "episode-creating" && "Criando..."}
-              {uploadPhase === "document-uploading" && "Anexando doc..."}
+              {uploadPhase === "document-preparing" && "Prep. doc..."}
+              {uploadPhase === "document-uploading" &&
+                `Doc ${Math.floor(documentProgress)}%`}
+              {uploadPhase === "document-registering" && "Registrando doc..."}
               {uploadPhase === "finished" && (
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" /> Feito
                 </>
               )}
-              {uploadPhase === "idle" && "Criar rascunho"}
               {uploadPhase === "error" && "Tentar novamente"}
             </Button>
             <Button
@@ -780,7 +1025,10 @@ export function UploadForm() {
               {uploadPhase === "audio-uploading" &&
                 `Áudio ${Math.floor(audioProgress)}%`}
               {uploadPhase === "episode-creating" && "Criando episódio..."}
-              {uploadPhase === "document-uploading" && "Anexando documento..."}
+              {uploadPhase === "document-preparing" && "Prep. doc..."}
+              {uploadPhase === "document-uploading" &&
+                `Doc ${Math.floor(documentProgress)}%`}
+              {uploadPhase === "document-registering" && "Finalizando..."}
               {uploadPhase === "finished" && (
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" /> Sucesso!
