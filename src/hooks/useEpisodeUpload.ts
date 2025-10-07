@@ -6,7 +6,7 @@ import {
   getDocumentSignedUploadUrl,
   registerUploadedDocumentAction,
 } from "@/src/app/admin/episodes/documentActions";
-import { createEpisodeAction } from "@/src/app/admin/episodes/createEpisodeAction";
+import { createEpisodeAction } from "@/src/app/admin/episodes/actions";
 import { revalidateAdminDashboard } from "@/src/app/admin/actions";
 import { Program, Category, Subcategory, Tag, Episode } from "@/src/lib/types";
 
