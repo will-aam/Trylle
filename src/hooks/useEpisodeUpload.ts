@@ -1,9 +1,8 @@
-// src/hooks/useEpisodeUpload.ts
+"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
-import { getTags } from "@/src/services/tagService";
-import { getLastEpisodeNumber } from "@/src/services/episodeService.client"; // <-- IMPORTAÇÃO CORRIGIDA
+import { getLastEpisodeNumber } from "@/src/services/episodeService.client";
 import { getAudioSignedUploadUrlForCreation } from "@/src/app/admin/episodes/audioCreationActions";
 import {
   getDocumentSignedUploadUrl,
@@ -12,7 +11,6 @@ import {
 import { createEpisodeAction } from "@/src/app/admin/episodes/actions";
 import { revalidateAdminDashboard } from "@/src/app/admin/actions";
 import { Program, Category, Subcategory, Tag, Episode } from "@/src/lib/types";
-
 import {
   normalizeUploadError,
   validateFileType,
@@ -20,6 +18,9 @@ import {
   buildUserMessage,
   type NormalizedUploadError,
 } from "@/src/lib/upload/errors";
+
+// Substitui o antigo getTags() do service pelo uso das Server Actions
+import { listTagsAction } from "@/src/app/admin/tags/actions";
 
 /* --------------------------------------------------
  * Types
@@ -133,7 +134,6 @@ export interface UseEpisodeUploadReturn {
 
   readablePhaseMessage: () => string | null;
 
-  // Utility to format error externally if needed
   buildUserMessage: (err: NormalizedUploadError) => string;
 }
 
@@ -216,13 +216,12 @@ export function useEpisodeUpload(
   );
 
   /* --------------------------------------------------
-   * Auto page count (PDF) via import dinâmico
+   * Auto page count (PDF)
    * -------------------------------------------------- */
   useEffect(() => {
     (async () => {
       if (!documentFile) return;
       if (!documentFile.type.toLowerCase().includes("pdf")) return;
-      // Do not re-calculate if a value is already present
       if (docPageCount.trim() !== "") return;
 
       try {
@@ -257,14 +256,30 @@ export function useEpisodeUpload(
    * Load reference data
    * -------------------------------------------------- */
   const reloadReferenceData = useCallback(async () => {
-    const [catRes, tagRes, programRes] = await Promise.all([
+    const [catRes, programRes, tagRes] = await Promise.all([
       supabase.from("categories").select("*").order("name"),
-      getTags(),
       supabase.from("programs").select("*, categories(*)").order("title"),
+      listTagsAction({
+        page: 1,
+        perPage: 5000, // grande o suficiente para trazer todas as tags
+        search: "",
+        filterMode: "all",
+      }),
     ]);
+
     setCategories(catRes.data || []);
-    setTags(tagRes || []);
     setPrograms(programRes.data || []);
+
+    if (tagRes.success) {
+      const mapped: Tag[] = tagRes.data.map((t) => ({
+        id: t.id,
+        name: t.name,
+        created_at: t.created_at,
+      }));
+      setTags(mapped);
+    } else {
+      setTags([]);
+    }
   }, [supabase]);
 
   useEffect(() => {
@@ -461,7 +476,7 @@ export function useEpisodeUpload(
       const typeErr = validateFileType(documentFile, documentAllowedExt);
       if (typeErr) {
         setLastError(typeErr);
-        transitionPhase("audio-done"); // do not kill entire episode
+        transitionPhase("audio-done");
         onError?.(buildUserMessage(typeErr), typeErr);
         return;
       }
@@ -547,7 +562,6 @@ export function useEpisodeUpload(
           technicalMessage: register.error,
         });
         setLastError(err);
-        // Do not block overall success of episode creation
         onError?.(buildUserMessage(err), err);
       }
     } catch (e: any) {
