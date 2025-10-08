@@ -1,34 +1,30 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/src/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/src/components/ui/select";
-import { Trash2, Edit } from "lucide-react";
-import { TagWithCount, TagGroup } from "./types";
+import { TagGroup, TagWithCount } from "./types";
 
-interface TagActionsDialogProps {
+export interface TagActionsDialogProps {
   tag: TagWithCount | null;
   isOpen: boolean;
   onClose: () => void;
-  // A função onEdit agora também aceitará o ID do grupo
-  onEdit: (tagId: string, newName: string, groupId: string | null) => void;
-  onDelete: (tagId: string) => void;
-  // Passaremos a lista de grupos disponíveis como uma propriedade
+  onEdit: (
+    tagId: string,
+    newName: string,
+    groupId: string | null
+  ) => void | Promise<void>;
+  onDelete: (tagId: string) => void | Promise<void>;
   tagGroups: TagGroup[];
+  // Novas props opcionais (controle externo)
+  editTagName?: string;
+  onEditTagNameChange?: (value: string) => void;
 }
 
 export function TagActionsDialog({
@@ -38,95 +34,104 @@ export function TagActionsDialog({
   onEdit,
   onDelete,
   tagGroups,
+  editTagName,
+  onEditTagNameChange,
 }: TagActionsDialogProps) {
-  const [editName, setEditName] = useState("");
-  // Novo estado para guardar o ID do grupo selecionado
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  // Estado interno fallback se controle externo não foi fornecido
+  const [internalName, setInternalName] = useState("");
+  const [groupId, setGroupId] = useState<string | null>(null);
 
-  // Efeito para preencher os campos quando o diálogo abre
+  const controlled = typeof editTagName === "string" && !!onEditTagNameChange;
+
   useEffect(() => {
     if (tag) {
-      setEditName(tag.name);
-      setSelectedGroupId(tag.group_id || null);
+      if (!controlled) {
+        setInternalName(tag.name);
+      }
+      setGroupId(tag.group_id || null);
     } else {
-      setEditName("");
-      setSelectedGroupId(null);
+      if (!controlled) setInternalName("");
+      setGroupId(null);
     }
-  }, [tag]);
+  }, [tag, controlled, editTagName]);
 
-  const handleSave = () => {
-    if (tag && editName.trim()) {
-      // Passamos o ID do grupo selecionado ao salvar
-      onEdit(tag.id, editName.trim(), selectedGroupId);
-      onClose();
+  const currentName = controlled ? editTagName! : internalName;
+
+  const handleNameChange = (val: string) => {
+    if (controlled) {
+      onEditTagNameChange!(val);
+    } else {
+      setInternalName(val);
     }
   };
 
-  const handleDelete = () => {
-    if (tag) {
-      onDelete(tag.id);
-      onClose();
-    }
+  if (!isOpen || !tag) return null;
+
+  const handleEdit = async () => {
+    if (!currentName.trim()) return;
+    await onEdit(tag.id, currentName.trim(), groupId);
+  };
+
+  const handleDelete = async () => {
+    await onDelete(tag.id);
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Ações para a Tag</AlertDialogTitle>
-          <AlertDialogDescription>
-            Edite o nome, atribua a um grupo ou exclua a tag "{tag?.name}"
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="flex flex-col gap-4 py-4">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle>Editar Tag</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="edit-tag-name">Nome da tag:</Label>
+            <label className="text-sm font-medium">Nome da Tag</label>
             <Input
-              id="edit-tag-name"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              placeholder={tag?.name}
+              value={currentName}
+              onChange={(e) => handleNameChange(e.target.value)}
+              autoFocus
             />
+            <p className="text-xs text-muted-foreground">
+              Vinculada a {tag.episode_count} episódio(s).
+            </p>
           </div>
 
-          {/* Novo Bloco: Seletor de Grupo */}
-          <div className="space-y-2">
-            <Label htmlFor="tag-group">Grupo (Opcional)</Label>
-            <Select
-              value={selectedGroupId || "none"}
-              onValueChange={(value) => {
-                setSelectedGroupId(value === "none" ? null : value);
-              }}
-            >
-              <SelectTrigger id="tag-group">
-                <SelectValue placeholder="Selecione um grupo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhum grupo</SelectItem>
-                {tagGroups.map((group) => (
-                  <SelectItem key={group.id} value={group.id}>
-                    {group.name}
-                  </SelectItem>
+          {tagGroups.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Grupo (opcional)</label>
+              <select
+                className="border rounded-md h-9 px-2 text-sm bg-background"
+                value={groupId || ""}
+                onChange={(e) => setGroupId(e.target.value || null)}
+              >
+                <option value="">Sem grupo</option>
+                {tagGroups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+              </select>
+            </div>
+          )}
 
-        <div className="flex justify-between mt-4">
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <div className="flex space-x-2">
-            <Button variant="destructive" onClick={handleDelete}>
-              <Trash2 className="mr-2 h-4 w-4" /> Excluir
+          <div className="flex justify-between pt-2">
+            <Button variant="destructive" type="button" onClick={handleDelete}>
+              Excluir
             </Button>
-            <Button onClick={handleSave} disabled={!editName.trim()}>
-              <Edit className="mr-2 h-4 w-4" /> Salvar Alterações
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" type="button" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleEdit}
+                disabled={!currentName.trim()}
+              >
+                Salvar
+              </Button>
+            </div>
           </div>
         </div>
-      </AlertDialogContent>
-    </AlertDialog>
+      </DialogContent>
+    </Dialog>
   );
 }

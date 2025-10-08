@@ -1,35 +1,31 @@
-"use client";
-import { useRef } from "react";
-import { Button } from "../../../ui/button";
-import { Upload } from "lucide-react";
+import { ChangeEvent } from "react";
+import { Button } from "@/src/components/ui/button";
 
-interface FileInputProps {
-  onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  accept?: string;
+export interface FileInputProps {
+  onFileChange: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
+  disabled?: boolean; // ADICIONADO
 }
 
-export function FileInput({
-  onFileChange,
-  accept = ".csv,.txt",
-}: FileInputProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleClick = () => {
-    fileInputRef.current?.click();
-  };
-
+export function FileInput({ onFileChange, disabled = false }: FileInputProps) {
   return (
-    <>
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept={accept}
-        onChange={onFileChange}
-      />
-      <Button onClick={handleClick} variant="outline" className="w-full">
-        <Upload className="mr-2 h-4 w-4" /> Importar
-      </Button>
-    </>
+    <div className="w-full">
+      <label className="w-full">
+        <input
+          type="file"
+          accept=".csv,text/csv,text/plain"
+          className="hidden"
+          onChange={onFileChange}
+          disabled={disabled}
+        />
+        <Button
+          variant="outline"
+          type="button"
+          className="w-full"
+          disabled={disabled}
+        >
+          Importar CSV
+        </Button>
+      </label>
+    </div>
   );
 }
