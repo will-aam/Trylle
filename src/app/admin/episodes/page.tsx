@@ -1,75 +1,46 @@
 import { EpisodeManager } from "@/src/components/features/admin/episode-management/episode-manager";
-import {
-  getEpisodesWithRelations,
-  getEpisodesCount,
-} from "@/src/services/episodeService";
-import { getEpisodeStatusCounts } from "@/src/services/adminService";
-import {
-  getCategoriesForServer,
-  getSubcategoriesForServer,
-  getProgramsForServer,
-  getTagsForServer,
-} from "@/src/services/serverDataService";
+import { createSupabaseServerClient } from "@/src/lib/supabase-server";
 
 export const revalidate = 0;
 
 export default async function AdminEpisodesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
+  searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const sp = await searchParams;
-
-  const searchTerm = sp.q?.trim() || "";
-  const status = sp.status || "all";
-  const categoryId = sp.category || "all";
-  const page = safePositiveInt(sp.page, 1);
-  const limit = safePositiveInt(sp.limit, 5);
-  const sortBy = (sp.sortBy as any) || "published_at";
-  const ascending = sp.order === "asc";
-  const offset = (page - 1) * limit;
+  const supabase = await createSupabaseServerClient();
 
   const [
-    episodesResult,
-    totalCount,
-    categoriesResult,
-    subcategoriesResult,
-    programsResult,
-    statusCountsResult,
-    tagsResult,
+    { data: categoriesData },
+    { data: subcategoriesData },
+    { data: programsData },
+    { data: tagsData },
   ] = await Promise.all([
-    getEpisodesWithRelations({
-      limit,
-      offset,
-      searchTerm,
-      status,
-      categoryId,
-      sortBy,
-      ascending,
-    }),
-    getEpisodesCount({ searchTerm, status, categoryId }),
-    getCategoriesForServer(),
-    getSubcategoriesForServer(),
-    getProgramsForServer(),
-    getEpisodeStatusCounts(),
-    getTagsForServer(),
+    supabase.from("categories").select("id,name,created_at").order("name"),
+    supabase
+      .from("subcategories")
+      .select("id,name,category_id,created_at")
+      .order("name"),
+    supabase
+      .from("programs")
+      .select("id,title,description,category_id,created_at,updated_at")
+      .order("title"),
+    supabase.from("tags").select("id,name,created_at").order("name"),
   ]);
+
+  // Normaliza para satisfazer a interface Program (que exige 'category')
+  const normalizedPrograms =
+    (programsData || []).map((p: any) => ({
+      ...p,
+      category: null, // placeholder (já que Program.category é 'any')
+    })) || [];
 
   return (
     <EpisodeManager
-      initialEpisodes={episodesResult}
-      initialTotalEpisodes={totalCount}
-      initialCategories={categoriesResult}
-      initialSubcategories={subcategoriesResult}
-      initialPrograms={programsResult}
-      initialStatusCounts={statusCountsResult}
-      initialAllTags={tagsResult}
+      initialCategories={categoriesData || []}
+      initialSubcategories={subcategoriesData || []}
+      initialPrograms={normalizedPrograms}
+      initialAllTags={tagsData || []}
     />
   );
-}
-
-function safePositiveInt(raw: string | undefined, fallback: number): number {
-  if (!raw) return fallback;
-  const n = Number(raw);
-  return Number.isInteger(n) && n > 0 ? n : fallback;
 }

@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
-import { getLastEpisodeNumber } from "@/src/services/episodeService.client";
 import { getAudioSignedUploadUrlForCreation } from "@/src/app/admin/episodes/audioCreationActions";
 import {
   getDocumentSignedUploadUrl,
   registerUploadedDocumentAction,
 } from "@/src/app/admin/episodes/documentActions";
-import { createEpisodeAction } from "@/src/app/admin/episodes/actions";
+import {
+  createEpisodeAction,
+  getNextEpisodeNumberAction, // ADICIONADO
+} from "@/src/app/admin/episodes/actions";
 import { revalidateAdminDashboard } from "@/src/app/admin/actions";
 import { Program, Category, Subcategory, Tag, Episode } from "@/src/lib/types";
 import {
@@ -18,14 +20,9 @@ import {
   buildUserMessage,
   type NormalizedUploadError,
 } from "@/src/lib/upload/errors";
-
-// Substitui o antigo getTags() do service pelo uso das Server Actions
 import { listTagsAction } from "@/src/app/admin/tags/actions";
 
-/* --------------------------------------------------
- * Types
- * -------------------------------------------------- */
-
+/* ---------- Types (inalterados) ---------- */
 export type EpisodeUploadPhase =
   | "idle"
   | "audio-preparing"
@@ -66,7 +63,7 @@ export interface EpisodeFormState {
   episodeNumber: string;
   categoryId: string;
   subcategoryId: string;
-  publishedAt: string; // yyyy-mm-dd
+  publishedAt: string;
 }
 
 export interface EpisodeUploadState {
@@ -98,65 +95,48 @@ export interface UseEpisodeUploadOptions {
 export interface UseEpisodeUploadReturn {
   form: EpisodeFormState;
   setForm: React.Dispatch<React.SetStateAction<EpisodeFormState>>;
-
   audioFile: File | null;
   setAudioFile: (f: File | null) => void;
   documentFile: File | null;
   setDocumentFile: (f: File | null) => void;
-
   docPageCount: string;
   setDocPageCount: (v: string) => void;
   docReferenceCount: string;
   setDocReferenceCount: (v: string) => void;
-
   data: LoadedReferenceData;
   reloadReferenceData: () => Promise<void>;
-
   selectedTagIds: string[];
   setSelectedTagIds: React.Dispatch<React.SetStateAction<string[]>>;
   createAndSelectTag: (tag: Tag) => void;
-
   selectedCategory: string;
   setSelectedCategory: (id: string) => void;
   selectedProgram: Program | null;
   setSelectedProgram: (p: Program | null) => void;
   filteredSubcategories: Subcategory[];
-
   upload: EpisodeUploadState;
-
   submit: (status: "draft" | "scheduled" | "published") => Promise<void>;
   cancelAudioUpload: () => void;
   cancelDocumentUpload: () => void;
   resetAll: () => void;
-
   lastError: NormalizedUploadError | null;
   isBusy: boolean;
-
   readablePhaseMessage: () => string | null;
-
   buildUserMessage: (err: NormalizedUploadError) => string;
 }
 
-/* --------------------------------------------------
- * Type Guards
- * -------------------------------------------------- */
+/* ---------- Guards ---------- */
 function assertAudioSuccess(
   r: AudioSignedResult
 ): asserts r is AudioSignedSuccess {
-  if (!r.success) {
+  if (!r.success)
     throw new Error(r.error || "Falha ao preparar upload de áudio.");
-  }
 }
-
 function assertDocSuccess(r: DocSignedResult): asserts r is DocSignedSuccess {
-  if (!r.success) {
+  if (!r.success)
     throw new Error(r.error || "Falha ao preparar upload de documento.");
-  }
 }
 
-/* --------------------------------------------------
- * Hook
- * -------------------------------------------------- */
+/* ---------- Hook ---------- */
 export function useEpisodeUpload(
   options: UseEpisodeUploadOptions = {}
 ): UseEpisodeUploadReturn {
@@ -173,7 +153,7 @@ export function useEpisodeUpload(
 
   const supabase = createSupabaseBrowserClient();
 
-  // Reference data
+  // Reference state
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -184,7 +164,6 @@ export function useEpisodeUpload(
   const [filteredSubcategories, setFilteredSubcategories] = useState<
     Subcategory[]
   >([]);
-
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   const [form, setForm] = useState<EpisodeFormState>({
@@ -210,85 +189,65 @@ export function useEpisodeUpload(
 
   const audioXhrRef = useRef<XMLHttpRequest | null>(null);
   const documentXhrRef = useRef<XMLHttpRequest | null>(null);
-
   const [lastError, setLastError] = useState<NormalizedUploadError | null>(
     null
   );
 
-  /* --------------------------------------------------
-   * Auto page count (PDF)
-   * -------------------------------------------------- */
+  /* ---------- PDF auto pages ---------- */
   useEffect(() => {
     (async () => {
       if (!documentFile) return;
       if (!documentFile.type.toLowerCase().includes("pdf")) return;
       if (docPageCount.trim() !== "") return;
-
       try {
         const { extractPdfPageCount } = await import(
           "@/src/lib/pdf/extract-pdf-page-count"
         );
         const count = await extractPdfPageCount(documentFile);
-        if (count && !isNaN(count)) {
-          setDocPageCount(String(count));
-        }
-      } catch (err) {
-        console.warn("Could not extract PDF page count", err);
+        if (count && !isNaN(count)) setDocPageCount(String(count));
+      } catch {
+        /* silencioso */
       }
     })();
   }, [documentFile, docPageCount]);
 
-  /* --------------------------------------------------
-   * Phase Management
-   * -------------------------------------------------- */
+  /* ---------- Phase helper ---------- */
   function transitionPhase(next: EpisodeUploadPhase) {
-    if (
-      next === "idle" ||
-      next === "audio-preparing" ||
-      next === "audio-uploading"
-    ) {
+    if (["idle", "audio-preparing", "audio-uploading"].includes(next)) {
       setLastError(null);
     }
     setPhase(next);
   }
 
-  /* --------------------------------------------------
-   * Load reference data
-   * -------------------------------------------------- */
+  /* ---------- Load reference data ---------- */
   const reloadReferenceData = useCallback(async () => {
     const [catRes, programRes, tagRes] = await Promise.all([
       supabase.from("categories").select("*").order("name"),
       supabase.from("programs").select("*, categories(*)").order("title"),
-      listTagsAction({
-        page: 1,
-        perPage: 5000, // grande o suficiente para trazer todas as tags
-        search: "",
-        filterMode: "all",
-      }),
+      listTagsAction({ page: 1, perPage: 5000, search: "", filterMode: "all" }),
     ]);
 
     setCategories(catRes.data || []);
     setPrograms(programRes.data || []);
 
     if (tagRes.success) {
-      const mapped: Tag[] = tagRes.data.map((t) => ({
-        id: t.id,
-        name: t.name,
-        created_at: t.created_at,
-      }));
-      setTags(mapped);
+      setTags(
+        tagRes.data.map((t) => ({
+          id: t.id,
+          name: t.name,
+          created_at: t.created_at,
+        }))
+      );
     } else {
       setTags([]);
     }
   }, [supabase]);
 
   useEffect(() => {
-    if (autoLoadData) {
-      void reloadReferenceData();
-    }
+    if (autoLoadData) void reloadReferenceData();
   }, [autoLoadData, reloadReferenceData]);
 
-  // Subcategories update
+  /* ---------- Subcategories update ---------- */
   useEffect(() => {
     if (selectedCategory) {
       const run = async () => {
@@ -307,7 +266,7 @@ export function useEpisodeUpload(
     }
   }, [selectedCategory, supabase]);
 
-  // Bind category from program and fetch next episode number
+  /* ---------- Program binding + next episode number ---------- */
   useEffect(() => {
     if (!selectedProgram) {
       setForm((prev) => ({
@@ -323,7 +282,6 @@ export function useEpisodeUpload(
     const programCategory = categories.find(
       (c) => c.id === selectedProgram.category_id
     );
-
     if (programCategory) {
       setForm((prev) => ({
         ...prev,
@@ -335,26 +293,23 @@ export function useEpisodeUpload(
 
     const fetchAndSetNextEpisodeNumber = async () => {
       if (selectedProgram.id) {
-        const lastNumber = await getLastEpisodeNumber(selectedProgram.id);
-        const nextNumber = lastNumber + 1;
+        const res = await getNextEpisodeNumberAction(selectedProgram.id);
+        const nextNumber = res.success ? res.nextNumber : 1;
         setForm((prev) => ({
           ...prev,
           episodeNumber: String(nextNumber),
         }));
       }
     };
-
     fetchAndSetNextEpisodeNumber();
   }, [selectedProgram, categories]);
 
-  // External phase watcher
+  /* ---------- External phase watcher ---------- */
   useEffect(() => {
     onPhaseChange?.(phase);
   }, [phase, onPhaseChange]);
 
-  /* --------------------------------------------------
-   * Setters / Helpers
-   * -------------------------------------------------- */
+  /* ---------- Helpers ---------- */
   const setAudioFile = (file: File | null) => {
     setAudioFileInternal(file);
     if (file) {
@@ -381,7 +336,7 @@ export function useEpisodeUpload(
     );
   };
 
-  const isBusy = phase !== "idle" && phase !== "finished" && phase !== "error";
+  const isBusy = !["idle", "finished", "error"].includes(phase);
 
   function readablePhaseMessage(): string | null {
     switch (phase) {
@@ -406,9 +361,7 @@ export function useEpisodeUpload(
     }
   }
 
-  /* --------------------------------------------------
-   * Cancel
-   * -------------------------------------------------- */
+  /* ---------- Cancel ---------- */
   const cancelAudioUpload = () => {
     if (audioXhrRef.current && phase === "audio-uploading") {
       audioXhrRef.current.abort();
@@ -419,7 +372,6 @@ export function useEpisodeUpload(
       onError?.(buildUserMessage(err), err);
     }
   };
-
   const cancelDocumentUpload = () => {
     if (
       documentXhrRef.current &&
@@ -434,9 +386,7 @@ export function useEpisodeUpload(
     }
   };
 
-  /* --------------------------------------------------
-   * Reset
-   * -------------------------------------------------- */
+  /* ---------- Reset ---------- */
   const resetAll = () => {
     setForm({
       title: "",
@@ -464,15 +414,11 @@ export function useEpisodeUpload(
     documentXhrRef.current?.abort();
   };
 
-  /* --------------------------------------------------
-   * Document Upload (optional)
-   * -------------------------------------------------- */
+  /* ---------- Document (optional) ---------- */
   const uploadDocumentIfNeeded = async (episodeId: string) => {
     if (!documentFile) return;
     try {
       transitionPhase("document-preparing");
-
-      // Local validations
       const typeErr = validateFileType(documentFile, documentAllowedExt);
       if (typeErr) {
         setLastError(typeErr);
@@ -492,7 +438,6 @@ export function useEpisodeUpload(
         episodeId,
         documentFile.name
       )) as DocSignedResult;
-
       if (!raw.success) {
         const err = normalizeUploadError({
           code: "SIGNED_URL_FAIL",
@@ -565,20 +510,16 @@ export function useEpisodeUpload(
         onError?.(buildUserMessage(err), err);
       }
     } catch (e: any) {
-      const err = e?.code
-        ? normalizeUploadError({ code: e.code, technicalMessage: e?.message })
-        : normalizeUploadError({
-            code: "UNKNOWN",
-            technicalMessage: e?.message,
-          });
+      const err = normalizeUploadError({
+        code: "UNKNOWN",
+        technicalMessage: e?.message,
+      });
       setLastError(err);
       onError?.(buildUserMessage(err), err);
     }
   };
 
-  /* --------------------------------------------------
-   * Submit Flow
-   * -------------------------------------------------- */
+  /* ---------- Submit Flow ---------- */
   const submit = async (status: "draft" | "scheduled" | "published") => {
     if (!audioFile || !form.title.trim()) {
       const err = normalizeUploadError({
@@ -590,14 +531,12 @@ export function useEpisodeUpload(
       return;
     }
 
-    // Local validations (audio)
     const audioExtErr = validateFileType(audioFile, audioAllowedExt);
     if (audioExtErr) {
       setLastError(audioExtErr);
       onError?.(buildUserMessage(audioExtErr), audioExtErr);
       return;
     }
-
     const audioSizeErr = validateFileSize(audioFile, audioMaxMB);
     if (audioSizeErr) {
       setLastError(audioSizeErr);
@@ -610,7 +549,6 @@ export function useEpisodeUpload(
       const raw = (await getAudioSignedUploadUrlForCreation(
         audioFile.name
       )) as AudioSignedResult;
-
       if (!raw.success) {
         const err = normalizeUploadError({
           code: "SIGNED_URL_FAIL",
@@ -715,9 +653,6 @@ export function useEpisodeUpload(
     }
   };
 
-  /* --------------------------------------------------
-   * Return
-   * -------------------------------------------------- */
   return {
     form,
     setForm,

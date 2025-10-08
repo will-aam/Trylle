@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Program,
@@ -10,45 +10,68 @@ import {
   SortDirection,
   Tag,
 } from "@/src/lib/types";
-import {
-  updateEpisodeAction,
-  deleteEpisodeAction,
-  type UpdateEpisodeServerInput,
-} from "@/src/app/admin/episodes/actions";
+import { EditEpisodeDialog } from "./edit/edit-episode-dialog";
 import { EpisodeTable } from "./episode-table";
 import { EpisodeStats } from "./episode-stats";
 import { EpisodeFilters } from "./episode-filters";
-import { EditEpisodeDialog } from "./edit/edit-episode-dialog";
 import { EpisodeTablePagination } from "./episode-table-pagination";
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { ListMusic } from "lucide-react";
 import { toast } from "sonner";
 import { BulkStatusBar } from "./bulk-status-bar";
+import { updateEpisodeAction } from "@/src/app/admin/episodes/actions";
+import { useEpisodesData } from "./useEpisodesData";
 
 interface EpisodeManagerProps {
-  initialEpisodes: Episode[];
-  initialTotalEpisodes: number;
   initialCategories: Category[];
   initialSubcategories: Subcategory[];
   initialPrograms: Program[];
-  initialStatusCounts: { published: number; draft: number; scheduled: number };
   initialAllTags: Tag[];
 }
 
 export function EpisodeManager({
-  initialEpisodes,
-  initialTotalEpisodes,
   initialCategories,
   initialSubcategories,
   initialPrograms,
-  initialStatusCounts,
   initialAllTags,
 }: EpisodeManagerProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const [isPendingNav, startTransition] = useTransition();
+
+  // URL params
+  const page = Number(searchParams.get("page")) || 1;
+  const perPage = Number(searchParams.get("limit")) || 5;
+  const search = searchParams.get("q") || "";
+  const statusCsv = searchParams.get("status") || "";
+  const categoryCsv = searchParams.get("category") || "";
+  const programCsv = searchParams.get("program") || "";
+  const sortBy =
+    (searchParams.get("sortBy") as keyof Episode) || "published_at";
+  const order = (searchParams.get("order") as SortDirection) || "desc";
+
+  const {
+    episodes,
+    loading,
+    totalFiltered,
+    statusCounts,
+    isPendingTransition,
+    refetch,
+    optimisticUpdateStatus,
+    optimisticBulkStatus,
+    optimisticDelete,
+  } = useEpisodesData({
+    page,
+    perPage,
+    search,
+    statusCsv,
+    categoryCsv,
+    programCsv,
+    sortBy,
+    order,
+  });
 
   const [episodeToEdit, setEpisodeToEdit] = useState<Episode | null>(null);
   const [episodeToDelete, setEpisodeToDelete] = useState<Episode | null>(null);
@@ -56,9 +79,7 @@ export function EpisodeManager({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedEpisodes, setSelectedEpisodes] = useState<string[]>([]);
 
-  /* --------------------------------------------------
-   * Utils
-   * -------------------------------------------------- */
+  // Query state helpers
   const createQueryString = (
     params: Record<string, string | number | null>
   ) => {
@@ -69,140 +90,98 @@ export function EpisodeManager({
     }
     return newSearchParams.toString();
   };
-
-  const pushWithParams = (nextParams: Record<string, string | number | null>) =>
+  const pushWithParams = (next: Record<string, string | number | null>) =>
     startTransition(() => {
-      router.push(`${pathname}?${createQueryString(nextParams)}`);
+      router.push(`${pathname}?${createQueryString(next)}`);
     });
 
-  /* --------------------------------------------------
-   * Handlers: Filtros / Ordenação / Paginação
-   * -------------------------------------------------- */
+  // Filtros / Sort / Paginação
   const handleSearch = (term: string) =>
     pushWithParams({ q: term || null, page: 1 });
 
   const handleFilterChange = (key: string, value: string[] | string) => {
-    const filterValue = Array.isArray(value) ? value.join(",") : value;
-    pushWithParams({ [key]: filterValue || null, page: 1 });
+    const v = Array.isArray(value) ? value.join(",") : value;
+    pushWithParams({ [key]: v || null, page: 1 });
   };
 
   const handleSort = (column: keyof Episode | "") => {
     const currentSort = searchParams.get("sortBy");
     const currentOrder = (searchParams.get("order") as SortDirection) || "desc";
-    let order: SortDirection = "asc";
-    if (currentSort === column && currentOrder === "asc") order = "desc";
-    pushWithParams({ sortBy: column || null, order });
+    let newOrder: SortDirection = "asc";
+    if (currentSort === column && currentOrder === "asc") newOrder = "desc";
+    pushWithParams({ sortBy: column || null, order: newOrder });
   };
 
-  const handlePageChange = (page: number) => pushWithParams({ page });
-
+  const handlePageChange = (p: number) => pushWithParams({ page: p });
   const handleItemsPerPageChange = (limit: number) =>
     pushWithParams({ limit, page: 1 });
 
-  /* --------------------------------------------------
-   * CRUD UI
-   * -------------------------------------------------- */
-  const handleEdit = (episode: Episode) => {
-    setEpisodeToEdit(episode);
+  // CRUD UI
+  const handleEdit = (ep: Episode) => {
+    setEpisodeToEdit(ep);
     setIsEditDialogOpen(true);
   };
-
-  const handleDelete = (episode: Episode) => {
-    setEpisodeToDelete(episode);
+  const handleDelete = (ep: Episode) => {
+    setEpisodeToDelete(ep);
     setIsDeleteDialogOpen(true);
   };
-
   const confirmDelete = async () => {
     if (!episodeToDelete) return;
-    const result = await deleteEpisodeAction(episodeToDelete.id);
-    if (result.success) {
-      toast.success("Episódio deletado com sucesso.");
-      // Atualiza seleção local removendo o id deletado
-      setSelectedEpisodes((prev) =>
-        prev.filter((id) => id !== episodeToDelete.id)
-      );
-      startTransition(() => router.refresh());
-    } else {
-      toast.error("Erro ao deletar", { description: result.error });
-    }
-    setIsDeleteDialogOpen(false);
+    await optimisticDelete(episodeToDelete.id);
+    setSelectedEpisodes((prev) =>
+      prev.filter((id) => id !== episodeToDelete.id)
+    );
     setEpisodeToDelete(null);
+    setIsDeleteDialogOpen(false);
   };
 
-  /**
-   * Recebe diff parcial (já calculado no EditEpisodeDialog) e repassa para a server action.
-   * A tipagem agora está alinhada com o schema do backend (UpdateEpisodeServerInput).
-   */
   const handleUpdateEpisode = async (
     episodeId: string,
-    updates: Partial<UpdateEpisodeServerInput>
-  ): Promise<boolean> => {
-    const result = await updateEpisodeAction(episodeId, updates);
-    if (result.success) {
+    updates: Partial<{
+      title: string;
+      description: string | null;
+      program_id: string | null;
+      episode_number: number;
+      category_id: string;
+      subcategory_id: string | null;
+      tags: string[];
+    }>
+  ) => {
+    const res = await updateEpisodeAction(episodeId, updates);
+    if (res.success) {
       toast.success("Episódio atualizado com sucesso!");
       setIsEditDialogOpen(false);
-      startTransition(() => router.refresh());
+      await refetch();
       return true;
     } else {
-      toast.error("Erro ao atualizar o episódio", {
-        description: result.error,
+      toast.error("Erro ao atualizar episódio", {
+        description: res.error,
       });
       return false;
     }
   };
 
-  const clearFilters = () => {
-    startTransition(() => {
-      router.push(pathname);
-    });
-  };
-
+  const clearFilters = () => startTransition(() => router.push(pathname));
   const hasActiveFilters = searchParams.toString().length > 0;
 
+  const effectiveStatusCounts = statusCounts || {
+    published: 0,
+    draft: 0,
+    scheduled: 0,
+  };
   const globalTotal =
-    initialStatusCounts.published +
-    initialStatusCounts.draft +
-    initialStatusCounts.scheduled;
+    effectiveStatusCounts.published +
+    effectiveStatusCounts.draft +
+    effectiveStatusCounts.scheduled;
 
-  /* --------------------------------------------------
-   * Bulk status update
-   * -------------------------------------------------- */
   const bulkUpdateStatus = async (
     ids: string[],
     newStatus: Episode["status"]
-  ): Promise<{ ok: number; fail: number }> => {
-    const results = await Promise.all(
-      ids.map(async (id) => {
-        const r = await updateEpisodeAction(id, { status: newStatus });
-        return r.success;
-      })
-    );
-    const ok = results.filter(Boolean).length;
-    const fail = results.length - ok;
+  ) => optimisticBulkStatus(ids, newStatus);
 
-    if (ok > 0) {
-      startTransition(() => {
-        router.refresh();
-      });
-      toast.success(
-        `${ok} episódio${ok > 1 ? "s" : ""} atualizado${
-          ok > 1 ? "s" : ""
-        } para ${newStatus}.`
-      );
-    }
-    if (fail > 0) {
-      toast.error(
-        `${fail} episódio${fail > 1 ? "s" : ""} não pôde${
-          fail > 1 ? "m" : ""
-        } ser atualizado${fail > 1 ? "s" : ""}.`
-      );
-    }
-    return { ok, fail };
-  };
+  // Lista final (sem fallback de initialEpisodes agora)
+  const tableEpisodes = useMemo(() => episodes, [episodes]);
 
-  /* --------------------------------------------------
-   * Render
-   * -------------------------------------------------- */
   return (
     <div className="w-full">
       <div className="mx-auto max-w-screen-2xl px-4 py-6 lg:py-8">
@@ -217,10 +196,10 @@ export function EpisodeManager({
 
         <div className="flex flex-col gap-6">
           <EpisodeStats
-            totalCount={initialTotalEpisodes}
-            publishedCount={initialStatusCounts.published}
-            draftCount={initialStatusCounts.draft}
-            scheduledCount={initialStatusCounts.scheduled}
+            totalCount={totalFiltered}
+            publishedCount={effectiveStatusCounts.published}
+            draftCount={effectiveStatusCounts.draft}
+            scheduledCount={effectiveStatusCounts.scheduled}
             globalTotal={globalTotal}
             showPercentages={false}
             compact={false}
@@ -228,11 +207,13 @@ export function EpisodeManager({
 
           <EpisodeFilters
             categories={initialCategories}
-            searchTerm={searchParams.get("q") || ""}
+            searchTerm={search}
             setSearchTerm={handleSearch}
-            statusFilter={searchParams.get("status")?.split(",") || []}
+            statusFilter={statusCsv ? statusCsv.split(",").filter(Boolean) : []}
             setStatusFilter={(value) => handleFilterChange("status", value)}
-            categoryFilter={searchParams.get("category")?.split(",") || []}
+            categoryFilter={
+              categoryCsv ? categoryCsv.split(",").filter(Boolean) : []
+            }
             setCategoryFilter={(value) => handleFilterChange("category", value)}
             onClearFilters={clearFilters}
             hasActiveFilters={hasActiveFilters}
@@ -244,65 +225,43 @@ export function EpisodeManager({
               selectedIds={selectedEpisodes}
               onClear={() => setSelectedEpisodes([])}
               onBulkUpdate={bulkUpdateStatus}
-              isPending={isPending}
+              isPending={isPendingTransition || loading || isPendingNav}
               topOffsetClass="top-[72px]"
             />
           )}
 
-          {initialEpisodes.length > 0 ? (
+          {tableEpisodes.length > 0 ? (
             <>
               <EpisodeTable
-                episodes={initialEpisodes}
+                episodes={tableEpisodes}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onSort={handleSort}
-                sortColumn={
-                  (searchParams.get("sortBy") as keyof Episode) ||
-                  "published_at"
-                }
-                sortDirection={
-                  (searchParams.get("order") as SortDirection) || "desc"
-                }
+                sortColumn={sortBy}
+                sortDirection={order}
                 selectedEpisodes={selectedEpisodes}
-                onSelectEpisode={(id: string) =>
+                onSelectEpisode={(id) =>
                   setSelectedEpisodes((prev) =>
                     prev.includes(id)
                       ? prev.filter((i) => i !== id)
                       : [...prev, id]
                   )
                 }
-                onSelectAll={(selectAll: boolean) => {
-                  if (selectAll) {
-                    setSelectedEpisodes(initialEpisodes.map((e) => e.id));
-                  } else {
-                    setSelectedEpisodes([]);
-                  }
-                }}
-                onStatusChange={async (
-                  episodeId: string,
-                  newStatus: Episode["status"]
-                ) => {
-                  const result = await updateEpisodeAction(episodeId, {
-                    status: newStatus,
-                  });
-                  if (result.success) {
-                    toast.success("Status atualizado com sucesso!");
-                    startTransition(() => router.refresh());
-                  } else {
-                    toast.error("Erro ao atualizar status", {
-                      description: result.error,
-                    });
-                  }
-                }}
+                onSelectAll={(sel) =>
+                  setSelectedEpisodes(sel ? tableEpisodes.map((e) => e.id) : [])
+                }
+                onStatusChange={(id, newStatus) =>
+                  optimisticUpdateStatus(id, newStatus)
+                }
                 responsiveMode="auto"
                 actionsMode="inline-hover"
                 primaryAction="edit"
                 compactRows
               />
               <EpisodeTablePagination
-                currentPage={Number(searchParams.get("page")) || 1}
-                totalCount={initialTotalEpisodes}
-                itemsPerPage={Number(searchParams.get("limit")) || 5}
+                currentPage={page}
+                totalCount={totalFiltered}
+                itemsPerPage={perPage}
                 onPageChange={handlePageChange}
                 setItemsPerPage={handleItemsPerPageChange}
               />
@@ -342,13 +301,14 @@ export function EpisodeManager({
           onUpdate={handleUpdateEpisode}
         />
       )}
+
       {isDeleteDialogOpen && episodeToDelete && (
         <ConfirmationDialog
           isOpen={isDeleteDialogOpen}
           onOpenChange={setIsDeleteDialogOpen}
           onConfirm={confirmDelete}
           title="Confirmar Exclusão"
-          description={`Tem certeza que deseja deletar o episódio "${episodeToDelete.title}"?`}
+          description={`Deseja realmente excluir o episódio "${episodeToDelete.title}"?`}
         />
       )}
     </div>

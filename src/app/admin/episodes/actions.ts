@@ -3,11 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
-import { Episode, Tag, EpisodeDocument } from "@/src/lib/types";
+import { Episode, Tag, EpisodeDocument, Program } from "@/src/lib/types";
 
-/**
- * Schema compartilhado de UPDATE (já existente) – mantido.
- */
+/* =========================================================
+ * SCHEMAS: CREATE / UPDATE
+ * =======================================================*/
 const updateEpisodeServerSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
@@ -26,6 +26,90 @@ export type UpdateEpisodeResult =
   | { success: true; episode: Episode }
   | { success: false; error: string; code?: string };
 
+const createEpisodeSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().nullable(),
+  audio_url: z.string().url(),
+  file_name: z.string().min(1),
+  program_id: z.string().nullable(),
+  episode_number: z.number().int().positive().nullable(),
+  category_id: z.string().nullable(),
+  subcategory_id: z.string().nullable(),
+  published_at: z.string().datetime(),
+  status: z.enum(["draft", "scheduled", "published"]),
+  duration_in_seconds: z.number().int().positive().nullable(),
+  tagIds: z.array(z.string()).default([]),
+});
+export type CreateEpisodeInput = z.infer<typeof createEpisodeSchema>;
+
+export type CreateEpisodeResult =
+  | { success: true; episode: Episode }
+  | { success: false; error: string; code?: string };
+
+/* =========================================================
+ * SCHEMA: LIST / FILTER
+ * =======================================================*/
+const listEpisodesSchema = z.object({
+  page: z.number().int().min(1).default(1),
+  perPage: z.number().int().min(1).max(100).default(10),
+  search: z.string().optional().default(""),
+  status: z
+    .array(z.enum(["draft", "scheduled", "published"]))
+    .optional()
+    .default([]),
+  categoryIds: z.array(z.string()).optional().default([]),
+  programIds: z.array(z.string()).optional().default([]),
+  sortBy: z
+    .enum([
+      "published_at",
+      "created_at",
+      "title",
+      "episode_number",
+      "view_count",
+      "status",
+    ])
+    .default("published_at"),
+  order: z.enum(["asc", "desc"]).default("desc"),
+  includeTags: z.boolean().optional().default(false),
+  includeDocuments: z.boolean().optional().default(false),
+});
+
+/* =========================================================
+ * AUXILIARY TYPES
+ * =======================================================*/
+interface ActionError {
+  success: false;
+  error: string;
+  code?: string;
+}
+interface ListEpisodesResult {
+  success: true;
+  data: Episode[];
+  page: number;
+  perPage: number;
+  totalFiltered: number;
+}
+interface StatusCountsResult {
+  success: true;
+  counts: { draft: number; scheduled: number; published: number };
+}
+interface EpisodeTotalsResult {
+  success: true;
+  totalFiltered: number;
+  totalAll: number;
+}
+interface NextEpisodeNumberResult {
+  success: true;
+  nextNumber: number;
+}
+interface SingleEpisodeResult {
+  success: true;
+  episode: Episode;
+}
+
+/* =========================================================
+ * RAW ROW TYPE (flexível para variações do Supabase)
+ * =======================================================*/
 interface RawEpisodeRow {
   id: string;
   title: string;
@@ -53,25 +137,65 @@ interface RawEpisodeRow {
     page_count?: number | null;
     reference_count?: number | null;
   }[];
+  /**
+   * Pode vir:
+   * [{ tag: { ... } }] OU [{ tag: [{...},{...}] }]
+   */
   episode_tags?: {
-    tag: {
-      id: string;
-      name: string;
-      created_at: string;
-    } | null;
+    tag:
+      | {
+          id: string;
+          name: string;
+          created_at: string;
+        }
+      | {
+          id: string;
+          name: string;
+          created_at: string;
+        }[]
+      | null;
   }[];
+  programs?: {
+    id: string;
+    title: string;
+    description: string | null;
+    category_id: string | null;
+    created_at: string;
+    updated_at: string;
+  } | null;
+  categories?: { name: string | null } | null;
+  subcategories?: { name: string | null } | null;
 }
 
+/* =========================================================
+ * MAP RAW → DOMAIN
+ * =======================================================*/
 function mapRawToEpisode(row: RawEpisodeRow): Episode {
-  const tags: Tag[] =
-    row.episode_tags
-      ?.map((et) => et.tag)
-      .filter((t): t is Tag => !!t)
-      .map((t) => ({
-        id: t.id,
-        name: t.name,
-        created_at: t.created_at,
-      })) || [];
+  const collectedTags: Tag[] = [];
+
+  if (row.episode_tags && Array.isArray(row.episode_tags)) {
+    for (const et of row.episode_tags) {
+      const raw = et?.tag;
+      if (!raw) continue;
+      if (Array.isArray(raw)) {
+        for (const t of raw) {
+          if (t && t.id) {
+            collectedTags.push({
+              id: t.id,
+              name: t.name,
+              created_at: t.created_at,
+            });
+          }
+        }
+      } else if (raw.id) {
+        collectedTags.push({
+          id: raw.id,
+          name: raw.name,
+          created_at: raw.created_at,
+        });
+      }
+    }
+  }
 
   const episodeDocuments: EpisodeDocument[] | null =
     row.episode_documents?.map((d) => ({
@@ -85,6 +209,28 @@ function mapRawToEpisode(row: RawEpisodeRow): Episode {
       page_count: d.page_count,
       reference_count: d.reference_count,
     })) || null;
+
+  let programValue: Program | undefined;
+  if (row.programs) {
+    programValue = {
+      id: row.programs.id,
+      title: row.programs.title,
+      description: row.programs.description ?? "",
+      category_id: row.programs.category_id ?? "",
+      created_at: row.programs.created_at,
+      updated_at: row.programs.updated_at,
+      category: null, // placeholder
+    } as Program;
+  }
+
+  const categoriesRel =
+    row.categories && typeof row.categories.name === "string"
+      ? { name: row.categories.name }
+      : null;
+  const subcategoriesRel =
+    row.subcategories && typeof row.subcategories.name === "string"
+      ? { name: row.subcategories.name }
+      : null;
 
   return {
     id: row.id,
@@ -100,48 +246,24 @@ function mapRawToEpisode(row: RawEpisodeRow): Episode {
     updated_at: row.updated_at,
     duration_in_seconds: row.duration_in_seconds,
     view_count: row.view_count,
-    tags,
     program_id: row.program_id,
     episode_number: row.episode_number,
-    categories: undefined,
-    subcategories: undefined,
-    programs: undefined,
+    tags: collectedTags,
+    programs: programValue || null,
+    categories: categoriesRel,
+    subcategories: subcategoriesRel,
     episode_documents: episodeDocuments,
   };
 }
 
 /* =========================================================
- * CREATE EPISODE
+ * CREATE
  * =======================================================*/
-
-const createEpisodeSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().nullable(),
-  audio_url: z.string().url(),
-  file_name: z.string().min(1),
-  program_id: z.string().nullable(),
-  episode_number: z.number().int().positive().nullable(),
-  category_id: z.string().nullable(),
-  subcategory_id: z.string().nullable(),
-  published_at: z.string().datetime(),
-  status: z.enum(["draft", "scheduled", "published"]),
-  duration_in_seconds: z.number().int().positive().nullable(),
-  tagIds: z.array(z.string()).default([]),
-});
-
-export type CreateEpisodeInput = z.infer<typeof createEpisodeSchema>;
-
-export type CreateEpisodeResult =
-  | { success: true; episode: Episode }
-  | { success: false; error: string; code?: string };
-
 export async function createEpisodeAction(
   payload: CreateEpisodeInput
 ): Promise<CreateEpisodeResult> {
   try {
     const supabase = await createSupabaseServerClient();
-
-    // 1. Validar payload
     const parsed = createEpisodeSchema.safeParse(payload);
     if (!parsed.success) {
       return {
@@ -152,26 +274,21 @@ export async function createEpisodeAction(
     }
     const data = parsed.data;
 
-    // 2. Regras de coerência (pode ajustar conforme suas políticas)
     const now = new Date();
     let publishedAtISO = data.published_at;
-    const givenDate = new Date(data.published_at);
+    const providedDate = new Date(data.published_at);
 
-    // Exemplo de ajustes opcionais:
-    if (data.status === "published" && givenDate > now) {
-      // Força para agora (ou poderia forçar status=scheduled)
+    if (data.status === "published" && providedDate > now) {
       publishedAtISO = now.toISOString();
     }
-    if (data.status === "scheduled" && givenDate <= now) {
-      // Regride para draft se data não está no futuro
+    if (data.status === "scheduled" && providedDate <= now) {
       return {
         success: false,
-        error: "Data de publicação precisa ser futura para status 'scheduled'.",
+        error: "Data futura obrigatória para status 'scheduled'.",
         code: "INVALID_SCHEDULE_DATE",
       };
     }
 
-    // 3. Inserir episódio
     const insertPayload = {
       title: data.title,
       description: data.description,
@@ -211,7 +328,7 @@ export async function createEpisodeAction(
         episode_number
       `
       )
-      .single<RawEpisodeRow>();
+      .single();
 
     if (insertErr || !inserted) {
       return {
@@ -223,7 +340,6 @@ export async function createEpisodeAction(
 
     const episodeId = inserted.id;
 
-    // 4. Inserir tags (pivot) se houver
     if (data.tagIds.length > 0) {
       const pivotRows = data.tagIds.map((tagId) => ({
         episode_id: episodeId,
@@ -233,7 +349,6 @@ export async function createEpisodeAction(
         .from("episode_tags")
         .insert(pivotRows);
       if (pivotErr) {
-        // Decide: reverter episódio? (aqui não removemos; apenas retornamos warning)
         return {
           success: false,
           error:
@@ -243,7 +358,6 @@ export async function createEpisodeAction(
       }
     }
 
-    // 5. Recarregar já com joins
     const { data: full, error: fetchErr } = await supabase
       .from("episodes")
       .select(
@@ -263,6 +377,16 @@ export async function createEpisodeAction(
         view_count,
         program_id,
         episode_number,
+        programs (
+          id,
+          title,
+          description,
+          category_id,
+          created_at,
+          updated_at
+        ),
+        categories ( name ),
+        subcategories ( name ),
         episode_documents (
           id,
           episode_id,
@@ -284,7 +408,7 @@ export async function createEpisodeAction(
         `
       )
       .eq("id", episodeId)
-      .single<RawEpisodeRow>();
+      .single();
 
     if (fetchErr || !full) {
       return {
@@ -294,12 +418,9 @@ export async function createEpisodeAction(
       };
     }
 
+    const fullRow = full as unknown as RawEpisodeRow;
     revalidatePath("/admin/episodes");
-
-    return {
-      success: true,
-      episode: mapRawToEpisode(full),
-    };
+    return { success: true, episode: mapRawToEpisode(fullRow) };
   } catch (e: any) {
     return {
       success: false,
@@ -309,7 +430,7 @@ export async function createEpisodeAction(
 }
 
 /* =========================================================
- * UPDATE EPISODE (já existia)
+ * UPDATE
  * =======================================================*/
 export async function updateEpisodeAction(
   episodeId: string,
@@ -326,8 +447,8 @@ export async function updateEpisodeAction(
     };
   }
   const data = parse.data;
-
   const { tags, ...episodeFieldUpdates } = data;
+
   const cleaned: Record<string, any> = {};
   Object.entries(episodeFieldUpdates).forEach(([k, v]) => {
     if (v !== undefined) cleaned[k] = v;
@@ -418,6 +539,16 @@ export async function updateEpisodeAction(
       view_count,
       program_id,
       episode_number,
+      programs (
+        id,
+        title,
+        description,
+        category_id,
+        created_at,
+        updated_at
+      ),
+      categories ( name ),
+      subcategories ( name ),
       episode_documents (
         id,
         episode_id,
@@ -439,7 +570,7 @@ export async function updateEpisodeAction(
       `
     )
     .eq("id", episodeId)
-    .single<RawEpisodeRow>();
+    .single();
 
   if (fetchError || !updatedRow) {
     return {
@@ -449,12 +580,13 @@ export async function updateEpisodeAction(
     };
   }
 
+  const updatedNorm = updatedRow as unknown as RawEpisodeRow;
   revalidatePath("/admin/episodes");
-  return { success: true, episode: mapRawToEpisode(updatedRow) };
+  return { success: true, episode: mapRawToEpisode(updatedNorm) };
 }
 
 /* =========================================================
- * DELETE EPISODE (já existia)
+ * DELETE
  * =======================================================*/
 export async function deleteEpisodeAction(
   episodeId: string
@@ -503,5 +635,298 @@ export async function deleteEpisodeAction(
     return { success: true };
   } catch (e: any) {
     return { success: false, error: e?.message || "Erro inesperado." };
+  }
+}
+
+/* =========================================================
+ * LIST
+ * =======================================================*/
+export async function listEpisodesAction(
+  params: Partial<z.infer<typeof listEpisodesSchema>>
+): Promise<ListEpisodesResult | ActionError> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const parsed = listEpisodesSchema.parse(params);
+    const {
+      page,
+      perPage,
+      search,
+      status,
+      categoryIds,
+      programIds,
+      sortBy,
+      order,
+      includeTags,
+      includeDocuments,
+    } = parsed;
+
+    const from = (page - 1) * perPage;
+    const to = from + perPage - 1;
+
+    const baseSelect: string[] = [
+      "id",
+      "title",
+      "description",
+      "audio_url",
+      "file_name",
+      "category_id",
+      "subcategory_id",
+      "status",
+      "published_at",
+      "created_at",
+      "updated_at",
+      "duration_in_seconds",
+      "view_count",
+      "program_id",
+      "episode_number",
+      "programs(id,title,description,category_id,created_at,updated_at)",
+      "categories(name)",
+      "subcategories(name)",
+    ];
+
+    if (includeDocuments) {
+      baseSelect.push(
+        "episode_documents(id,episode_id,file_name,public_url,storage_path,created_at,file_size,page_count,reference_count)"
+      );
+    }
+    if (includeTags) {
+      baseSelect.push(
+        "episode_tags:episode_tags(tag:tags(id,name,created_at))"
+      );
+    }
+
+    let query = supabase
+      .from("episodes")
+      .select(baseSelect.join(","), { count: "exact" })
+      .order(sortBy, { ascending: order === "asc" })
+      .range(from, to);
+
+    if (search) query = query.ilike("title", `%${search}%`);
+    if (status.length > 0) query = query.in("status", status);
+    if (categoryIds.length > 0) query = query.in("category_id", categoryIds);
+    if (programIds.length > 0) query = query.in("program_id", programIds);
+
+    const { data, error, count } = await query;
+    if (error) {
+      return { success: false, error: error.message, code: error.code };
+    }
+
+    const mapped = (data || []).map((r) =>
+      mapRawToEpisode(r as unknown as RawEpisodeRow)
+    );
+
+    return {
+      success: true,
+      data: mapped,
+      page,
+      perPage,
+      totalFiltered: count || 0,
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      error: e?.message || "Falha ao listar episódios.",
+    };
+  }
+}
+
+/* =========================================================
+ * STATUS COUNTS
+ * =======================================================*/
+export async function getEpisodeStatusCountsAction(): Promise<
+  StatusCountsResult | ActionError
+> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const statuses: Array<"draft" | "scheduled" | "published"> = [
+      "draft",
+      "scheduled",
+      "published",
+    ];
+    const counts: Record<string, number> = {
+      draft: 0,
+      scheduled: 0,
+      published: 0,
+    };
+
+    const results = await Promise.all(
+      statuses.map((s) =>
+        supabase
+          .from("episodes")
+          .select("*", { count: "exact", head: true })
+          .eq("status", s)
+      )
+    );
+
+    results.forEach((r, idx) => {
+      if (!r.error) counts[statuses[idx]] = r.count || 0;
+    });
+
+    return {
+      success: true,
+      counts: {
+        draft: counts.draft,
+        scheduled: counts.scheduled,
+        published: counts.published,
+      },
+    };
+  } catch (e: any) {
+    return { success: false, error: e?.message || "Falha ao contar status." };
+  }
+}
+
+/* =========================================================
+ * TOTALS
+ * =======================================================*/
+export async function getEpisodeTotalsAction(
+  params: Partial<
+    Pick<
+      z.infer<typeof listEpisodesSchema>,
+      "search" | "status" | "categoryIds" | "programIds"
+    >
+  >
+): Promise<EpisodeTotalsResult | ActionError> {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const { count: totalAll, error: allErr } = await supabase
+      .from("episodes")
+      .select("*", { count: "exact", head: true });
+    if (allErr) {
+      return { success: false, error: allErr.message, code: allErr.code };
+    }
+
+    const {
+      search = "",
+      status = [],
+      categoryIds = [],
+      programIds = [],
+    } = params;
+
+    let filteredQuery = supabase
+      .from("episodes")
+      .select("*", { count: "exact", head: true });
+
+    if (search) filteredQuery = filteredQuery.ilike("title", `%${search}%`);
+    if (status.length > 0) filteredQuery = filteredQuery.in("status", status);
+    if (categoryIds.length > 0)
+      filteredQuery = filteredQuery.in("category_id", categoryIds);
+    if (programIds.length > 0)
+      filteredQuery = filteredQuery.in("program_id", programIds);
+
+    const { count: totalFiltered, error: filtErr } = await filteredQuery;
+    if (filtErr) {
+      return { success: false, error: filtErr.message, code: filtErr.code };
+    }
+
+    return {
+      success: true,
+      totalFiltered: totalFiltered || 0,
+      totalAll: totalAll || 0,
+    };
+  } catch (e: any) {
+    return { success: false, error: e?.message || "Falha ao calcular totais." };
+  }
+}
+
+/* =========================================================
+ * NEXT EPISODE NUMBER
+ * =======================================================*/
+export async function getNextEpisodeNumberAction(
+  programId: string
+): Promise<NextEpisodeNumberResult | ActionError> {
+  try {
+    if (!programId) {
+      return { success: true, nextNumber: 1 };
+    }
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("episodes")
+      .select("episode_number")
+      .eq("program_id", programId)
+      .order("episode_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      return { success: false, error: error.message, code: error.code };
+    }
+    const last = data?.episode_number || 0;
+    return { success: true, nextNumber: last + 1 };
+  } catch (e: any) {
+    return {
+      success: false,
+      error: e?.message || "Falha ao obter próximo número.",
+    };
+  }
+}
+
+/* =========================================================
+ * GET BY ID
+ * =======================================================*/
+export async function getEpisodeByIdAction(
+  id: string
+): Promise<SingleEpisodeResult | ActionError> {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("episodes")
+      .select(
+        `
+        id,
+        title,
+        description,
+        audio_url,
+        file_name,
+        category_id,
+        subcategory_id,
+        status,
+        published_at,
+        created_at,
+        updated_at,
+        duration_in_seconds,
+        view_count,
+        program_id,
+        episode_number,
+        programs (
+          id,
+          title,
+          description,
+          category_id,
+          created_at,
+          updated_at
+        ),
+        categories ( name ),
+        subcategories ( name ),
+        episode_documents (
+          id,
+          episode_id,
+          file_name,
+          public_url,
+          storage_path,
+          created_at,
+          file_size,
+          page_count,
+          reference_count
+        ),
+        episode_tags:episode_tags (
+          tag:tags ( id, name, created_at )
+        )
+        `
+      )
+      .eq("id", id)
+      .single();
+
+    if (error || !data) {
+      return {
+        success: false,
+        error: error?.message || "Episódio não encontrado.",
+        code: error?.code,
+      };
+    }
+    const singleNorm = data as unknown as RawEpisodeRow;
+    return { success: true, episode: mapRawToEpisode(singleNorm) };
+  } catch (e: any) {
+    return { success: false, error: e?.message || "Falha ao buscar episódio." };
   }
 }
