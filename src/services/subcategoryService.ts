@@ -1,4 +1,3 @@
-// src/services/subcategoryService.ts
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Subcategory } from "../lib/types";
 

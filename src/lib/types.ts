@@ -71,11 +71,11 @@ export interface Episode {
 export interface Category {
   id: string;
   name: string;
-  description: string;
   created_at: string;
-  episode_count?: number;
-  subcategories?: Subcategory[];
-  subcategoriesLoading?: boolean;
+  updated_at?: string | null; // ADICIONADO
+  episode_count?: number; // Mantemos opcional para uso em listagens
+  subcategories?: Subcategory[]; // (se você já usa isso no client para accordion)
+  subcategoriesLoading?: boolean; // flag usada no cliente (se existir)
 }
 
 /**
@@ -84,11 +84,10 @@ export interface Category {
 export interface Subcategory {
   id: string;
   name: string;
-  description: string;
   category_id: string;
   created_at: string;
-  categories?: { name: string };
-  episode_count?: number;
+  updated_at?: string | null; // ADICIONADO
+  episode_count?: number; // opcional
 }
 
 export type SortDirection = "asc" | "desc";
