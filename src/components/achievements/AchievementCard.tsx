@@ -1,7 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/src/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
 import { cn } from "@/src/lib/utils";
 
@@ -18,7 +25,10 @@ interface AchievementCardProps {
   className?: string;
 }
 
-export function AchievementCard({ achievement, className }: AchievementCardProps) {
+export function AchievementCard({
+  achievement,
+  className,
+}: AchievementCardProps) {
   const { name, description, icon, unlocked } = achievement;
 
   return (
