@@ -1,3 +1,6 @@
+// Versão baseada na que você enviou (carregando tags direto via Supabase).
+// Comentários extras adicionados para possíveis evoluções.
+
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -9,7 +12,7 @@ import {
 } from "@/src/app/admin/episodes/documentActions";
 import {
   createEpisodeAction,
-  getNextEpisodeNumberAction, // ADICIONADO
+  getNextEpisodeNumberAction,
 } from "@/src/app/admin/episodes/actions";
 import { revalidateAdminDashboard } from "@/src/app/admin/actions";
 import { Program, Category, Subcategory, Tag, Episode } from "@/src/lib/types";
@@ -20,9 +23,10 @@ import {
   buildUserMessage,
   type NormalizedUploadError,
 } from "@/src/lib/upload/errors";
-import { listTagsAction } from "@/src/app/admin/tags/actions";
 
-/* ---------- Types (inalterados) ---------- */
+// NOTE: Se quiser voltar a usar server action (mais consistente): substitua a parte de tags
+// em reloadReferenceData por uma chamada listTagsAction e mapping.
+
 export type EpisodeUploadPhase =
   | "idle"
   | "audio-preparing"
@@ -124,7 +128,6 @@ export interface UseEpisodeUploadReturn {
   buildUserMessage: (err: NormalizedUploadError) => string;
 }
 
-/* ---------- Guards ---------- */
 function assertAudioSuccess(
   r: AudioSignedResult
 ): asserts r is AudioSignedSuccess {
@@ -136,7 +139,6 @@ function assertDocSuccess(r: DocSignedResult): asserts r is DocSignedSuccess {
     throw new Error(r.error || "Falha ao preparar upload de documento.");
 }
 
-/* ---------- Hook ---------- */
 export function useEpisodeUpload(
   options: UseEpisodeUploadOptions = {}
 ): UseEpisodeUploadReturn {
@@ -153,7 +155,6 @@ export function useEpisodeUpload(
 
   const supabase = createSupabaseBrowserClient();
 
-  // Reference state
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -193,7 +194,6 @@ export function useEpisodeUpload(
     null
   );
 
-  /* ---------- PDF auto pages ---------- */
   useEffect(() => {
     (async () => {
       if (!documentFile) return;
@@ -211,7 +211,6 @@ export function useEpisodeUpload(
     })();
   }, [documentFile, docPageCount]);
 
-  /* ---------- Phase helper ---------- */
   function transitionPhase(next: EpisodeUploadPhase) {
     if (["idle", "audio-preparing", "audio-uploading"].includes(next)) {
       setLastError(null);
@@ -219,35 +218,23 @@ export function useEpisodeUpload(
     setPhase(next);
   }
 
-  /* ---------- Load reference data ---------- */
   const reloadReferenceData = useCallback(async () => {
-    const [catRes, programRes, tagRes] = await Promise.all([
+    const [catRes, programRes, tagsRes] = await Promise.all([
       supabase.from("categories").select("*").order("name"),
       supabase.from("programs").select("*, categories(*)").order("title"),
-      listTagsAction({ page: 1, perPage: 5000, search: "", filterMode: "all" }),
+      supabase.from("tags").select("id, name, created_at").order("name"),
     ]);
 
     setCategories(catRes.data || []);
     setPrograms(programRes.data || []);
-
-    if (tagRes.success) {
-      setTags(
-        tagRes.data.map((t) => ({
-          id: t.id,
-          name: t.name,
-          created_at: t.created_at,
-        }))
-      );
-    } else {
-      setTags([]);
-    }
+    if (tagsRes.data) setTags(tagsRes.data);
+    else setTags([]);
   }, [supabase]);
 
   useEffect(() => {
     if (autoLoadData) void reloadReferenceData();
   }, [autoLoadData, reloadReferenceData]);
 
-  /* ---------- Subcategories update ---------- */
   useEffect(() => {
     if (selectedCategory) {
       const run = async () => {
@@ -266,7 +253,6 @@ export function useEpisodeUpload(
     }
   }, [selectedCategory, supabase]);
 
-  /* ---------- Program binding + next episode number ---------- */
   useEffect(() => {
     if (!selectedProgram) {
       setForm((prev) => ({
@@ -304,12 +290,10 @@ export function useEpisodeUpload(
     fetchAndSetNextEpisodeNumber();
   }, [selectedProgram, categories]);
 
-  /* ---------- External phase watcher ---------- */
   useEffect(() => {
     onPhaseChange?.(phase);
   }, [phase, onPhaseChange]);
 
-  /* ---------- Helpers ---------- */
   const setAudioFile = (file: File | null) => {
     setAudioFileInternal(file);
     if (file) {
@@ -361,7 +345,6 @@ export function useEpisodeUpload(
     }
   }
 
-  /* ---------- Cancel ---------- */
   const cancelAudioUpload = () => {
     if (audioXhrRef.current && phase === "audio-uploading") {
       audioXhrRef.current.abort();
@@ -386,7 +369,6 @@ export function useEpisodeUpload(
     }
   };
 
-  /* ---------- Reset ---------- */
   const resetAll = () => {
     setForm({
       title: "",
@@ -414,7 +396,6 @@ export function useEpisodeUpload(
     documentXhrRef.current?.abort();
   };
 
-  /* ---------- Document (optional) ---------- */
   const uploadDocumentIfNeeded = async (episodeId: string) => {
     if (!documentFile) return;
     try {
@@ -519,7 +500,6 @@ export function useEpisodeUpload(
     }
   };
 
-  /* ---------- Submit Flow ---------- */
   const submit = async (status: "draft" | "scheduled" | "published") => {
     if (!audioFile || !form.title.trim()) {
       const err = normalizeUploadError({
