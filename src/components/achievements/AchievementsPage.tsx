@@ -9,7 +9,9 @@ interface AchievementsPageProps {
   achievements: Achievement[];
 }
 
-export default function AchievementsPage({ achievements }: AchievementsPageProps) {
+export default function AchievementsPage({
+  achievements,
+}: AchievementsPageProps) {
   const total = achievements.length;
   const unlocked = achievements.filter((a) => a.unlocked).length;
   const progress = total > 0 ? Math.round((unlocked / total) * 100) : 0;
