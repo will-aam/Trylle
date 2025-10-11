@@ -39,6 +39,15 @@ import {
   Music,
   FileText,
   XCircle,
+  Calendar as CalendarIcon,
+  Clock,
+  AlertCircle,
+  FileAudio,
+  File,
+  Hash,
+  Tags,
+  Mic,
+  BookOpen,
 } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { cn } from "@/src/lib/utils";
@@ -57,10 +66,10 @@ export function UploadForm() {
   const router = useRouter();
 
   const [justFinished, setJustFinished] = useState(false);
-  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false); // <- NOVO ESTADO
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(
     new Date()
-  ); // <- NOVO ESTADO
+  );
 
   const {
     form,
@@ -97,9 +106,9 @@ export function UploadForm() {
         title: "Sucesso!",
         description: `Episódio "${episode.title}" criado.`,
       });
-      router.refresh(); // Atualiza a lista de episódios
+      router.refresh();
       if (episode.status === "scheduled") {
-        router.push("/schedule"); // Redireciona para a página de programação
+        router.push("/schedule");
       }
       setJustFinished(true);
     },
@@ -166,7 +175,6 @@ export function UploadForm() {
       });
       return;
     }
-    // Seta a data no formulário e submete com o status 'scheduled'
     setForm((prev) => ({ ...prev, publishedAt: scheduleDate.toISOString() }));
     submit("scheduled");
     setIsScheduleDialogOpen(false);
@@ -224,12 +232,12 @@ export function UploadForm() {
     <div className="h-full flex flex-col">
       {justFinished && phase === "finished" && (
         <div
-          className="mb-4 flex items-center justify-between rounded-md border border-green-300 bg-green-50 p-4 text-sm text-green-700"
+          className="mb-4 flex items-center justify-between rounded-lg border border-green-300 bg-gradient-to-r from-green-50 to-emerald-50 p-4 text-sm text-green-700 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300"
           role="status"
           aria-live="polite"
         >
-          <span className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4" />
+          <span className="flex items-center gap-2 font-medium">
+            <CheckCircle className="h-5 w-5 text-green-600" />
             Episódio criado com sucesso!
           </span>
           <div className="flex gap-2">
@@ -241,6 +249,7 @@ export function UploadForm() {
                 resetAll();
                 setJustFinished(false);
               }}
+              className="border-green-300 text-green-700 hover:bg-green-100"
             >
               Novo upload
             </Button>
@@ -248,6 +257,7 @@ export function UploadForm() {
               type="button"
               size="sm"
               onClick={() => setJustFinished(false)}
+              className="bg-green-600 hover:bg-green-700"
             >
               Fechar
             </Button>
@@ -262,10 +272,10 @@ export function UploadForm() {
           if (!isBusy) void submit("published");
         }}
       >
-        <Card className="flex-1 flex flex-col overflow-hidden">
-          <CardHeader className="border-b">
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" /> Novo Episódio
+        <Card className="flex-1 flex flex-col overflow-hidden shadow-md border-0">
+          <CardHeader className="border-b px-6 py-4">
+            <CardTitle className="flex items-center gap-2 text-xl text-foreground">
+              Novo Episódio
             </CardTitle>
           </CardHeader>
 
@@ -275,21 +285,27 @@ export function UploadForm() {
                 role="alert"
                 aria-live="polite"
                 className={cn(
-                  "relative rounded-md border px-4 py-3 text-sm shadow-sm",
+                  "relative rounded-lg border px-4 py-3 text-sm shadow-sm animate-in fade-in slide-in-from-top-2 duration-300",
                   lastError.severity === "warning"
-                    ? "border-amber-300 bg-amber-50 text-amber-800"
-                    : "border-red-400 bg-red-50 text-red-700"
+                    ? "border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-800"
+                    : "border-red-400 bg-gradient-to-r from-red-50 to-rose-50 text-red-700"
                 )}
               >
                 <div className="flex items-start gap-3 pr-6">
-                  <XCircle
+                  <div
                     className={cn(
-                      "h-5 w-5 flex-shrink-0",
+                      "flex h-8 w-8 items-center justify-center rounded-full flex-shrink-0",
                       lastError.severity === "warning"
-                        ? "text-amber-500"
-                        : "text-red-500"
+                        ? "bg-amber-100 text-amber-600"
+                        : "bg-red-100 text-red-600"
                     )}
-                  />
+                  >
+                    {lastError.severity === "warning" ? (
+                      <AlertCircle className="h-4 w-4" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                  </div>
                   <div className="flex-1 space-y-1">
                     <p className="font-medium leading-none">
                       {lastError.severity === "warning" ? "Aviso" : "Erro"}
@@ -312,7 +328,7 @@ export function UploadForm() {
                   <button
                     type="button"
                     onClick={dismissError}
-                    className="absolute right-2 top-2 rounded p-1 text-xs text-current hover:bg-black/10 focus:outline-none"
+                    className="absolute right-2 top-2 rounded p-1 text-xs text-current hover:bg-black/10 focus:outline-none transition-colors"
                     aria-label="Fechar alerta"
                   >
                     ✕
@@ -321,10 +337,16 @@ export function UploadForm() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="space-y-6">
-                <div>
-                  <Label htmlFor="title">Título *</Label>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="title"
+                    className="text-base font-medium flex items-center gap-2"
+                  >
+                    <Hash className="h-4 w-4 text-muted-foreground" />
+                    Título *
+                  </Label>
                   <Input
                     id="title"
                     value={form.title}
@@ -332,21 +354,34 @@ export function UploadForm() {
                       setForm((prev) => ({ ...prev, title: e.target.value }))
                     }
                     placeholder="Digite o título do episódio"
-                    className="mt-1"
+                    className="mt-1 h-11 transition-all focus:ring-2 focus:ring-primary/20"
                     disabled={isBusy}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="description">Descrição</Label>
-                  <RichTextEditor
-                    content={form.description}
-                    onChange={(newContent) =>
-                      setForm((prev) => ({ ...prev, description: newContent }))
-                    }
-                  />
+
+                <div className="space-y-2">
+                  <Label className="text-base font-medium flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    Descrição
+                  </Label>
+                  <div className="border rounded-md overflow-hidden transition-all focus-within:ring-2 focus-within:ring-primary/20">
+                    <RichTextEditor
+                      content={form.description}
+                      onChange={(newContent) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          description: newContent,
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label>Tags</Label>
+
+                <div className="space-y-2">
+                  <Label className="text-base font-medium flex items-center gap-2">
+                    <Tags className="h-4 w-4 text-muted-foreground" />
+                    Tags
+                  </Label>
                   <TagSelector
                     allTags={tags}
                     value={selectedTagIds}
@@ -356,17 +391,44 @@ export function UploadForm() {
                   />
                 </div>
               </div>
+
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Arquivo de Áudio *</Label>
-                  <div className="rounded-md border p-3 space-y-3">
+                <div className="space-y-3">
+                  <Label className="text-base font-medium flex items-center gap-2">
+                    <FileAudio className="h-4 w-4 text-muted-foreground" />
+                    Arquivo de Áudio *
+                  </Label>
+                  <div
+                    className={cn(
+                      "rounded-lg border-2 p-4 space-y-3 transition-all",
+                      audioFile
+                        ? "border-primary/30 bg-primary/5"
+                        : "border-dashed border-muted-foreground/25 bg-muted/20"
+                    )}
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Music className="h-5 w-5 text-muted-foreground" />
-                        <div className="truncate text-sm">
-                          {audioFile
-                            ? audioFile.name
-                            : "Nenhum arquivo selecionado"}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={cn(
+                            "flex h-10 w-10 items-center justify-center rounded-full",
+                            audioFile
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          <Music className="h-5 w-5" />
+                        </div>
+                        <div className="truncate">
+                          <p className="text-sm font-medium">
+                            {audioFile
+                              ? audioFile.name
+                              : "Nenhum arquivo selecionado"}
+                          </p>
+                          {audioFile && (
+                            <p className="text-xs text-muted-foreground">
+                              {(audioFile.size / (1024 * 1024)).toFixed(2)} MB
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -387,7 +449,9 @@ export function UploadForm() {
                             onClick={() =>
                               document.getElementById("audio-file")?.click()
                             }
+                            className="gap-1"
                           >
+                            <Upload className="h-3.5 w-3.5" />
                             Selecionar
                           </Button>
                         )}
@@ -396,19 +460,26 @@ export function UploadForm() {
                     {audioFile && (
                       <>
                         {phase === "audio-uploading" && (
-                          <div>
-                            <div className="w-full h-2 rounded bg-muted overflow-hidden mb-1">
+                          <div className="space-y-2">
+                            <div className="w-full h-2.5 rounded-full bg-muted overflow-hidden">
                               <div
-                                className="h-full bg-primary transition-all"
+                                className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-300 ease-out"
                                 style={{
                                   width: `${Math.min(audioProgress, 100)}%`,
                                 }}
                               />
                             </div>
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>Enviando áudio...</span>
+                              <span>{Math.floor(audioProgress)}%</span>
+                            </div>
                           </div>
                         )}
                         {readablePhaseMessage() && (
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1.5">
+                            {phase === "audio-uploading" && (
+                              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                            )}
                             {readablePhaseMessage()}
                           </div>
                         )}
@@ -418,8 +489,9 @@ export function UploadForm() {
                             variant="destructive"
                             size="sm"
                             onClick={cancelAudioUpload}
+                            className="gap-1"
                           >
-                            <StopCircle className="h-4 w-4 mr-1" />
+                            <StopCircle className="h-3.5 w-3.5" />
                             Cancelar
                           </Button>
                         ) : audioFile ? (
@@ -429,26 +501,32 @@ export function UploadForm() {
                             size="sm"
                             disabled={isBusy}
                             onClick={() => setAudioFile(null)}
+                            className="text-muted-foreground hover:text-foreground"
                           >
                             Remover seleção
                           </Button>
                         ) : null}
                         {audioFile && audioDuration != null && (
-                          <p className="text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1.5">
+                            <Clock className="h-3 w-3" />
                             Duração: {Math.floor(audioDuration / 60)}:
                             {String(Math.floor(audioDuration % 60)).padStart(
                               2,
                               "0"
                             )}
-                          </p>
+                          </div>
                         )}
                       </>
                     )}
                   </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Programa</Label>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Mic className="h-3.5 w-3.5 text-muted-foreground" />
+                      Programa
+                    </Label>
                     <Select
                       value={form.programId}
                       onValueChange={(value) => {
@@ -464,7 +542,7 @@ export function UploadForm() {
                       }}
                       disabled={isBusy}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="h-10 transition-all focus:ring-2 focus:ring-primary/20">
                         <SelectValue placeholder="Selecione um programa" />
                       </SelectTrigger>
                       <SelectContent>
@@ -477,8 +555,14 @@ export function UploadForm() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label htmlFor="episode-number">Nº do Episódio</Label>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="episode-number"
+                      className="text-sm font-medium flex items-center gap-2"
+                    >
+                      <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                      Nº do Episódio
+                    </Label>
                     <Input
                       id="episode-number"
                       type="number"
@@ -490,14 +574,15 @@ export function UploadForm() {
                         }))
                       }
                       placeholder="Ex: 1"
-                      className="mt-1"
+                      className="h-10 transition-all focus:ring-2 focus:ring-primary/20"
                       disabled={!form.programId || isBusy}
                     />
                   </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Categoria</Label>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Categoria</Label>
                     <Select
                       value={form.categoryId}
                       onValueChange={(value) => {
@@ -510,7 +595,7 @@ export function UploadForm() {
                       }}
                       disabled={!!selectedProgram || isBusy}
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="h-10 transition-all focus:ring-2 focus:ring-primary/20">
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
@@ -522,8 +607,8 @@ export function UploadForm() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label>Subcategoria</Label>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Subcategoria</Label>
                     <Select
                       value={form.subcategoryId}
                       onValueChange={(value) =>
@@ -535,7 +620,7 @@ export function UploadForm() {
                         isBusy
                       }
                     >
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="h-10 transition-all focus:ring-2 focus:ring-primary/20">
                         <SelectValue
                           placeholder={
                             !selectedCategory ? "Indisponível" : "Selecione"
@@ -552,16 +637,44 @@ export function UploadForm() {
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="document-file">Documento de Apoio</Label>
-                  <div className="rounded-md border p-3 space-y-3">
+
+                <div className="space-y-3">
+                  <Label className="text-base font-medium flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-muted-foreground" />
+                    Documento de Apoio
+                  </Label>
+                  <div
+                    className={cn(
+                      "rounded-lg border-2 p-4 space-y-3 transition-all",
+                      documentFile
+                        ? "border-primary/30 bg-primary/5"
+                        : "border-dashed border-muted-foreground/25 bg-muted/20"
+                    )}
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        <div className="truncate text-sm">
-                          {documentFile
-                            ? documentFile.name
-                            : "Nenhum documento selecionado"}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={cn(
+                            "flex h-10 w-10 items-center justify-center rounded-full",
+                            documentFile
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          <FileText className="h-5 w-5" />
+                        </div>
+                        <div className="truncate">
+                          <p className="text-sm font-medium">
+                            {documentFile
+                              ? documentFile.name
+                              : "Nenhum documento selecionado"}
+                          </p>
+                          {documentFile && (
+                            <p className="text-xs text-muted-foreground">
+                              {(documentFile.size / (1024 * 1024)).toFixed(2)}{" "}
+                              MB
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -592,7 +705,9 @@ export function UploadForm() {
                             onClick={() =>
                               document.getElementById("document-file")?.click()
                             }
+                            className="gap-1"
                           >
+                            <Upload className="h-3.5 w-3.5" />
                             Selecionar
                           </Button>
                         )}
@@ -603,10 +718,10 @@ export function UploadForm() {
                         {(phase === "document-uploading" ||
                           phase === "document-registering" ||
                           documentProgress > 0) && (
-                          <div>
-                            <div className="w-full h-2 rounded bg-muted overflow-hidden mb-1">
+                          <div className="space-y-2">
+                            <div className="w-full h-2.5 rounded-full bg-muted overflow-hidden">
                               <div
-                                className="h-full bg-primary transition-all"
+                                className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-300 ease-out"
                                 style={{
                                   width: `${
                                     phase === "document-registering"
@@ -616,23 +731,27 @@ export function UploadForm() {
                                 }}
                               />
                             </div>
-                            <div className="text-[11px] text-muted-foreground">
-                              {phase === "document-preparing" &&
-                                "Preparando..."}
-                              {phase === "document-uploading" &&
-                                `Enviando doc: ${Math.floor(
-                                  documentProgress
-                                )}%`}
-                              {phase === "document-registering" &&
-                                "Registrando..."}
-                              {phase === "finished" && "Concluído"}
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>
+                                {phase === "document-preparing" &&
+                                  "Preparando..."}
+                                {phase === "document-uploading" &&
+                                  "Enviando documento..."}
+                                {phase === "document-registering" &&
+                                  "Registrando..."}
+                                {phase === "finished" && "Concluído"}
+                              </span>
+                              <span>
+                                {phase === "document-uploading" &&
+                                  `${Math.floor(documentProgress)}%`}
+                              </span>
                             </div>
                           </div>
                         )}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="flex flex-col">
-                            <label className="text-xs font-medium">
-                              Nº de Páginas (opcional)
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-muted-foreground">
+                              Nº de Páginas
                             </label>
                             <Input
                               type="number"
@@ -646,11 +765,12 @@ export function UploadForm() {
                                   phase === "error"
                                 )
                               }
+                              className="h-9"
                             />
                           </div>
-                          <div className="flex flex-col">
-                            <label className="text-xs font-medium">
-                              Nº de Referências (opcional)
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-muted-foreground">
+                              Nº de Referências
                             </label>
                             <Input
                               type="number"
@@ -666,6 +786,7 @@ export function UploadForm() {
                                   phase === "error"
                                 )
                               }
+                              className="h-9"
                             />
                           </div>
                         </div>
@@ -675,8 +796,9 @@ export function UploadForm() {
                             variant="destructive"
                             size="sm"
                             onClick={cancelDocumentUpload}
+                            className="gap-1"
                           >
-                            <StopCircle className="h-4 w-4 mr-1" />
+                            <StopCircle className="h-3.5 w-3.5" />
                             Cancelar
                           </Button>
                         ) : (
@@ -695,60 +817,79 @@ export function UploadForm() {
                               setDocPageCount("");
                               setDocReferenceCount("");
                             }}
+                            className="text-muted-foreground hover:text-foreground"
                           >
                             Remover seleção
                           </Button>
                         )}
                         {phase === "audio-done" && documentFile && (
-                          <p className="text-[11px] text-muted-foreground">
-                            O documento será enviado após o episódio ser criado.
-                          </p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1.5">
+                            <AlertCircle className="h-3 w-3" />O documento será
+                            enviado após o episódio ser criado.
+                          </div>
                         )}
                       </>
                     )}
                   </div>
                 </div>
-
-                {/* O CAMPO DE DATA FOI REMOVIDO DAQUI */}
               </div>
             </div>
           </CardContent>
 
-          <CardFooter className="border-t pt-6">
-            <div className="w-full md:w-auto ml-auto flex flex-col md:flex-row gap-2">
+          <CardFooter className="border-t px-6 py-4">
+            <div className="w-full md:w-auto ml-auto flex flex-col md:flex-row gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => submit("draft")}
                 disabled={isBusy || !audioFile || !form.title.trim()}
+                className="gap-1.5 h-10 px-4"
               >
-                Salvar como Rascunho
+                Criar Rascunho
               </Button>
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => setIsScheduleDialogOpen(true)} // <- AÇÃO ALTERADA
+                onClick={() => setIsScheduleDialogOpen(true)}
                 disabled={isBusy || !audioFile || !form.title.trim()}
+                className="gap-1.5 h-10 px-4"
               >
-                Agendar...
+                <CalendarIcon className="h-4 w-4" />
+                Agendar
               </Button>
               <Button
                 type="button"
                 onClick={() => submit("published")}
                 disabled={isBusy || !audioFile || !form.title.trim()}
-                className={cn(isFinished && "bg-green-600 hover:bg-green-700")}
+                className={cn(
+                  "gap-1.5 h-10 px-4",
+                  isFinished && "bg-green-600 hover:bg-green-700"
+                )}
               >
-                {phase === "idle" && "Publicar Agora"}
-                {isFinished && (
+                {phase === "idle" && (
                   <>
-                    <CheckCircle className="mr-2 h-4 w-4" /> Publicado!
+                    <Upload className="h-4 w-4" />
+                    Publicar Agora
                   </>
                 )}
-                {phase !== "idle" &&
-                  !isFinished &&
-                  !isError &&
-                  "Processando..."}
-                {isError && "Tentar novamente"}
+                {isFinished && (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Publicado!
+                  </>
+                )}
+                {phase !== "idle" && !isFinished && !isError && (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Processando...
+                  </>
+                )}
+                {isError && (
+                  <>
+                    <AlertCircle className="h-4 w-4" />
+                    Tentar novamente
+                  </>
+                )}
               </Button>
             </div>
           </CardFooter>
@@ -761,9 +902,12 @@ export function UploadForm() {
         onOpenChange={setIsScheduleDialogOpen}
       >
         <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Agendar Publicação</DialogTitle>
-            <DialogDescription>
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <CalendarIcon className="h-5 w-5" />
+              Agendar Publicação
+            </DialogTitle>
+            <DialogDescription className="text-sm">
               Selecione a data em que este episódio deve ser publicado.
             </DialogDescription>
           </DialogHeader>
@@ -772,20 +916,22 @@ export function UploadForm() {
               mode="single"
               selected={scheduleDate}
               onSelect={setScheduleDate}
-              className="rounded-md border"
+              className="rounded-md border shadow-sm"
               disabled={(date) =>
                 date < new Date(new Date().setDate(new Date().getDate() - 1))
               }
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="pt-2">
             <Button
               variant="outline"
               onClick={() => setIsScheduleDialogOpen(false)}
+              className="gap-1.5"
             >
               Cancelar
             </Button>
-            <Button onClick={handleConfirmSchedule}>
+            <Button onClick={handleConfirmSchedule} className="gap-1.5">
+              <CalendarIcon className="h-4 w-4" />
               Confirmar Agendamento
             </Button>
           </DialogFooter>
