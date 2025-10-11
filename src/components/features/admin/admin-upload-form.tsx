@@ -1,3 +1,5 @@
+// src/components/features/admin/admin-upload-form.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -20,6 +22,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/src/components/ui/dialog";
+import { Calendar } from "@/src/components/ui/calendar";
 import { TagSelector } from "../admin/TagSelector";
 import {
   Upload,
@@ -46,6 +57,10 @@ export function UploadForm() {
   const router = useRouter();
 
   const [justFinished, setJustFinished] = useState(false);
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false); // <- NOVO ESTADO
+  const [scheduleDate, setScheduleDate] = useState<Date | undefined>(
+    new Date()
+  ); // <- NOVO ESTADO
 
   const {
     form,
@@ -82,8 +97,11 @@ export function UploadForm() {
         title: "Sucesso!",
         description: `Episódio "${episode.title}" criado.`,
       });
-      router.refresh();
-      setJustFinished(true); // Mostra banner até ação do usuário
+      router.refresh(); // Atualiza a lista de episódios
+      if (episode.status === "scheduled") {
+        router.push("/schedule"); // Redireciona para a página de programação
+      }
+      setJustFinished(true);
     },
     onError: (msg) => {
       toast({
@@ -95,7 +113,6 @@ export function UploadForm() {
   });
 
   useEffect(() => {
-    // Se por algum motivo a fase sair de finished (ex: reset), escondemos o banner
     if (phase !== "finished" && justFinished) {
       setJustFinished(false);
     }
@@ -140,18 +157,27 @@ export function UploadForm() {
     }
   }
 
-  /**
-   * Criação persistente de tag.
-   * TagSelector exige onCreateTag(tag: Tag) => void
-   * Portanto encapsulamos a lógica assíncrona internamente.
-   */
+  const handleConfirmSchedule = () => {
+    if (!scheduleDate) {
+      toast({
+        title: "Data inválida",
+        description: "Por favor, selecione uma data para agendar.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Seta a data no formulário e submete com o status 'scheduled'
+    setForm((prev) => ({ ...prev, publishedAt: scheduleDate.toISOString() }));
+    submit("scheduled");
+    setIsScheduleDialogOpen(false);
+  };
+
   const handleCreateTag = (incoming: Tag) => {
     (async () => {
       const rawName = incoming?.name || "";
       const name = rawName.trim().toLowerCase();
       if (!name) return;
 
-      // 1. Já existe por ID (caso improvável se TagSelector gerar algo local)
       const existingById = tags.find((t) => t.id === incoming.id);
       if (existingById) {
         setSelectedTagIds((prev) =>
@@ -160,7 +186,6 @@ export function UploadForm() {
         return;
       }
 
-      // 2. Já existe por nome (case-insensitive)
       const existingByName = tags.find(
         (t) => t.name.toLowerCase() === name.toLowerCase()
       );
@@ -171,7 +196,6 @@ export function UploadForm() {
         return;
       }
 
-      // 3. Criar no servidor
       const res = await createTagAction({ name, groupId: null });
       if (!res.success) {
         toast({
@@ -182,7 +206,6 @@ export function UploadForm() {
         return;
       }
 
-      // 4. Adicionar ao estado local via helper do hook
       createAndSelectTag({
         id: res.tag.id,
         name: res.tag.name,
@@ -199,7 +222,6 @@ export function UploadForm() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Banner de sucesso persistente até ação do usuário */}
       {justFinished && phase === "finished" && (
         <div
           className="mb-4 flex items-center justify-between rounded-md border border-green-300 bg-green-50 p-4 text-sm text-green-700"
@@ -248,7 +270,6 @@ export function UploadForm() {
           </CardHeader>
 
           <CardContent className="overflow-y-auto p-6 space-y-6">
-            {/* ALERTA DE ERRO / WARNING */}
             {lastError && (
               <div
                 role="alert"
@@ -301,7 +322,6 @@ export function UploadForm() {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Coluna Esquerda */}
               <div className="space-y-6">
                 <div>
                   <Label htmlFor="title">Título *</Label>
@@ -316,7 +336,6 @@ export function UploadForm() {
                     disabled={isBusy}
                   />
                 </div>
-
                 <div>
                   <Label htmlFor="description">Descrição</Label>
                   <RichTextEditor
@@ -326,7 +345,6 @@ export function UploadForm() {
                     }
                   />
                 </div>
-
                 <div>
                   <Label>Tags</Label>
                   <TagSelector
@@ -338,10 +356,7 @@ export function UploadForm() {
                   />
                 </div>
               </div>
-
-              {/* Coluna Direita */}
               <div className="space-y-6">
-                {/* Áudio */}
                 <div className="space-y-2">
                   <Label>Arquivo de Áudio *</Label>
                   <div className="rounded-md border p-3 space-y-3">
@@ -378,7 +393,6 @@ export function UploadForm() {
                         )}
                       </div>
                     </div>
-
                     {audioFile && (
                       <>
                         {phase === "audio-uploading" && (
@@ -393,13 +407,11 @@ export function UploadForm() {
                             </div>
                           </div>
                         )}
-
                         {readablePhaseMessage() && (
                           <div className="text-[11px] text-muted-foreground">
                             {readablePhaseMessage()}
                           </div>
                         )}
-
                         {phase === "audio-uploading" ? (
                           <Button
                             type="button"
@@ -421,19 +433,19 @@ export function UploadForm() {
                             Remover seleção
                           </Button>
                         ) : null}
-
                         {audioFile && audioDuration != null && (
                           <p className="text-xs text-muted-foreground">
                             Duração: {Math.floor(audioDuration / 60)}:
-                            {String(audioDuration % 60).padStart(2, "0")}
+                            {String(Math.floor(audioDuration % 60)).padStart(
+                              2,
+                              "0"
+                            )}
                           </p>
                         )}
                       </>
                     )}
                   </div>
                 </div>
-
-                {/* Programa / Nº Episódio */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Programa</Label>
@@ -483,8 +495,6 @@ export function UploadForm() {
                     />
                   </div>
                 </div>
-
-                {/* Categoria / Subcategoria */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Categoria</Label>
@@ -542,8 +552,6 @@ export function UploadForm() {
                     </Select>
                   </div>
                 </div>
-
-                {/* Documento */}
                 <div className="space-y-2">
                   <Label htmlFor="document-file">Documento de Apoio</Label>
                   <div className="rounded-md border p-3 space-y-3">
@@ -590,7 +598,6 @@ export function UploadForm() {
                         )}
                       </div>
                     </div>
-
                     {documentFile && (
                       <>
                         {(phase === "document-uploading" ||
@@ -622,7 +629,6 @@ export function UploadForm() {
                             </div>
                           </div>
                         )}
-
                         <div className="grid grid-cols-2 gap-4">
                           <div className="flex flex-col">
                             <label className="text-xs font-medium">
@@ -663,7 +669,6 @@ export function UploadForm() {
                             />
                           </div>
                         </div>
-
                         {phase === "document-uploading" ? (
                           <Button
                             type="button"
@@ -694,7 +699,6 @@ export function UploadForm() {
                             Remover seleção
                           </Button>
                         )}
-
                         {phase === "audio-done" && documentFile && (
                           <p className="text-[11px] text-muted-foreground">
                             O documento será enviado após o episódio ser criado.
@@ -705,23 +709,7 @@ export function UploadForm() {
                   </div>
                 </div>
 
-                {/* Publicação */}
-                <div>
-                  <Label htmlFor="published-at">Data de Publicação</Label>
-                  <Input
-                    id="published-at"
-                    type="date"
-                    value={form.publishedAt}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        publishedAt: e.target.value,
-                      }))
-                    }
-                    className="mt-1"
-                    disabled={isBusy}
-                  />
-                </div>
+                {/* O CAMPO DE DATA FOI REMOVIDO DAQUI */}
               </div>
             </div>
           </CardContent>
@@ -734,37 +722,23 @@ export function UploadForm() {
                 onClick={() => submit("draft")}
                 disabled={isBusy || !audioFile || !form.title.trim()}
               >
-                {phase === "idle" && "Criar rascunho"}
-                {isFinished && "Feito"}
-                {phase !== "idle" &&
-                  !isFinished &&
-                  !isError &&
-                  "Processando..."}
-                {isError && "Tentar novamente"}
+                Salvar como Rascunho
               </Button>
-
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => submit("scheduled")}
+                onClick={() => setIsScheduleDialogOpen(true)} // <- AÇÃO ALTERADA
                 disabled={isBusy || !audioFile || !form.title.trim()}
               >
-                {phase === "idle" && "Agendar"}
-                {isFinished && "Sucesso"}
-                {phase !== "idle" &&
-                  !isFinished &&
-                  !isError &&
-                  "Processando..."}
-                {isError && "Retry"}
+                Agendar...
               </Button>
-
               <Button
                 type="button"
                 onClick={() => submit("published")}
                 disabled={isBusy || !audioFile || !form.title.trim()}
                 className={cn(isFinished && "bg-green-600 hover:bg-green-700")}
               >
-                {phase === "idle" && "Publicar"}
+                {phase === "idle" && "Publicar Agora"}
                 {isFinished && (
                   <>
                     <CheckCircle className="mr-2 h-4 w-4" /> Publicado!
@@ -780,6 +754,43 @@ export function UploadForm() {
           </CardFooter>
         </Card>
       </form>
+
+      {/* DIÁLOGO DE AGENDAMENTO */}
+      <Dialog
+        open={isScheduleDialogOpen}
+        onOpenChange={setIsScheduleDialogOpen}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Agendar Publicação</DialogTitle>
+            <DialogDescription>
+              Selecione a data em que este episódio deve ser publicado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center py-4">
+            <Calendar
+              mode="single"
+              selected={scheduleDate}
+              onSelect={setScheduleDate}
+              className="rounded-md border"
+              disabled={(date) =>
+                date < new Date(new Date().setDate(new Date().getDate() - 1))
+              }
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsScheduleDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmSchedule}>
+              Confirmar Agendamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
