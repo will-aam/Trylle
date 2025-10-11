@@ -9,23 +9,39 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/dialog";
-import { ProgramForm } from "@/src/components/features/admin/program-management/ProgramForm";
+import { ProgramForm } from "./ProgramForm";
 import { Button } from "@/src/components/ui/button";
 import { Category, Program, ProgramWithRelations } from "@/src/lib/types";
 import { PlusCircle } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
-import { ProgramCard } from "@/src/components/features/admin/program-management/program-card";
+import { ProgramCard } from "./program-card";
+import { useProgramManager } from "./useProgramManager"; // Importamos nosso novo hook
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/src/components/ui/pagination";
+import { Skeleton } from "@/src/components/ui/skeleton";
 
-interface ProgramPageClientProps {
-  programs: ProgramWithRelations[];
-  categories: Category[];
-}
-
+// O componente agora só precisa receber as categorias para o formulário
 export default function ProgramPageClient({
-  programs,
   categories,
-}: ProgramPageClientProps) {
+}: {
+  categories: Category[];
+}) {
+  const {
+    programs,
+    loading,
+    currentPage,
+    totalCount,
+    itemsPerPage,
+    fetchData,
+    handlePageChange,
+  } = useProgramManager();
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProgram, setEditingProgram] =
     useState<ProgramWithRelations | null>(null);
@@ -45,23 +61,19 @@ export default function ProgramPageClient({
   };
 
   const confirmDelete = async () => {
-    // A Server Action já está no seu programService, não precisamos importar de actions
-    // if (deletingProgram) {
-    //   const result = await deleteProgramAction(deletingProgram.id);
-    //   if (result.success) {
-    //     toast({ description: result.message });
-    //   } else {
-    //     toast({ description: result.message, variant: "destructive" });
-    //   }
-    // }
-    console.log("Deletar programa:", deletingProgram?.id);
-    // A lógica de deleção que você já tem funcionará aqui
+    if (deletingProgram) {
+      // Usaremos a Server Action diretamente aqui no futuro, por enquanto o console.log está ok
+      console.log("Deletar programa:", deletingProgram?.id);
+      setIsDeleteDialogOpen(false);
+      // Aqui chamaríamos a action de deletar e depois o fetchData()
+    }
   };
 
   const handleSuccess = (program: Program) => {
     setIsFormOpen(false);
     setEditingProgram(null);
-    // A página será recarregada pela Server Action, então o toast já é suficiente
+    fetchData(); // Recarrega os dados da página atual após salvar
+    toast({ title: "Sucesso!", description: "Programa salvo." });
   };
 
   const handleCancel = () => {
@@ -74,6 +86,8 @@ export default function ProgramPageClient({
     setIsFormOpen(true);
   };
 
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+
   return (
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
@@ -84,18 +98,70 @@ export default function ProgramPageClient({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
-        {programs.map((program) => (
-          <ProgramCard
-            key={program.id}
-            program={program}
-            onEdit={handleEdit}
-            onDelete={handleDeleteRequest}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+          {[...Array(itemsPerPage)].map((_, i) => (
+            <div key={i} className="flex flex-col gap-3">
+              <Skeleton className="h-[150px] w-full rounded-xl" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
+          {programs.map((program) => (
+            <ProgramCard
+              key={program.id}
+              program={program}
+              onEdit={handleEdit}
+              onDelete={handleDeleteRequest}
+            />
+          ))}
+        </div>
+      )}
 
-      {/* ProgramForm agora está dentro de um Dialog */}
+      {totalPages > 1 && (
+        <Pagination className="mt-8">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage > 1) handlePageChange(currentPage - 1);
+                }}
+                className={
+                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                }
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-4 text-sm font-medium">
+                Página {currentPage} de {totalPages}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage < totalPages)
+                    handlePageChange(currentPage + 1);
+                }}
+                className={
+                  currentPage === totalPages
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>
           <DialogHeader>
@@ -112,13 +178,12 @@ export default function ProgramPageClient({
         </DialogContent>
       </Dialog>
 
-      {/* ConfirmationDialog com a prop correta: isOpen */}
       <ConfirmationDialog
         isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={confirmDelete}
         title="Confirmar Exclusão"
-        description={`Tem certeza que deseja deletar o programa "${deletingProgram?.title}"? Esta ação não pode ser desfeita.`}
+        description={`Tem certeza que deseja deletar o programa "${deletingProgram?.title}"?`}
       />
     </div>
   );

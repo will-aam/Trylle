@@ -88,11 +88,14 @@ export async function getCategories() {
   return data;
 }
 
-// NOVA FUNÇÃO CORRIGIDA
-export async function getProgramsWithRelations() {
+export async function getProgramsWithRelations(page: number, perPage: number) {
   noStore();
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
+
+  const { data, error, count } = await supabase
     .from("programs")
     .select(
       `
@@ -105,19 +108,26 @@ export async function getProgramsWithRelations() {
       episodes (
         count
       )
-    `
+    `,
+      { count: "exact" }
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   if (error) {
-    console.error("Error fetching programs with relations:", error);
-    return [];
+    console.error("Error fetching paginated programs with relations:", error);
+    // Retorna um objeto com dados e contagem em caso de erro
+    return { data: [], count: 0 };
   }
 
-  return data.map((program) => ({
+  // A sua lógica original para mapear a contagem de episódios
+  const programs = data.map((program) => ({
     ...program,
     _count: {
       episodes: program.episodes[0]?.count ?? 0,
     },
   }));
+
+  // Retorna os dados da página e a contagem total
+  return { data: programs, count: count ?? 0 };
 }
