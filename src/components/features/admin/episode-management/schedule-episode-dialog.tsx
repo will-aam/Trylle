@@ -37,18 +37,22 @@ export function ScheduleEpisodeDialog({
       return;
     }
 
-    // Adiciona o horário atual à data selecionada para garantir que não seja no passado
     const now = new Date();
     date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
 
     const result = await scheduleEpisode(episodeId, date.toISOString());
 
-    if (result.success) {
-      toast.success(result.success);
-      onOpenChange(false);
-    } else {
-      toast.error(result.error);
-    }
+    // Primeiro, fechamos o diálogo.
+    onOpenChange(false);
+
+    // E então, no próximo "tick" do navegador, disparamos a notificação.
+    setTimeout(() => {
+      if (result.success) {
+        toast.success(result.success);
+      } else {
+        toast.error(result.error);
+      }
+    }, 50); // 50ms é um delay seguro e imperceptível.
   };
 
   return (
@@ -69,7 +73,7 @@ export function ScheduleEpisodeDialog({
             disabled={(currentDate) =>
               currentDate <
               new Date(new Date().setDate(new Date().getDate() - 1))
-            } // Desabilita dias passados
+            }
           />
         </div>
         <DialogFooter>
