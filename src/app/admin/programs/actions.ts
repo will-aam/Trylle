@@ -111,3 +111,17 @@ export async function listProgramsAction({
     return { success: false, error: "Falha ao listar programas." };
   }
 }
+export async function getAllPrograms() {
+  "use server";
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("programs")
+    .select("*")
+    .order("title", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching all programs:", error);
+    return [];
+  }
+  return data;
+}

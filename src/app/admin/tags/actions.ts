@@ -572,3 +572,18 @@ export async function getPaginatedTagGroups(page: number, pageSize: number) {
 
   return { groups, count: count ?? 0 };
 }
+
+export async function getAllTags() {
+  "use server";
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("tags")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching all tags:", error);
+    return [];
+  }
+  return data;
+}

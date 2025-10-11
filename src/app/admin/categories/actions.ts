@@ -392,3 +392,28 @@ export async function deleteSubcategoryAction(
     };
   }
 }
+export async function getAllCategoriesAndSubcategories() {
+  "use server";
+  const supabase = await createSupabaseServerClient();
+  const { data: categories, error: catError } = await supabase
+    .from("categories")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (catError) {
+    console.error("Error fetching categories:", catError);
+    return { categories: [], subcategories: [] };
+  }
+
+  const { data: subcategories, error: subError } = await supabase
+    .from("subcategories")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (subError) {
+    console.error("Error fetching subcategories:", subError);
+    return { categories, subcategories: [] };
+  }
+
+  return { categories, subcategories };
+}
