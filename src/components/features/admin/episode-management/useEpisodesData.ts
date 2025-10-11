@@ -1,3 +1,5 @@
+// src/components/features/admin/episode-management/useEpisodesData.ts
+
 "use client";
 
 import {
@@ -19,13 +21,21 @@ import { toast } from "sonner";
 
 export interface UseEpisodesDataParams {
   search?: string;
-  statusCsv?: string; // ex: "published,draft"
-  categoryCsv?: string; // ex: "cat1,cat2"
+  statusCsv?: string;
+  categoryCsv?: string;
   programCsv?: string;
   sortBy?: string;
   order?: string;
   page?: number;
   perPage?: number;
+}
+
+// CORREÇÃO: Tipo StatusCounts agora inclui 'archived' e é uma interface dedicada.
+interface StatusCounts {
+  draft: number;
+  scheduled: number;
+  published: number;
+  archived: number;
 }
 
 interface UseEpisodesDataReturn {
@@ -34,7 +44,7 @@ interface UseEpisodesDataReturn {
   page: number;
   perPage: number;
   totalFiltered: number;
-  statusCounts: { draft: number; scheduled: number; published: number } | null;
+  statusCounts: StatusCounts | null; // Usando a interface
   isPendingTransition: boolean;
   refetch: () => Promise<void>;
   optimisticUpdateStatus: (
@@ -49,10 +59,6 @@ interface UseEpisodesDataReturn {
   refreshOne: (id: string) => Promise<void>;
 }
 
-/**
- * Hook para centralizar listagem e operações de episódios via Server Actions.
- * Corrigido para evitar loop infinito (arrays memorizados + guard de requisição).
- */
 export function useEpisodesData(
   params: UseEpisodesDataParams
 ): UseEpisodesDataReturn {
@@ -69,18 +75,13 @@ export function useEpisodesData(
 
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [totalFiltered, setTotalFiltered] = useState(0);
-  const [statusCounts, setStatusCounts] = useState<{
-    draft: number;
-    scheduled: number;
-    published: number;
-  } | null>(null);
+  const [statusCounts, setStatusCounts] = useState<StatusCounts | null>(null); // Usando a interface
 
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const mountedRef = useRef(true);
-  const inFlightRef = useRef(false); // evita requisições sobrepostas
+  const inFlightRef = useRef(false);
 
-  // Memorizar arrays para não recriarem referência a cada render
   const statusArray = useMemo(
     () =>
       statusCsv
@@ -97,7 +98,6 @@ export function useEpisodesData(
     [programCsv]
   );
 
-  // Função util para comparar shallow (evitar setState redundante)
   function shallowDiffersEpisodes(a: Episode[], b: Episode[]) {
     if (a.length !== b.length) return true;
     for (let i = 0; i < a.length; i++) {
@@ -137,7 +137,6 @@ export function useEpisodesData(
           setEpisodes(listRes.data);
           setTotalFiltered(listRes.totalFiltered);
         } else if (mountedRef.current) {
-          // garantir total mesmo que episódios iguais
           setTotalFiltered(listRes.totalFiltered);
         }
       } else {
@@ -146,7 +145,7 @@ export function useEpisodesData(
 
       if (countsRes.success) {
         if (mountedRef.current) {
-          setStatusCounts(countsRes.counts);
+          setStatusCounts(countsRes.counts as StatusCounts);
         }
       } else {
         toast.error("Erro ao contar status", { description: countsRes.error });
@@ -166,7 +165,7 @@ export function useEpisodesData(
     programIds,
     sortBy,
     order,
-    episodes, // usamos para shallowDiff
+    episodes,
   ]);
 
   useEffect(() => {
@@ -181,8 +180,6 @@ export function useEpisodesData(
     await fetchAll();
   }, [fetchAll]);
 
-  /* ---------- Operações Otimistas ---------- */
-
   const optimisticUpdateStatus = useCallback(
     async (id: string, newStatus: Episode["status"]) => {
       const prev = episodes;
@@ -192,10 +189,9 @@ export function useEpisodesData(
       const res = await updateEpisodeAction(id, { status: newStatus });
       if (!res.success) {
         toast.error("Falha ao atualizar status", { description: res.error });
-        setEpisodes(prev); // rollback
+        setEpisodes(prev);
       } else {
         toast.success("Status atualizado");
-        // Ajusta contadores localmente
         if (statusCounts) {
           const prevEp = prev.find((p) => p.id === id);
           if (prevEp && prevEp.status !== newStatus) {
@@ -253,28 +249,28 @@ export function useEpisodesData(
       }
 
       if (statusCounts) {
-        const delta: Record<string, number> = {
-          draft: 0,
-          scheduled: 0,
-          published: 0,
-        };
+        // CORREÇÃO: O tipo delta agora é mais robusto.
+        const delta: Partial<Record<Episode["status"], number>> = {};
+
         ids.forEach((id, idx) => {
           if (!results[idx]) return;
           const oldS = prevStatusMap[id];
           if (oldS !== newStatus) {
-            delta[oldS] -= 1;
-            delta[newStatus] += 1;
+            delta[oldS] = (delta[oldS] || 0) - 1;
+            delta[newStatus] = (delta[newStatus] || 0) + 1;
           }
         });
-        setStatusCounts((c) =>
-          c
-            ? {
-                draft: c.draft + delta.draft,
-                scheduled: c.scheduled + delta.scheduled,
-                published: c.published + delta.published,
-              }
-            : c
-        );
+
+        setStatusCounts((c) => {
+          if (!c) return c;
+          const newCounts = { ...c };
+          for (const key in delta) {
+            newCounts[key as Episode["status"]] =
+              (newCounts[key as Episode["status"]] || 0) +
+              (delta[key as Episode["status"]] || 0);
+          }
+          return newCounts;
+        });
       }
 
       return { ok, fail };

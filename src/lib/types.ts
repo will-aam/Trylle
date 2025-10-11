@@ -49,7 +49,7 @@ export interface Episode {
   file_name: string;
   category_id: string | null;
   subcategory_id: string | null;
-  status: "draft" | "scheduled" | "published";
+  status: "published" | "draft" | "scheduled";
   published_at: string;
   created_at: string;
   updated_at: string;

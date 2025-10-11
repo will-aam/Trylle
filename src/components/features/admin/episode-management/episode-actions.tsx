@@ -1,339 +1,137 @@
+// src/components/features/admin/episode-management/episode-actions.tsx
+
 "use client";
 
-import { Episode } from "@/src/lib/types";
-import { Button } from "@/src/components/ui/button";
-import { MoreHorizontal, Pencil, Trash2, Code2, Link2 } from "lucide-react";
-import { useState, useCallback, useMemo } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
-import { EpisodeJsonDialog } from "./episode-json-dialog";
+import { Button } from "@/src/components/ui/button";
+import { MoreHorizontal, CalendarClock, Edit, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/src/lib/utils";
+import { Episode, Category, Subcategory, Program, Tag } from "@/src/lib/types"; // Adicionado mais tipos
+import { deleteEpisodeAction } from "@/src/app/admin/episodes/actions"; // <- CORREÇÃO: Nome da função
+import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
+import { JsonViewDialog } from "./JsonViewDialog";
+import {
+  EditEpisodeDialog,
+  UpdateEpisodeInput,
+} from "./edit/edit-episode-dialog";
+import { ScheduleEpisodeDialog } from "./schedule-episode-dialog";
 
-type ActionKey = "edit" | "copyAudio" | "viewJson" | "delete";
-
+// Props expandidas para incluir dados necessários pelos diálogos filhos
 export interface EpisodeActionsProps {
   episode: Episode;
-  onEdit: (episode: Episode) => void;
-  onDelete: (episode: Episode) => void;
-  size?: "default" | "icon" | "sm";
-  mode?: "menu" | "primary+menu" | "inline-hover" | "auto";
-  primaryAction?: "edit" | "viewJson" | "none";
-  dense?: boolean;
-  className?: string;
-  active?: boolean;
-}
-
-function resolveAudioUrl(ep: Episode): string | undefined {
-  const candidate =
-    (ep as any).audioUrl ||
-    (ep as any).audio_url ||
-    (ep as any).mediaUrl ||
-    (ep as any).media_url ||
-    (ep as any).file_url ||
-    (ep as any).fileUrl;
-  return typeof candidate === "string" ? candidate : undefined;
+  categories: Category[];
+  subcategories: Subcategory[];
+  programs: Program[];
+  allTags: Tag[];
 }
 
 export function EpisodeActions({
   episode,
-  onEdit,
-  onDelete,
-  mode = "auto",
-  primaryAction = "edit",
-  dense = true,
-  className,
-  active = false,
+  categories,
+  subcategories,
+  programs,
+  allTags,
 }: EpisodeActionsProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [jsonOpen, setJsonOpen] = useState(false);
-  const audioUrl = resolveAudioUrl(episode);
+  const router = useRouter();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isJsonDialogOpen, setIsJsonDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
 
-  const handleCopyAudio = useCallback(async () => {
-    if (!audioUrl) {
-      toast.error("Sem URL de áudio.");
-      return;
+  const handleDelete = async () => {
+    const result = await deleteEpisodeAction(episode.id); // <- CORREÇÃO: Nome da função
+    if (result.success) {
+      toast.success(result.success);
+      setIsDeleteDialogOpen(false);
+      router.refresh();
+    } else {
+      toast.error(result.error);
     }
-    try {
-      await navigator.clipboard.writeText(audioUrl);
-      toast.success("URL copiada!");
-    } catch {
-      toast.error("Falha ao copiar URL.");
-    }
-  }, [audioUrl]);
-
-  const openJson = () => setJsonOpen(true);
-
-  const ACTIONS: Record<
-    ActionKey,
-    {
-      label: string;
-      icon: any;
-      onClick: () => void;
-      destructive?: boolean;
-      disabled?: boolean;
-    }
-  > = {
-    edit: {
-      label: "Editar",
-      icon: Pencil,
-      onClick: () => onEdit(episode),
-    },
-    copyAudio: {
-      label: "Copiar URL do Áudio",
-      icon: Link2,
-      onClick: handleCopyAudio,
-      disabled: !audioUrl,
-    },
-    viewJson: {
-      label: "Ver JSON",
-      icon: Code2,
-      onClick: openJson,
-    },
-    delete: {
-      label: "Deletar",
-      icon: Trash2,
-      onClick: () => onDelete(episode),
-      destructive: true,
-    },
   };
 
-  const primary = useMemo<ActionKey | null>(() => {
-    if (mode !== "primary+menu") return null;
-    if (primaryAction === "edit") return "edit";
-    if (primaryAction === "viewJson") return "viewJson";
-    return null;
-  }, [mode, primaryAction]);
-
-  // Modo AUTO: delega para variações concretas conforme breakpoint
-  if (mode === "auto") {
-    return (
-      <div
-        className={cn(
-          "group/actions inline-flex",
-          className,
-          dense && "text-sm"
-        )}
-      >
-        <div className="hidden md:inline-flex">
-          <EpisodeActions
-            episode={episode}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            mode="primary+menu"
-            primaryAction={primaryAction}
-            dense={dense}
-            active={active}
-          />
-        </div>
-        <div className="md:hidden inline-flex">
-          <EpisodeActions
-            episode={episode}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            mode="menu"
-            dense={dense}
-            active={active}
-          />
-        </div>
-        <EpisodeJsonDialog
-          episode={episode}
-          open={jsonOpen}
-          onOpenChange={setJsonOpen}
-        />
-      </div>
-    );
-  }
-
-  // Modo MENU
-  if (mode === "menu") {
-    return (
-      <>
-        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                dense ? "h-8 w-8" : "h-9 w-9",
-                "transition-opacity",
-                className
-              )}
-              aria-label="Ações"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-            {(["edit", "copyAudio", "viewJson"] as ActionKey[]).map((key) => {
-              const A = ACTIONS[key];
-              const Icon = A.icon;
-              return (
-                <DropdownMenuItem
-                  key={key}
-                  onClick={() => {
-                    A.onClick();
-                    setMenuOpen(false);
-                  }}
-                  disabled={A.disabled}
-                >
-                  <Icon className="mr-2 h-4 w-4" /> {A.label}
-                </DropdownMenuItem>
-              );
-            })}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => {
-                ACTIONS.delete.onClick();
-                setMenuOpen(false);
-              }}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Deletar
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Abrir menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Ações</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            Editar
+          </DropdownMenuItem>
+          {episode.status === "draft" && (
+            <DropdownMenuItem onClick={() => setIsScheduleDialogOpen(true)}>
+              <CalendarClock className="mr-2 h-4 w-4" />
+              Agendar
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <EpisodeJsonDialog
-          episode={episode}
-          open={jsonOpen}
-          onOpenChange={setJsonOpen}
-        />
-      </>
-    );
-  }
-
-  // Modo PRIMARY + MENU
-  if (mode === "primary+menu") {
-    const primaryActionConfig = primary ? ACTIONS[primary] : undefined;
-    return (
-      <>
-        <div className={cn("inline-flex items-center gap-1", className)}>
-          {primaryActionConfig && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={primaryActionConfig.label}
-              onClick={primaryActionConfig.onClick}
-              className={cn(
-                dense ? "h-8 w-8" : "h-9 w-9",
-                "border border-border"
-              )}
-            >
-              <primaryActionConfig.icon className="h-4 w-4" />
-            </Button>
           )}
-          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  dense ? "h-8 w-8" : "h-9 w-9",
-                  "border border-border"
-                )}
-                aria-label="Mais ações"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-52"
-              onCloseAutoFocus={(e) => e.preventDefault()}
-            >
-              <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              {(Object.keys(ACTIONS) as ActionKey[])
-                .filter((k) => k !== "delete" && k !== primary)
-                .map((k) => {
-                  const A = ACTIONS[k];
-                  const Icon = A.icon;
-                  return (
-                    <DropdownMenuItem
-                      key={k}
-                      disabled={A.disabled}
-                      onClick={() => {
-                        A.onClick();
-                        setMenuOpen(false);
-                      }}
-                    >
-                      <Icon className="mr-2 h-4 w-4" /> {A.label}
-                    </DropdownMenuItem>
-                  );
-                })}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => {
-                  ACTIONS.delete.onClick();
-                  setMenuOpen(false);
-                }}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" /> Deletar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        <EpisodeJsonDialog
-          episode={episode}
-          open={jsonOpen}
-          onOpenChange={setJsonOpen}
-        />
-      </>
-    );
-  }
+          <DropdownMenuItem onClick={() => setIsJsonDialogOpen(true)}>
+            <Eye className="mr-2 h-4 w-4" />
+            Ver JSON
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-red-600 focus:text-red-600"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Deletar
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-  // Modo INLINE-HOVER
-  if (mode === "inline-hover") {
-    return (
-      <>
-        <div
-          className={cn(
-            "flex items-center gap-1 opacity-0 transition-opacity",
-            "group-hover/row:opacity-100",
-            active && "opacity-100",
-            className
-          )}
-        >
-          {(["edit", "copyAudio", "viewJson", "delete"] as ActionKey[]).map(
-            (k) => {
-              const A = ACTIONS[k];
-              const Icon = A.icon;
-              const destructive = A.destructive;
-              return (
-                <Button
-                  key={k}
-                  variant="ghost"
-                  size="icon"
-                  aria-label={A.label}
-                  disabled={A.disabled}
-                  onClick={A.onClick}
-                  className={cn(
-                    dense ? "h-7 w-7" : "h-8 w-8",
-                    "border border-transparent hover:border-border",
-                    destructive && "text-destructive hover:text-destructive/90"
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                </Button>
-              );
-            }
-          )}
-        </div>
-        <EpisodeJsonDialog
-          episode={episode}
-          open={jsonOpen}
-          onOpenChange={setJsonOpen}
-        />
-      </>
-    );
-  }
+      {/* Renderiza o diálogo de agendamento */}
+      <ScheduleEpisodeDialog
+        isOpen={isScheduleDialogOpen}
+        onOpenChange={setIsScheduleDialogOpen}
+        episodeId={episode.id}
+        episodeTitle={episode.title}
+      />
 
-  return null;
+      {/* DIÁLOGOS CORRIGIDOS */}
+      <EditEpisodeDialog
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        episode={episode}
+        categories={categories} // <- CORREÇÃO: Prop passada
+        subcategories={subcategories} // <- CORREÇÃO: Prop passada
+        programs={programs} // <- CORREÇÃO: Prop passada
+        allTags={allTags} // <- CORREÇÃO: Prop passada
+        onUpdate={function (
+          episodeId: string,
+          updates: Partial<UpdateEpisodeInput>
+        ): Promise<boolean> {
+          throw new Error("Function not implemented.");
+        }}
+      />
+      <JsonViewDialog
+        isOpen={isJsonDialogOpen}
+        onOpenChange={setIsJsonDialogOpen}
+        data={episode} // <- CORREÇÃO: Nome da prop
+        title={""}
+      />
+      <ConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDelete}
+        title="Você tem certeza?"
+        description={`Esta ação não pode ser desfeita. Isso irá deletar permanentemente o episódio "${episode.title}".`}
+      />
+    </>
+  );
 }

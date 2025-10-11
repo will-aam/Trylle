@@ -1,8 +1,17 @@
+// src/components/features/admin/episode-management/episode-table.tsx
+
 "use client";
 
-import React from "react";
-import { Episode, SortDirection } from "@/src/lib/types";
-import { EpisodeActions } from "./episode-actions";
+import React, { useState } from "react"; // <- Importa o useState
+import {
+  Episode,
+  SortDirection,
+  Category,
+  Subcategory,
+  Program,
+  Tag,
+} from "@/src/lib/types";
+import { EpisodeActions, EpisodeActionsProps } from "./episode-actions";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import { Button } from "@/src/components/ui/button";
 import {
@@ -16,7 +25,9 @@ import {
 import { StatusBadgeSelector } from "@/src/components/ui/status-badge-selector";
 import { ChevronsUpDown, ArrowDown, ArrowUp } from "lucide-react";
 import { cn } from "@/src/lib/utils";
+import { ScheduleEpisodeDialog } from "./schedule-episode-dialog"; // <- Importa o Dialog
 
+// Interface de props expandida para os dados de edição
 export interface EpisodeTableProps {
   episodes: Episode[];
   onEdit: (episode: Episode) => void;
@@ -28,39 +39,18 @@ export interface EpisodeTableProps {
   onSelectEpisode: (episodeId: string) => void;
   onSelectAll: (selectAll: boolean) => void;
   onStatusChange?: (episodeId: string, newStatus: Episode["status"]) => void;
-
-  /**
-   * auto => Cards em mobile, tabela em >= md
-   * table => Sempre tabela
-   */
   responsiveMode?: "auto" | "table";
-
-  /**
-   * Largura mínima para evitar esmagar colunas
-   */
   minTableWidthClass?: string;
-
   hideProgramColumn?: boolean;
   hideDateColumn?: boolean;
-
-  /**
-   * Modo de apresentação das ações:
-   * menu => só ícone (kebab)
-   * primary+menu => ação principal + menu
-   * inline-hover => ícones aparecem apenas em hover ou se selecionado
-   * auto => mobile=menu / desktop=primary+menu
-   */
   actionsMode?: "menu" | "primary+menu" | "inline-hover" | "auto";
-
-  /**
-   * Qual ação é a primária quando usar primary+menu/auto
-   */
   primaryAction?: "edit" | "viewJson" | "none";
-
-  /**
-   * Reduz padding vertical das linhas
-   */
   compactRows?: boolean;
+  // Props para o diálogo de edição
+  categories: Category[];
+  subcategories: Subcategory[];
+  programs: Program[];
+  allTags: Tag[];
 }
 
 export function EpisodeTable({
@@ -81,7 +71,17 @@ export function EpisodeTable({
   actionsMode = "auto",
   primaryAction = "edit",
   compactRows = true,
+  // Props para o diálogo de edição
+  categories,
+  subcategories,
+  programs,
+  allTags,
 }: EpisodeTableProps) {
+  // Estado para controlar o diálogo de agendamento
+  const [episodeToSchedule, setEpisodeToSchedule] = useState<Episode | null>(
+    null
+  );
+
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("pt-BR", {
@@ -135,263 +135,194 @@ export function EpisodeTable({
     );
   };
 
-  /* =======================
-     MOBILE CARDS (responsiveMode = auto)
-     ======================= */
-  if (responsiveMode === "auto") {
-    return (
-      <div className="w-full">
-        <div className="space-y-4 md:hidden">
-          {episodes.map((ep) => {
-            const selected = selectedEpisodes.includes(ep.id);
-            return (
-              <div
-                key={ep.id}
-                className={cn(
-                  "group/row rounded-md border bg-background p-4 shadow-sm transition",
-                  selected && "ring-1 ring-primary/40"
-                )}
-              >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="flex items-start gap-2">
-                    <Checkbox
-                      checked={selected}
-                      onCheckedChange={() => onSelectEpisode(ep.id)}
-                      aria-label={`Selecionar episódio ${ep.title}`}
-                    />
-                    <div className="flex flex-col">
-                      <span className="font-semibold leading-snug">
-                        {ep.title}
-                      </span>
-                      {!hideProgramColumn && (
-                        <span className="text-xs text-muted-foreground line-clamp-2">
-                          {ep.programs?.title || "Sem programa"}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <EpisodeActions
-                    episode={ep}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    mode="menu"
-                    dense
-                    primaryAction={primaryAction}
-                    active={selected}
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-xs">
-                  <StatusBadgeSelector
-                    status={ep.status}
-                    disabled={!onStatusChange}
-                    onStatusChange={(s) => handleStatusChange(ep.id, s)}
-                  />
-                  {!hideDateColumn && (
-                    <span className="text-muted-foreground">
-                      {formatDate(ep.published_at)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* DESKTOP TABLE */}
-        <DesktopTable
-          episodes={episodes}
-          selectedEpisodes={selectedEpisodes}
-          onSelectEpisode={onSelectEpisode}
-          onSelectAll={onSelectAll}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onStatusChange={onStatusChange}
-          handleStatusChange={handleStatusChange}
-          renderSortableHead={renderSortableHead}
-          hideProgramColumn={hideProgramColumn}
-          hideDateColumn={hideDateColumn}
-          formatDate={formatDate}
-          minTableWidthClass={minTableWidthClass}
-          actionsMode={actionsMode}
-          primaryAction={primaryAction}
-          compactRows={compactRows}
-        />
-      </div>
-    );
-  }
-
-  // Sempre tabela
-  return (
-    <DesktopTable
-      episodes={episodes}
-      selectedEpisodes={selectedEpisodes}
-      onSelectEpisode={onSelectEpisode}
-      onSelectAll={onSelectAll}
-      onEdit={onEdit}
-      onDelete={onDelete}
-      onStatusChange={onStatusChange}
-      handleStatusChange={handleStatusChange}
-      renderSortableHead={renderSortableHead}
-      hideProgramColumn={hideProgramColumn}
-      hideDateColumn={hideDateColumn}
-      formatDate={formatDate}
-      minTableWidthClass={minTableWidthClass}
-      actionsMode={actionsMode}
-      primaryAction={primaryAction}
-      compactRows={compactRows}
-    />
-  );
-}
-
-/* ===========================
-   Desktop Table component
-   =========================== */
-interface DesktopTableProps {
-  episodes: Episode[];
-  selectedEpisodes: string[];
-  onSelectEpisode: (id: string) => void;
-  onSelectAll: (all: boolean) => void;
-  onEdit: (e: Episode) => void;
-  onDelete: (e: Episode) => void;
-  onStatusChange?: (id: string, status: Episode["status"]) => void;
-  handleStatusChange: (id: string, status: Episode["status"]) => void;
-  renderSortableHead: (
-    label: string,
-    column: keyof Episode,
-    extraClass?: string
-  ) => React.ReactNode;
-  hideProgramColumn: boolean;
-  hideDateColumn: boolean;
-  formatDate: (d: string) => string;
-  minTableWidthClass: string;
-  actionsMode: "menu" | "primary+menu" | "inline-hover" | "auto";
-  primaryAction: "edit" | "viewJson" | "none";
-  compactRows: boolean;
-}
-
-function DesktopTable({
-  episodes,
-  selectedEpisodes,
-  onSelectEpisode,
-  onSelectAll,
-  onEdit,
-  onDelete,
-  onStatusChange,
-  handleStatusChange,
-  renderSortableHead,
-  hideProgramColumn,
-  hideDateColumn,
-  formatDate,
-  minTableWidthClass,
-  actionsMode,
-  primaryAction,
-  compactRows,
-}: DesktopTableProps) {
-  const rowPad = compactRows ? "py-2" : "py-3";
+  // Prepara as props para o EpisodeActions para não repetir
+  const getActionsProps = (episode: Episode): EpisodeActionsProps => ({
+    episode,
+    categories,
+    subcategories,
+    programs,
+    allTags,
+  });
 
   return (
-    <div className="hidden md:block rounded-lg border bg-background overflow-hidden">
-      <div className="overflow-x-auto">
-        <Table className={cn(minTableWidthClass)}>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={
-                    episodes.length > 0 &&
-                    selectedEpisodes.length === episodes.length
-                  }
-                  onCheckedChange={(checked) => onSelectAll(!!checked)}
-                  aria-label="Selecionar todos"
-                />
-              </TableHead>
-              {renderSortableHead("Título", "title")}
-              <TableHead>Status</TableHead>
-              {!hideProgramColumn && <TableHead>Programa</TableHead>}
-              {!hideDateColumn && renderSortableHead("Data", "published_at")}
-              <TableHead className="text-right pr-5 w-[140px]">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+    <>
+      {/* =======================
+       MOBILE CARDS (responsiveMode = auto)
+       ======================= */}
+      {responsiveMode === "auto" && (
+        <div className="w-full md:hidden">
+          <div className="space-y-4">
             {episodes.map((ep) => {
               const selected = selectedEpisodes.includes(ep.id);
               return (
-                <TableRow
+                <div
                   key={ep.id}
                   className={cn(
-                    "group/row transition-colors",
-                    selected && "bg-muted/10"
+                    "group/row rounded-md border bg-background p-4 shadow-sm transition",
+                    selected && "ring-1 ring-primary/40"
                   )}
                 >
-                  <TableCell className={rowPad}>
-                    <Checkbox
-                      checked={selected}
-                      onCheckedChange={() => onSelectEpisode(ep.id)}
-                      aria-label={`Selecionar ${ep.title}`}
-                    />
-                  </TableCell>
-                  <TableCell className={rowPad}>
-                    <div className="font-medium leading-snug line-clamp-2 max-w-[420px]">
-                      {ep.title}
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-start gap-2">
+                      <Checkbox
+                        checked={selected}
+                        onCheckedChange={() => onSelectEpisode(ep.id)}
+                        aria-label={`Selecionar episódio ${ep.title}`}
+                      />
+                      <div className="flex flex-col">
+                        <span className="font-semibold leading-snug">
+                          {ep.title}
+                        </span>
+                        {!hideProgramColumn && (
+                          <span className="text-xs text-muted-foreground line-clamp-2">
+                            {ep.programs?.title || "Sem programa"}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </TableCell>
-                  <TableCell className={rowPad}>
+                    <EpisodeActions {...getActionsProps(ep)} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 text-xs">
                     <StatusBadgeSelector
                       status={ep.status}
-                      onStatusChange={(s) => handleStatusChange(ep.id, s)}
                       disabled={!onStatusChange}
+                      onStatusChange={(s) => handleStatusChange(ep.id, s)}
+                      onSchedule={() => setEpisodeToSchedule(ep)} // <- CONECTADO AQUI
                     />
-                  </TableCell>
-                  {!hideProgramColumn && (
-                    <TableCell
-                      className={cn(
-                        rowPad,
-                        "text-sm text-muted-foreground max-w-[320px]"
-                      )}
-                    >
-                      {ep.programs?.title ? (
-                        <span className="line-clamp-2">
-                          {ep.programs.title}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">N/A</span>
-                      )}
-                    </TableCell>
-                  )}
-                  {!hideDateColumn && (
-                    <TableCell className={cn(rowPad, "whitespace-nowrap")}>
-                      {formatDate(ep.published_at)}
-                    </TableCell>
-                  )}
-                  <TableCell className={cn(rowPad)}>
-                    <div className="flex justify-end">
-                      <EpisodeActions
-                        episode={ep}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        mode={actionsMode}
-                        primaryAction={primaryAction}
-                        dense
-                        active={selected}
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
+                    {!hideDateColumn && (
+                      <span className="text-muted-foreground">
+                        {formatDate(ep.published_at)}
+                      </span>
+                    )}
+                  </div>
+                </div>
               );
             })}
-            {episodes.length === 0 && (
+          </div>
+        </div>
+      )}
+
+      {/* ===========================
+       Desktop Table component
+       =========================== */}
+      <div
+        className={cn(
+          responsiveMode === "auto" && "hidden md:block",
+          "rounded-lg border bg-background overflow-hidden"
+        )}
+      >
+        <div className="overflow-x-auto">
+          <Table className={cn(minTableWidthClass)}>
+            <TableHeader>
               <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="py-10 text-center text-sm text-muted-foreground"
-                >
-                  Nenhum episódio para exibir.
-                </TableCell>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={
+                      episodes.length > 0 &&
+                      selectedEpisodes.length === episodes.length
+                    }
+                    onCheckedChange={(checked) => onSelectAll(!!checked)}
+                    aria-label="Selecionar todos"
+                  />
+                </TableHead>
+                {renderSortableHead("Título", "title")}
+                <TableHead>Status</TableHead>
+                {!hideProgramColumn && <TableHead>Programa</TableHead>}
+                {!hideDateColumn && renderSortableHead("Data", "published_at")}
+                <TableHead className="text-right pr-5 w-[140px]">
+                  Ações
+                </TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {episodes.map((ep) => {
+                const selected = selectedEpisodes.includes(ep.id);
+                return (
+                  <TableRow
+                    key={ep.id}
+                    className={cn(
+                      "group/row transition-colors",
+                      selected && "bg-muted/10"
+                    )}
+                  >
+                    <TableCell className={compactRows ? "py-2" : "py-3"}>
+                      <Checkbox
+                        checked={selected}
+                        onCheckedChange={() => onSelectEpisode(ep.id)}
+                        aria-label={`Selecionar ${ep.title}`}
+                      />
+                    </TableCell>
+                    <TableCell className={compactRows ? "py-2" : "py-3"}>
+                      <div className="font-medium leading-snug line-clamp-2 max-w-[420px]">
+                        {ep.title}
+                      </div>
+                    </TableCell>
+                    <TableCell className={compactRows ? "py-2" : "py-3"}>
+                      <StatusBadgeSelector
+                        status={ep.status}
+                        onStatusChange={(s) => handleStatusChange(ep.id, s)}
+                        disabled={!onStatusChange}
+                        onSchedule={() => setEpisodeToSchedule(ep)} // <- CONECTADO AQUI TAMBÉM
+                      />
+                    </TableCell>
+                    {!hideProgramColumn && (
+                      <TableCell
+                        className={cn(
+                          compactRows ? "py-2" : "py-3",
+                          "text-sm text-muted-foreground max-w-[320px]"
+                        )}
+                      >
+                        {ep.programs?.title ? (
+                          <span className="line-clamp-2">
+                            {ep.programs.title}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">N/A</span>
+                        )}
+                      </TableCell>
+                    )}
+                    {!hideDateColumn && (
+                      <TableCell
+                        className={cn(
+                          compactRows ? "py-2" : "py-3",
+                          "whitespace-nowrap"
+                        )}
+                      >
+                        {formatDate(ep.published_at)}
+                      </TableCell>
+                    )}
+                    <TableCell className={cn(compactRows ? "py-2" : "py-3")}>
+                      <div className="flex justify-end">
+                        <EpisodeActions {...getActionsProps(ep)} />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {episodes.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="py-10 text-center text-sm text-muted-foreground"
+                  >
+                    Nenhum episódio para exibir.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-    </div>
+
+      {/* Renderiza o diálogo de agendamento aqui */}
+      {episodeToSchedule && (
+        <ScheduleEpisodeDialog
+          isOpen={!!episodeToSchedule}
+          onOpenChange={() => setEpisodeToSchedule(null)}
+          episodeId={episodeToSchedule.id}
+          episodeTitle={episodeToSchedule.title}
+        />
+      )}
+    </>
   );
 }

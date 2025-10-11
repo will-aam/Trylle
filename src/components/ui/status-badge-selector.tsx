@@ -1,85 +1,103 @@
+// src/components/ui/status-badge-selector.tsx
+
 "use client";
 
-import { useState } from "react";
-import { Badge } from "@/src/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/src/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/src/components/ui/dropdown-menu";
+import { Badge } from "@/src/components/ui/badge";
+import { Episode } from "@/src/lib/types";
+import { cn } from "@/src/lib/utils";
+import {
+  CheckCircle2,
+  FileText,
+  CalendarClock,
+  ChevronDown,
+} from "lucide-react";
 
-type EpisodeStatus = "published" | "draft" | "scheduled";
+// Usando o tipo diretamente da fonte da verdade
+type Status = Episode["status"];
 
 interface StatusBadgeSelectorProps {
-  status: EpisodeStatus;
-  onStatusChange: (newStatus: EpisodeStatus) => void;
+  status: Status;
+  onStatusChange: (newStatus: Status) => void;
+  onSchedule: () => void;
   disabled?: boolean;
 }
 
-const statusConfig = {
+// Objeto de configuração apenas com os 3 status necessários
+const statusConfig: Record<
+  Status,
+  {
+    label: string;
+    variant: "default" | "secondary" | "outline";
+    icon: React.ElementType;
+    textColor?: string;
+  }
+> = {
   published: {
     label: "Publicado",
-    className: "bg-green-600 hover:bg-green-700 text-white",
+    variant: "default",
+    icon: CheckCircle2,
   },
-  draft: {
-    label: "Rascunho",
-    className: "bg-blue-500 hover:bg-blue-600 text-gray-800",
-  },
+  draft: { label: "Rascunho", variant: "secondary", icon: FileText },
   scheduled: {
     label: "Agendado",
-    className: "bg-yellow-500 hover:bg-yellow-600 text-black",
+    variant: "outline",
+    icon: CalendarClock,
+    textColor: "text-primary",
   },
 };
 
 export function StatusBadgeSelector({
   status,
   onStatusChange,
+  onSchedule,
   disabled = false,
 }: StatusBadgeSelectorProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const currentConfig = statusConfig[status];
-
-  if (disabled) {
-    return (
-      <Badge className={currentConfig.className}>{currentConfig.label}</Badge>
-    );
-  }
+  const current = statusConfig[status];
+  const options = Object.keys(statusConfig) as Status[];
 
   return (
-    <Select
-      value={status}
-      onValueChange={(value: EpisodeStatus) => {
-        onStatusChange(value);
-        setIsOpen(false);
-      }}
-      open={isOpen}
-      onOpenChange={setIsOpen}
-    >
-      <SelectTrigger className="w-auto h-auto p-0 border-none bg-transparent [&>svg]:hidden [&_span]:p-1.5 [&_span]:px-2.5 [&_span]:rounded-md [&_span]:text-xs [&_span]:font-medium [&_span]:transition-colors [&_span]:cursor-pointer">
-        <span className={currentConfig.className}>{currentConfig.label}</span>
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="published">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-600"></div>
-            Publicado
-          </div>
-        </SelectItem>
-        <SelectItem value="draft">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-blue-400"></div>
-            Rascunho
-          </div>
-        </SelectItem>
-        <SelectItem value="scheduled">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-            Agendado
-          </div>
-        </SelectItem>
-      </SelectContent>
-    </Select>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={disabled}>
+        <Badge
+          variant={current.variant}
+          className={cn(
+            "capitalize cursor-pointer transition-all hover:ring-2 hover:ring-ring hover:ring-offset-2 hover:ring-offset-background",
+            disabled && "cursor-not-allowed opacity-70"
+          )}
+        >
+          <current.icon
+            className={cn("mr-1.5 h-3.5 w-3.5", current.textColor)}
+          />
+          <span className={cn(current.textColor)}>{current.label}</span>
+          {!disabled && <ChevronDown className="ml-1.5 h-3 w-3" />}
+        </Badge>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        {options.map((opt) => {
+          const config = statusConfig[opt];
+          return (
+            <DropdownMenuItem
+              key={opt}
+              onClick={() => {
+                if (opt === "scheduled") {
+                  onSchedule();
+                } else {
+                  onStatusChange(opt);
+                }
+              }}
+            >
+              <config.icon className={cn("mr-2 h-4 w-4", config.textColor)} />
+              <span className={cn(config.textColor)}>{config.label}</span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

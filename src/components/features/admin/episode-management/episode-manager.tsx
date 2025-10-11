@@ -257,6 +257,10 @@ export function EpisodeManager({
                 actionsMode="inline-hover"
                 primaryAction="edit"
                 compactRows
+                categories={[]}
+                subcategories={[]}
+                programs={[]}
+                allTags={[]}
               />
               <EpisodeTablePagination
                 currentPage={page}
