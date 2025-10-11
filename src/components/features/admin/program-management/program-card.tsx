@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { ProgramWithRelations } from "@/src/lib/types";
 import { cn } from "@/src/lib/utils";
-import { Calendar, Edit, Trash2, Eye, EyeOff } from "lucide-react";
+import { Calendar, Edit, Trash2, Eye, EyeOff, Ellipsis } from "lucide-react"; // 1. IMPORTADO O ÍCONE
 import { useState, useRef, useEffect } from "react";
 import {
   Tooltip,
@@ -51,7 +51,6 @@ export function ProgramCard({ program, onEdit, onDelete }: ProgramCardProps) {
             gradientClass
           )}
         >
-          {/* USANDO AS NOVAS CLASSES SEM CONFLITO */}
           <div className="pattern rings">
             <div className="deco-ring deco-ring-1"></div>
             <div className="deco-ring deco-ring-2"></div>
@@ -81,7 +80,6 @@ export function ProgramCard({ program, onEdit, onDelete }: ProgramCardProps) {
         </CardContent>
       </Card>
 
-      {/* Controles do Card (inalterados) */}
       <div className="flex items-center justify-end px-2 pt-3">
         <TooltipProvider delayDuration={150}>
           <Tooltip>
@@ -116,12 +114,10 @@ export function ProgramCard({ program, onEdit, onDelete }: ProgramCardProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="flex h-10 w-10 flex-col items-center justify-center gap-1 text-rose-500 hover:bg-slate-700/50 hover:text-rose-500"
+            className="h-10 w-10 text-rose-500 hover:bg-slate-700/50 hover:text-rose-500"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            <div className="h-1 w-1 rounded-full bg-rose-500"></div>
-            <div className="h-1 w-1 rounded-full bg-rose-500"></div>
-            <div className="h-1 w-1 rounded-full bg-rose-500"></div>
+            <Ellipsis className="h-5 w-5" />
           </Button>
 
           {isMenuOpen && (
