@@ -1,3 +1,29 @@
+/* Estilos do seu protótipo para garantir que tudo funcione */
+.rings .deco-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  border-style: solid;
+  border-width: 4px;
+}
+.rings .deco-ring-1 {
+  height: 8rem;
+  width: 8rem;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.rings .deco-ring-2 {
+  height: 12rem;
+  width: 12rem;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.rings .deco-ring-3 {
+  height: 16rem;
+  width: 16rem;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
 .gradient-ocean {
   background-image: linear-gradient(to bottom right, #60a5fa, #3b82f6, #6366f1);
 }
