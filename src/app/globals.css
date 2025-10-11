@@ -133,18 +133,6 @@ html {
   }
 }
 /* Custom Card Gradients - VERSÃO CORRETA COM AS CORES DO PROTÓTIPO */
-.gradient-default {
-  background-image: linear-gradient(to bottom right, #64748b, #475569, #1e293b);
-}
-/* Mapeado do seu .gradient-3 (Cultura) */
-.gradient-sunset {
-  background-image: linear-gradient(to bottom right, #facc15, #f97316, #ec4899);
-}
-/* Mapeado do seu .gradient-4 (Ciência) */
-.gradient-forest {
-  background-image: linear-gradient(to bottom right, #34d399, #14b8a6, #0891b2);
-}
-/* Adicionando outros temas bonitos para o futuro */
 .gradient-ocean {
   background-image: linear-gradient(to bottom right, #60a5fa, #3b82f6, #6366f1);
 }
@@ -152,7 +140,31 @@ html {
   background-image: linear-gradient(to bottom right, #a78bfa, #8b5cf6, #7c3aed);
 }
 .gradient-passion {
-  background-image: linear-gradient(to bottom right, #f43f5e, #be123c, #9f1239);
+  background-image: linear-gradient(to bottom right, #34d399, #14b8a6, #0891b2);
+}
+.gradient-sunset {
+  background-image: linear-gradient(to bottom right, #fbbf24, #f87171, #a855f7);
+}
+.gradient-forest {
+  background-image: linear-gradient(to bottom right, #86efac, #22c55e, #15803d);
+}
+.gradient-galaxy {
+  background-image: linear-gradient(to bottom right, #312e81, #c026d3, #38bdf8);
+}
+.gradient-candy {
+  background-image: linear-gradient(to bottom right, #f9a8d4, #c084fc, #818cf8);
+}
+.gradient-aurora {
+  background-image: linear-gradient(to bottom right, #6ee7b7, #3b82f6, #8b5cf6);
+}
+.gradient-citrus {
+  background-image: linear-gradient(to bottom right, #fde047, #84cc16, #06b6d4);
+}
+.gradient-ice {
+  background-image: linear-gradient(to bottom right, #93c5fd, #60a5fa, #3b82f6);
+}
+.gradient-mod {
+  background-image: linear-gradient(to bottom right, #34d399, #14b8a6, #0891b2);
 }
 
 /* Estilos do seu protótipo para garantir que tudo funcione */

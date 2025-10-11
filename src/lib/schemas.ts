@@ -26,6 +26,7 @@ export const categoryFormSchema = z.object({
     .max(50, {
       message: "O nome da categoria não pode ter mais de 50 caracteres.",
     }),
+  color_theme: z.string().nullable(),
 });
 export type CategoryFormData = z.infer<typeof categoryFormSchema>;
 

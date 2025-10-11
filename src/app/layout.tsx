@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Sora } from "next/font/google"; // Corrigido para usar a fonte Sora do seu projeto
 import "./globals.css";
 import { ThemeProvider } from "@/src/components/theme-provider";
-import { Toaster as SonnerToaster } from "@/src/components/ui/sonner"; // Importação mais segura para evitar conflitos
+import { Toaster as SonnerToaster } from "@/src/components/ui/sonner";
+import "@/src/styles/card-themes.css";
 
 const sora = Sora({ subsets: ["latin"] }); // Corrigido para usar a fonte Sora
 
