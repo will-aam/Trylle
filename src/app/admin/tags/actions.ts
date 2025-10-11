@@ -513,3 +513,62 @@ export async function listAllTagNamesAction(): Promise<
     return { success: false, error: e?.message || "Erro ao listar nomes." };
   }
 }
+
+export async function getPaginatedTagAliases(page: number, pageSize: number) {
+  "use server";
+  const supabase = await createSupabaseServerClient();
+
+  const start = (page - 1) * pageSize;
+  const end = page * pageSize - 1;
+
+  const { data: aliases, error } = await supabase
+    .from("tag_aliases")
+    .select("*, tags!inner(name)")
+    .range(start, end)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching paginated tag aliases:", error);
+    return { aliases: [], count: 0 };
+  }
+
+  const { count, error: countError } = await supabase
+    .from("tag_aliases")
+    .select("*", { count: "exact", head: true });
+
+  if (countError) {
+    console.error("Error fetching tag aliases count:", countError);
+    return { aliases, count: 0 };
+  }
+
+  return { aliases, count: count ?? 0 };
+}
+export async function getPaginatedTagGroups(page: number, pageSize: number) {
+  "use server";
+  const supabase = await createSupabaseServerClient();
+
+  const start = (page - 1) * pageSize;
+  const end = page * pageSize - 1;
+
+  const { data: groups, error } = await supabase
+    .from("tag_groups")
+    .select("*, tags(*)") // Inclui as tags de cada grupo
+    .range(start, end)
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching paginated tag groups:", error);
+    return { groups: [], count: 0 };
+  }
+
+  const { count, error: countError } = await supabase
+    .from("tag_groups")
+    .select("*", { count: "exact", head: true });
+
+  if (countError) {
+    console.error("Error fetching tag groups count:", countError);
+    return { groups, count: 0 };
+  }
+
+  return { groups, count: count ?? 0 };
+}

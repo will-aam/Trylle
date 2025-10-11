@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
-import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
-import { useToast } from "@/src/hooks/use-toast";
+import { useState, useEffect, useCallback, useTransition } from "react";
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client"; // Corrigindo o caminho do import
+import { useToast } from "@/src/hooks/use-toast"; // Corrigindo o caminho do import
 import {
   Card,
   CardContent,
@@ -23,51 +22,54 @@ import {
 } from "@/src/components/ui/accordion";
 import { Badge } from "@/src/components/ui/badge";
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
+import { getPaginatedTagGroups } from "@/src/app/admin/tags/actions"; // Nossa server action
+import { TagPagination } from "../tag-manager/TagPagination"; // Nosso componente de paginação
+import { Tag } from "@/src/lib/types"; // Corrigindo o caminho do import
 
 type TagGroup = {
   id: string;
   name: string;
   created_at: string;
-  tags: { id: string; name: string }[];
+  tags: Tag[];
 };
 
+const PAGE_SIZE = 10; // Itens por página
+
 export function TagGroupManager() {
-  // 2. E AQUI: Use a nova função para criar o cliente
   const supabase = createSupabaseBrowserClient();
   const { toast } = useToast();
 
   const [groups, setGroups] = useState<TagGroup[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isPending, startTransition] = useTransition();
+
   const [newGroupName, setNewGroupName] = useState("");
   const [editingGroup, setEditingGroup] = useState<TagGroup | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  const fetchGroups = useCallback(async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("tag_groups")
-      .select("*, tags(id, name)")
-      .order("name", { ascending: true });
-
-    if (error) {
-      toast({
-        title: "Erro ao carregar grupos",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      setGroups(data || []);
-    }
-    setLoading(false);
-  }, [supabase, toast]);
+  const fetchGroups = useCallback(() => {
+    startTransition(async () => {
+      const { groups: fetchedGroups, count } = await getPaginatedTagGroups(
+        currentPage,
+        PAGE_SIZE
+      );
+      setGroups(fetchedGroups as TagGroup[]);
+      setTotalCount(count);
+    });
+  }, [currentPage]);
 
   useEffect(() => {
     fetchGroups();
-  }, [fetchGroups]);
+  }, [fetchGroups, currentPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const handleAddGroup = async () => {
     if (!newGroupName.trim()) return;
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("tag_groups")
       .insert([{ name: newGroupName.trim() }])
       .select()
@@ -80,9 +82,10 @@ export function TagGroupManager() {
         variant: "destructive",
       });
     } else {
-      setGroups([...groups, data].sort((a, b) => a.name.localeCompare(b.name)));
       setNewGroupName("");
       toast({ title: "Sucesso!", description: "Grupo de tags criado." });
+      // Recarrega os dados da página atual para refletir a adição
+      fetchGroups();
     }
   };
 
@@ -98,19 +101,19 @@ export function TagGroupManager() {
         variant: "destructive",
       });
     } else {
-      setGroups(groups.filter((g) => g.id !== groupId));
       toast({ title: "Sucesso!", description: "Grupo de tags excluído." });
+      // Recarrega os dados para refletir a exclusão
+      fetchGroups();
     }
   };
 
   const handleUpdateGroup = async () => {
     if (!editingGroup || !editingName.trim()) return;
-
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("tag_groups")
       .update({ name: editingName.trim() })
       .eq("id", editingGroup.id)
-      .select("*, tags(id, name)") // Adicionado para manter os dados das tags
+      .select("*, tags(id, name)")
       .single();
 
     if (error) {
@@ -120,16 +123,15 @@ export function TagGroupManager() {
         variant: "destructive",
       });
     } else {
-      setGroups(
-        groups
-          .map((g) => (g.id === editingGroup.id ? { ...g, ...data } : g))
-          .sort((a, b) => a.name.localeCompare(b.name))
-      );
       toast({ title: "Sucesso!", description: "Grupo de tags atualizado." });
       setEditingGroup(null);
       setEditingName("");
+      // Recarrega os dados para refletir a atualização
+      fetchGroups();
     }
   };
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
     <Card>
@@ -140,6 +142,7 @@ export function TagGroupManager() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Formulário de Adição (preservado) */}
         <div className="flex space-x-2 mb-4">
           <Input
             placeholder="Nome do novo grupo"
@@ -151,122 +154,133 @@ export function TagGroupManager() {
             <Plus className="mr-2 h-4 w-4" /> Adicionar Grupo
           </Button>
         </div>
-        <Accordion
-          type="multiple"
-          className="w-full max-h-[60vh] overflow-y-auto pr-2"
-        >
-          {loading
-            ? Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full rounded-md mb-1" />
-              ))
-            : groups.map((group) => (
-                <AccordionItem
-                  key={group.id}
-                  value={group.id}
-                  className="border-b"
-                >
-                  <div className="flex items-center w-full">
-                    <AccordionTrigger className="flex-grow text-left hover:no-underline px-4 py-3">
-                      {editingGroup?.id === group.id ? (
-                        <Input
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          autoFocus
-                          onClick={(e) => e.stopPropagation()}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleUpdateGroup();
-                            if (e.key === "Escape") setEditingGroup(null);
-                            e.stopPropagation();
-                          }}
-                          className="h-8"
-                        />
-                      ) : (
-                        <span className="text-sm font-medium">
-                          {group.name}
-                        </span>
-                      )}
-                    </AccordionTrigger>
-                    <div className="flex items-center pr-2">
-                      {editingGroup?.id === group.id ? (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
+
+        {/* Lista de Grupos (agora paginada) */}
+        <div className="min-h-[400px]">
+          <Accordion type="multiple" className="w-full">
+            {isPending
+              ? Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full rounded-md mb-1" />
+                ))
+              : groups.map((group) => (
+                  <AccordionItem
+                    key={group.id}
+                    value={group.id}
+                    className="border-b"
+                  >
+                    <div className="flex items-center w-full">
+                      <AccordionTrigger className="flex-grow text-left hover:no-underline px-4 py-3">
+                        {editingGroup?.id === group.id ? (
+                          <Input
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            autoFocus
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleUpdateGroup();
+                              if (e.key === "Escape") setEditingGroup(null);
                               e.stopPropagation();
-                              handleUpdateGroup();
                             }}
-                            className="h-8 w-8"
-                          >
-                            <Check className="h-4 w-4 text-green-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingGroup(null);
-                            }}
-                            className="h-8 w-8"
-                          >
-                            <X className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingGroup(group);
-                              setEditingName(group.name);
-                            }}
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <ConfirmationDialog
-                            title="Delete Tag Group"
-                            description={`Are you sure you want to delete the tag group "${group.name}"? This action cannot be undone.`}
-                            onConfirm={() => handleDeleteGroup(group.id)}
-                          >
-                            {(open) => (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  open();
-                                }}
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </ConfirmationDialog>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <AccordionContent className="px-4 pb-3">
-                    {group.tags && group.tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        {group.tags.map((tag) => (
-                          <Badge key={tag.id} variant="secondary">
-                            {tag.name}
-                          </Badge>
-                        ))}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-sm font-medium">
+                            {group.name}
+                          </span>
+                        )}
+                      </AccordionTrigger>
+                      <div className="flex items-center pr-2">
+                        {/* Botões de Ação (preservados) */}
+                        {editingGroup?.id === group.id ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUpdateGroup();
+                              }}
+                              className="h-8 w-8"
+                            >
+                              <Check className="h-4 w-4 text-green-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingGroup(null);
+                              }}
+                              className="h-8 w-8"
+                            >
+                              <X className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingGroup(group);
+                                setEditingName(group.name);
+                              }}
+                              className="h-8 w-8"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <ConfirmationDialog
+                              title="Delete Tag Group"
+                              description={`Are you sure you want to delete the tag group "${group.name}"? This action cannot be undone.`}
+                              onConfirm={() => handleDeleteGroup(group.id)}
+                            >
+                              {(open) => (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    open();
+                                  }}
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </ConfirmationDialog>
+                          </>
+                        )}
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic pt-2">
-                        Nenhuma tag associada a este grupo.
-                      </p>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-        </Accordion>
+                    </div>
+                    <AccordionContent className="px-4 pb-3">
+                      {group.tags && group.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          {group.tags.map((tag) => (
+                            <Badge key={tag.id} variant="secondary">
+                              {tag.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic pt-2">
+                          Nenhuma tag associada a este grupo.
+                        </p>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+          </Accordion>
+        </div>
+
+        {/* Controles de Paginação */}
+        <div className="mt-4 flex justify-center">
+          <TagPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        </div>
       </CardContent>
     </Card>
   );
