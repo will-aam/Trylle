@@ -98,7 +98,6 @@ export function CategoryManager() {
                     onEdit={() => openCategoryModal(category)}
                     onDelete={handleDeleteCategory}
                     onAddSubcategory={handleAddSubcategory}
-                    onAccordionChange={handleAccordionChange}
                     onEditSubcategory={openSubcategoryModal}
                     newSubcategoryNames={newSubcategoryNames}
                     setNewSubcategoryNames={setNewSubcategoryNames}
