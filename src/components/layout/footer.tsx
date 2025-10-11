@@ -76,6 +76,14 @@ export function Footer() {
               </li> */}
               <li>
                 <a
+                  href="/technologies"
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Tecnologias
+                </a>
+              </li>
+              <li>
+                <a
                   href="/suggest-topic"
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >

@@ -17,6 +17,7 @@ const updateEpisodeServerSchema = z.object({
   subcategory_id: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
   status: z.enum(["draft", "scheduled", "published"]).optional(),
+  published_at: z.string().datetime().optional(),
 });
 export type UpdateEpisodeServerInput = z.infer<
   typeof updateEpisodeServerSchema
@@ -447,6 +448,44 @@ export async function updateEpisodeAction(
     };
   }
   const data = parse.data;
+
+  // ---> INÍCIO DA NOVA LÓGICA DE VALIDAÇÃO <---
+  if (data.status) {
+    const now = new Date();
+    let publishedAt = data.published_at ? new Date(data.published_at) : null;
+
+    // Se a data não veio no update, precisamos buscar a atual no DB para validar
+    if (!publishedAt) {
+      const { data: currentEpisode, error } = await supabase
+        .from("episodes")
+        .select("published_at")
+        .eq("id", episodeId)
+        .single();
+
+      if (error || !currentEpisode) {
+        return {
+          success: false,
+          error: "Episódio não encontrado para validação.",
+        };
+      }
+      publishedAt = new Date(currentEpisode.published_at);
+    }
+
+    // Regra 1: Se o novo status é 'published', a data não pode ser futura.
+    if (data.status === "published" && publishedAt > now) {
+      // Força a data para agora, como definido na regra do Trello.
+      data.published_at = now.toISOString();
+    }
+
+    // Regra 2: Se o novo status é 'scheduled', a data DEVE ser futura.
+    if (data.status === "scheduled" && publishedAt <= now) {
+      return {
+        success: false,
+        error: "Para agendar, a data de publicação deve ser no futuro.",
+        code: "INVALID_SCHEDULE_DATE",
+      };
+    }
+  }
   const { tags, ...episodeFieldUpdates } = data;
 
   const cleaned: Record<string, any> = {};
@@ -928,5 +967,41 @@ export async function getEpisodeByIdAction(
     return { success: true, episode: mapRawToEpisode(singleNorm) };
   } catch (e: any) {
     return { success: false, error: e?.message || "Falha ao buscar episódio." };
+  }
+}
+// Adicione esta nova função ao final do arquivo src/app/admin/episodes/actions.ts
+
+export async function scheduleEpisode(
+  episodeId: string,
+  publicationDate: string
+) {
+  if (!episodeId || !publicationDate) {
+    return { error: "ID do episódio e data de publicação são obrigatórios." };
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient(); // Usando a função correta
+    const { error } = await supabase
+      .from("episodes")
+      .update({
+        status: "scheduled",
+        published_at: publicationDate, // Usando o nome de campo correto
+      })
+      .eq("id", episodeId);
+
+    if (error) {
+      throw error;
+    }
+
+    // Revalida os caches para que as páginas mostrem os dados atualizados
+    revalidatePath("/programacao"); // A nova página pública
+    revalidatePath("/admin/episodes"); // A tabela de episódios no admin
+
+    return { success: "Episódio agendado com sucesso!" };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Ocorreu um erro desconhecido.";
+    console.error("Error scheduling episode:", errorMessage);
+    return { error: "Não foi possível agendar o episódio." };
   }
 }

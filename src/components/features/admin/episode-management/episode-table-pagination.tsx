@@ -71,7 +71,7 @@ export function EpisodeTablePagination({
       aria-label="Controle de paginação"
     >
       {/* Seleção de itens por página */}
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+      <div className="grid w-full max-w-max-cols-[auto_auto_auto] grid-cols-3 items-center gap-2">
         <label htmlFor="items-per-page" className="text-muted-foreground">
           Itens por página
         </label>
@@ -95,9 +95,9 @@ export function EpisodeTablePagination({
             ))}
           </SelectContent>
         </Select>
-        <span className="text-muted-foreground">
+        {/* <span className="text-muted-foreground">
           Exibindo {startIndex}-{endIndex} de {totalCount}
-        </span>
+        </span> */}
       </div>
 
       {/* Navegação de páginas */}

@@ -12,11 +12,15 @@ const baseIdSchema = z.string().min(1, "ID inválido");
 
 const createCategorySchema = z.object({
   name: z.string().min(1, "Nome obrigatório").max(120),
+  // Novo campo: tema de cor (classe CSS), pode ser string ou null
+  color_theme: z.string().nullable().optional(),
 });
 
 const updateCategorySchema = z.object({
   id: baseIdSchema,
   name: z.string().min(1).max(120),
+  // Novo campo: tema de cor (classe CSS), pode ser string ou null
+  color_theme: z.string().nullable().optional(),
 });
 
 const createSubcategorySchema = z.object({
@@ -73,12 +77,15 @@ interface SingleSubcategoryResult {
    Helpers (sem updated_at)
    ========================= */
 function mapCategoryRow(row: any): Category & { episode_count: number } {
+  // Incluímos color_theme no objeto retornado.
+  // Mantemos a assinatura de tipo e fazemos cast para evitar quebrar o tipo Category atual caso não tenha color_theme ainda.
   return {
     id: row.id,
     name: row.name,
+    color_theme: row.color_theme ?? null,
     created_at: row.created_at,
     episode_count: row.episodes?.[0]?.count || 0,
-  };
+  } as any;
 }
 
 function mapSubcategoryRow(row: any): Subcategory & { episode_count: number } {
@@ -208,7 +215,12 @@ export async function createCategoryAction(
 
     const { data, error } = await supabase
       .from("categories")
-      .insert([{ name: parsed.name.trim() }])
+      .insert([
+        {
+          name: parsed.name.trim(),
+          color_theme: parsed.color_theme ?? null,
+        },
+      ])
       .select()
       .single();
 
@@ -233,6 +245,7 @@ export async function updateCategoryAction(
       .from("categories")
       .update({
         name: parsed.name.trim(),
+        color_theme: parsed.color_theme ?? null,
       })
       .eq("id", parsed.id)
       .select()

@@ -1,13 +1,13 @@
+// src/app/admin/episodes/page.tsx
+
 import { EpisodeManager } from "@/src/components/features/admin/episode-management/episode-manager";
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
 
 export const revalidate = 0;
 
-export default async function AdminEpisodesPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
+// Não precisamos mais passar os searchParams, então a tipagem aqui pode ser simplificada
+// ou removida, mas vamos manter por clareza de que a página os recebe.
+export default async function AdminEpisodesPage() {
   const supabase = await createSupabaseServerClient();
 
   const [
@@ -28,11 +28,10 @@ export default async function AdminEpisodesPage({
     supabase.from("tags").select("id,name,created_at").order("name"),
   ]);
 
-  // Normaliza para satisfazer a interface Program (que exige 'category')
   const normalizedPrograms =
     (programsData || []).map((p: any) => ({
       ...p,
-      category: null, // placeholder (já que Program.category é 'any')
+      category: null,
     })) || [];
 
   return (
@@ -41,6 +40,7 @@ export default async function AdminEpisodesPage({
       initialSubcategories={subcategoriesData || []}
       initialPrograms={normalizedPrograms}
       initialAllTags={tagsData || []}
+      // A propriedade searchParams foi REMOVIDA daqui, pois o componente já a lê internamente.
     />
   );
 }

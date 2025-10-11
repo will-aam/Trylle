@@ -49,7 +49,7 @@ export interface Episode {
   file_name: string;
   category_id: string | null;
   subcategory_id: string | null;
-  status: "draft" | "scheduled" | "published";
+  status: "published" | "draft" | "scheduled";
   published_at: string;
   created_at: string;
   updated_at: string;
@@ -76,6 +76,7 @@ export interface Category {
   episode_count?: number; // Mantemos opcional para uso em listagens
   subcategories?: Subcategory[]; // (se você já usa isso no client para accordion)
   subcategoriesLoading?: boolean; // flag usada no cliente (se existir)
+  color_theme?: string | null;
 }
 
 /**
@@ -91,3 +92,10 @@ export interface Subcategory {
 }
 
 export type SortDirection = "asc" | "desc";
+
+export type ProgramWithRelations = Program & {
+  categories: Category | null;
+  _count?: {
+    episodes: number;
+  };
+};

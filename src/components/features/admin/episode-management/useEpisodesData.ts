@@ -1,3 +1,5 @@
+// src/components/features/admin/episode-management/useEpisodesData.ts
+
 "use client";
 
 import {
@@ -17,15 +19,11 @@ import {
 import { Episode } from "@/src/lib/types";
 import { toast } from "sonner";
 
-export interface UseEpisodesDataParams {
-  search?: string;
-  statusCsv?: string; // ex: "published,draft"
-  categoryCsv?: string; // ex: "cat1,cat2"
-  programCsv?: string;
-  sortBy?: string;
-  order?: string;
-  page?: number;
-  perPage?: number;
+interface StatusCounts {
+  draft: number;
+  scheduled: number;
+  published: number;
+  archived: number;
 }
 
 interface UseEpisodesDataReturn {
@@ -34,28 +32,19 @@ interface UseEpisodesDataReturn {
   page: number;
   perPage: number;
   totalFiltered: number;
-  statusCounts: { draft: number; scheduled: number; published: number } | null;
+  statusCounts: StatusCounts | null;
   isPendingTransition: boolean;
   refetch: () => Promise<void>;
-  optimisticUpdateStatus: (
-    id: string,
-    newStatus: Episode["status"]
-  ) => Promise<void>;
+  optimisticUpdateStatus: (id: string, newStatus: Episode["status"]) => void;
   optimisticBulkStatus: (
     ids: string[],
     newStatus: Episode["status"]
   ) => Promise<{ ok: number; fail: number }>;
-  optimisticDelete: (id: string) => Promise<boolean>;
+  optimisticDelete: (id: string) => void;
   refreshOne: (id: string) => Promise<void>;
 }
 
-/**
- * Hook para centralizar listagem e operações de episódios via Server Actions.
- * Corrigido para evitar loop infinito (arrays memorizados + guard de requisição).
- */
-export function useEpisodesData(
-  params: UseEpisodesDataParams
-): UseEpisodesDataReturn {
+export function useEpisodesData(params: any): UseEpisodesDataReturn {
   const {
     search = "",
     statusCsv = "",
@@ -69,18 +58,12 @@ export function useEpisodesData(
 
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [totalFiltered, setTotalFiltered] = useState(0);
-  const [statusCounts, setStatusCounts] = useState<{
-    draft: number;
-    scheduled: number;
-    published: number;
-  } | null>(null);
-
+  const [statusCounts, setStatusCounts] = useState<StatusCounts | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const mountedRef = useRef(true);
-  const inFlightRef = useRef(false); // evita requisições sobrepostas
+  const inFlightRef = useRef(false);
 
-  // Memorizar arrays para não recriarem referência a cada render
   const statusArray = useMemo(
     () =>
       statusCsv
@@ -96,17 +79,6 @@ export function useEpisodesData(
     () => (programCsv ? programCsv.split(",").filter(Boolean) : []),
     [programCsv]
   );
-
-  // Função util para comparar shallow (evitar setState redundante)
-  function shallowDiffersEpisodes(a: Episode[], b: Episode[]) {
-    if (a.length !== b.length) return true;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i].id !== b[i].id || a[i].updated_at !== b[i].updated_at) {
-        return true;
-      }
-    }
-    return false;
-  }
 
   const fetchAll = useCallback(async () => {
     if (inFlightRef.current) return;
@@ -129,30 +101,32 @@ export function useEpisodesData(
         getEpisodeStatusCountsAction(),
       ]);
 
-      if (listRes.success) {
-        if (
-          mountedRef.current &&
-          shallowDiffersEpisodes(listRes.data, episodes)
-        ) {
-          setEpisodes(listRes.data);
-          setTotalFiltered(listRes.totalFiltered);
-        } else if (mountedRef.current) {
-          // garantir total mesmo que episódios iguais
-          setTotalFiltered(listRes.totalFiltered);
+      startTransition(() => {
+        if (listRes.success) {
+          if (mountedRef.current) {
+            setEpisodes(listRes.data);
+            setTotalFiltered(listRes.totalFiltered);
+          }
+        } else {
+          toast.error("Erro ao listar episódios", {
+            description: listRes.error,
+          });
         }
-      } else {
-        toast.error("Erro ao listar episódios", { description: listRes.error });
-      }
 
-      if (countsRes.success) {
-        if (mountedRef.current) {
-          setStatusCounts(countsRes.counts);
+        if (countsRes.success) {
+          if (mountedRef.current) {
+            setStatusCounts(countsRes.counts as StatusCounts);
+          }
+        } else {
+          toast.error("Erro ao contar status", {
+            description: countsRes.error,
+          });
         }
-      } else {
-        toast.error("Erro ao contar status", { description: countsRes.error });
-      }
+      });
     } catch (e: any) {
-      toast.error("Falha inesperada", { description: e?.message });
+      startTransition(() => {
+        toast.error("Falha inesperada", { description: e?.message });
+      });
     } finally {
       if (mountedRef.current) setLoading(false);
       inFlightRef.current = false;
@@ -166,7 +140,6 @@ export function useEpisodesData(
     programIds,
     sortBy,
     order,
-    episodes, // usamos para shallowDiff
   ]);
 
   useEffect(() => {
@@ -181,141 +154,114 @@ export function useEpisodesData(
     await fetchAll();
   }, [fetchAll]);
 
-  /* ---------- Operações Otimistas ---------- */
-
   const optimisticUpdateStatus = useCallback(
-    async (id: string, newStatus: Episode["status"]) => {
-      const prev = episodes;
+    (id: string, newStatus: Episode["status"]) => {
+      const prev = [...episodes];
       setEpisodes((cur) =>
         cur.map((e) => (e.id === id ? { ...e, status: newStatus } : e))
       );
-      const res = await updateEpisodeAction(id, { status: newStatus });
-      if (!res.success) {
-        toast.error("Falha ao atualizar status", { description: res.error });
-        setEpisodes(prev); // rollback
-      } else {
-        toast.success("Status atualizado");
-        // Ajusta contadores localmente
-        if (statusCounts) {
+
+      startTransition(async () => {
+        const res = await updateEpisodeAction(id, { status: newStatus });
+        if (!res.success) {
+          toast.error("Falha ao atualizar status", { description: res.error });
+          setEpisodes(prev);
+        } else {
+          toast.success("Status atualizado");
           const prevEp = prev.find((p) => p.id === id);
           if (prevEp && prevEp.status !== newStatus) {
             setStatusCounts((c) =>
               c
                 ? {
                     ...c,
-                    [prevEp.status]: c[prevEp.status] - 1,
-                    [newStatus]: c[newStatus] + 1,
+                    [prevEp.status]: c[prevEp.status as keyof StatusCounts] - 1,
+                    [newStatus]: c[newStatus as keyof StatusCounts] + 1,
                   }
                 : c
             );
           }
         }
-      }
+      });
     },
-    [episodes, statusCounts]
+    [episodes, startTransition]
   );
 
   const optimisticBulkStatus = useCallback(
     async (ids: string[], newStatus: Episode["status"]) => {
+      // Esta função é mais complexa e já retorna Promise, o setTimeout aqui é mais seguro.
+      // Manteremos como está para evitar refatoração excessiva.
       const prev = episodes;
       const prevStatusMap: Record<string, Episode["status"]> = {};
       prev.forEach((e) => {
         if (ids.includes(e.id)) prevStatusMap[e.id] = e.status;
       });
-
       setEpisodes((cur) =>
         cur.map((e) => (ids.includes(e.id) ? { ...e, status: newStatus } : e))
       );
 
       const results = await Promise.all(
-        ids.map(async (id) => {
-          const r = await updateEpisodeAction(id, { status: newStatus });
-          return r.success;
-        })
+        ids.map((id) =>
+          updateEpisodeAction(id, { status: newStatus }).then((r) => r.success)
+        )
       );
       const ok = results.filter(Boolean).length;
       const fail = results.length - ok;
 
-      if (fail > 0) {
-        const failedIds = ids.filter((_, idx) => !results[idx]);
-        setEpisodes((cur) =>
-          cur.map((e) =>
-            failedIds.includes(e.id) ? { ...e, status: prevStatusMap[e.id] } : e
-          )
-        );
-        toast.error("Atualização parcial", {
-          description: `${ok} sucesso / ${fail} falha(s)`,
-        });
-      } else {
-        toast.success(
-          `Status atualizado para ${newStatus} em ${ok} episódio(s)`
-        );
-      }
-
-      if (statusCounts) {
-        const delta: Record<string, number> = {
-          draft: 0,
-          scheduled: 0,
-          published: 0,
-        };
-        ids.forEach((id, idx) => {
-          if (!results[idx]) return;
-          const oldS = prevStatusMap[id];
-          if (oldS !== newStatus) {
-            delta[oldS] -= 1;
-            delta[newStatus] += 1;
-          }
-        });
-        setStatusCounts((c) =>
-          c
-            ? {
-                draft: c.draft + delta.draft,
-                scheduled: c.scheduled + delta.scheduled,
-                published: c.published + delta.published,
-              }
-            : c
-        );
-      }
+      setTimeout(() => {
+        if (fail > 0) {
+          toast.error("Atualização parcial", {
+            description: `${ok} sucesso / ${fail} falha(s)`,
+          });
+          fetchAll(); // Força a recarga para garantir consistência
+        } else {
+          toast.success(`Status atualizado para ${ok} episódio(s)`);
+          fetchAll();
+        }
+      }, 50);
 
       return { ok, fail };
     },
-    [episodes, statusCounts]
+    [episodes, fetchAll]
   );
 
   const optimisticDelete = useCallback(
-    async (id: string) => {
-      const prev = episodes;
+    (id: string) => {
+      const prev = [...episodes];
       const target = prev.find((e) => e.id === id);
       setEpisodes((cur) => cur.filter((e) => e.id !== id));
-      const res = await deleteEpisodeAction(id);
-      if (!res.success) {
-        toast.error("Falha ao deletar", { description: res.error });
-        setEpisodes(prev);
-        return false;
-      } else {
-        toast.success("Episódio deletado");
-        if (statusCounts && target) {
-          setStatusCounts((c) =>
-            c
-              ? {
-                  ...c,
-                  [target.status]: Math.max(0, c[target.status] - 1),
-                }
-              : c
-          );
+
+      startTransition(async () => {
+        const res = await deleteEpisodeAction(id);
+        if (!res.success) {
+          toast.error("Falha ao deletar", { description: res.error });
+          setEpisodes(prev);
+        } else {
+          toast.success("Episódio deletado");
+          if (target) {
+            setStatusCounts((c) =>
+              c
+                ? {
+                    ...c,
+                    [target.status]: Math.max(
+                      0,
+                      c[target.status as keyof StatusCounts] - 1
+                    ),
+                  }
+                : c
+            );
+          }
+          setTotalFiltered((t) => Math.max(0, t - 1));
         }
-        setTotalFiltered((t) => Math.max(0, t - 1));
-        return true;
-      }
+      });
     },
-    [episodes, statusCounts]
+    [episodes, startTransition]
   );
 
   const refreshOne = useCallback(
     async (_id: string) => {
-      await refetch();
+      await fetchAll();
     },
-    [refetch]
+    [fetchAll]
   );
 
   return {

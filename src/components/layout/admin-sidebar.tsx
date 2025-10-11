@@ -11,7 +11,6 @@ import {
   MonitorCog,
   Wallet,
   Eye,
-  CalendarArrowUp,
   LibraryBig,
   MessagesSquare,
   Radio,
@@ -23,10 +22,15 @@ import {
   TooltipTrigger,
 } from "@/src/components/ui/tooltip";
 import { Button } from "@/src/components/ui/button";
-// 1. AQUI ESTÁ A MUDANÇA: Importe a nova função
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { ThemeToggle } from "./theme-toggle";
-import { cn } from "@/src/lib/utils";
+import { cn } from "@/lib/utils";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/src/components/ui/accordion";
 
 interface AdminSidebarProps {
   isCollapsed: boolean;
@@ -36,12 +40,11 @@ interface AdminSidebarProps {
 export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  // 2. E AQUI: Use a nova função para criar o cliente
   const supabase = createSupabaseBrowserClient();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/auth"); // Redirecionar para a página de login
+    router.push("/auth");
   };
 
   return (
@@ -91,27 +94,123 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/admin"}
               />
-              <SidebarLink
-                href="/admin/episodes"
-                icon={<LibraryBig className="h-4 w-4" />}
-                label="Gerenciar Episódios"
-                isCollapsed={isCollapsed}
-                isActive={pathname === "/admin/episodes"}
-              />
-              <SidebarLink
-                href="/admin/programs"
-                icon={<Radio className="h-4 w-4" />}
-                label="Programas"
-                isCollapsed={isCollapsed}
-                isActive={pathname === "/admin/programs"}
-              />
-              <SidebarLink
-                href="/"
-                icon={<CalendarArrowUp className="h-4 w-4" />}
-                label="Programação"
-                isCollapsed={isCollapsed}
-                isActive={pathname === "/"}
-              />
+
+              {isCollapsed ? (
+                <SidebarLink
+                  href="/admin/episodes"
+                  icon={<LibraryBig className="h-4 w-4" />}
+                  label="Gerenciar Episódios"
+                  isCollapsed={isCollapsed}
+                  isActive={pathname.startsWith("/admin/episodes")}
+                />
+              ) : (
+                <Accordion
+                  type="single"
+                  collapsible
+                  className="w-full"
+                  defaultValue={
+                    pathname.startsWith("/admin/episodes")
+                      ? "episodes-manager"
+                      : ""
+                  }
+                >
+                  <AccordionItem
+                    value="episodes-manager"
+                    className="border-b-0"
+                  >
+                    <AccordionTrigger
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground hover:no-underline",
+                        pathname.startsWith("/admin/episodes") &&
+                          "bg-accent text-foreground"
+                      )}
+                    >
+                      <Link
+                        href="/admin/episodes"
+                        className="flex items-center gap-3 w-full"
+                      >
+                        <LibraryBig className="h-4 w-4" />
+                        <span className="truncate">Gerenciar Episódios</span>
+                      </Link>
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-12 mt-1 space-y-2">
+                      <Link
+                        href="#"
+                        className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all text-xs"
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                        <span>Análises</span>
+                      </Link>
+                      <Link
+                        href="#"
+                        className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all text-xs"
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                        <span>Agendamentos</span>
+                      </Link>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              )}
+
+              {isCollapsed ? (
+                <SidebarLink
+                  href="/admin/episodes"
+                  icon={<LibraryBig className="h-4 w-4" />}
+                  label="Gerenciar Episódios"
+                  isCollapsed={isCollapsed}
+                  isActive={pathname.startsWith("/admin/episodes")}
+                />
+              ) : (
+                <Accordion
+                  type="single"
+                  collapsible
+                  className="w-full"
+                  defaultValue={
+                    pathname.startsWith("/admin/episodes")
+                      ? "episodes-manager"
+                      : ""
+                  }
+                >
+                  <AccordionItem
+                    value="episodes-manager"
+                    className="border-b-0"
+                  >
+                    <AccordionTrigger
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground hover:no-underline",
+                        pathname.startsWith("/admin/episodes") &&
+                          "bg-accent text-foreground"
+                      )}
+                    >
+                      <Link
+                        href="/admin/programs"
+                        className="flex items-center gap-3 w-full"
+                      >
+                        <Radio className="h-4 w-4" />
+                        <span className="truncate">Gerenciar Programas</span>
+                      </Link>
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-12 mt-1 space-y-2">
+                      <Link
+                        href="#"
+                        className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all text-xs"
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                        <span>Análises</span>
+                      </Link>
+                      <Link
+                        href="#"
+                        className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all text-xs"
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                        <span>Agendamentos</span>
+                      </Link>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              )}
+
               <SidebarLink
                 href="/admin/users"
                 icon={<Users className="h-4 w-4" />}
@@ -131,7 +230,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 icon={<Wallet className="h-4 w-4" />}
                 label="Financeiro"
                 isCollapsed={isCollapsed}
-                isActive={pathname === "/admin/config"} // <-- Corrigi um pequeno bug aqui
+                isActive={pathname === "/admin/financial"}
               />
               <SidebarLink
                 href="/admin/config"
@@ -172,7 +271,6 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
   );
 }
 
-// O componente SidebarLink não precisa de alterações.
 function SidebarLink({
   href,
   icon,

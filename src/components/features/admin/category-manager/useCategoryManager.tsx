@@ -139,12 +139,16 @@ export function useCategoryManager() {
   }, [categories, sortType, sortOrder]);
 
   /* Criação / Atualização de Categoria */
-  const handleSaveCategory = async (data: CategoryFormData) => {
+  const handleSaveCategory = async (
+    data: CategoryFormData & { id?: string }
+  ) => {
     try {
       if (editingCategory) {
+        // ATUALIZAÇÃO: garantir que color_theme seja enviado
         const result = await updateCategoryAction({
           id: editingCategory.id,
           name: data.name.trim(),
+          color_theme: data.color_theme ?? null,
         });
         if (!result.success) throw new Error(result.error);
         toast({
@@ -152,7 +156,11 @@ export function useCategoryManager() {
           description: "Categoria atualizada com sucesso.",
         });
       } else {
-        const result = await createCategoryAction({ name: data.name.trim() });
+        // CRIAÇÃO: enviar color_theme também
+        const result = await createCategoryAction({
+          name: data.name.trim(),
+          color_theme: data.color_theme ?? null,
+        });
         if (!result.success) throw new Error(result.error);
         toast({
           title: "Sucesso!",

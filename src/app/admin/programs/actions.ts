@@ -1,9 +1,10 @@
 // src/app/admin/programs/actions.ts
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { getProgramsWithRelations } from "@/src/services/programService";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { revalidatePath } from "next/cache";
 import { Program } from "@/src/lib/types";
 
 const createSupabaseServerClient = async () => {
@@ -94,4 +95,19 @@ export async function deleteProgram(
 
   revalidatePath("/admin/programs");
   return { success: true, message: "Programa deletado com sucesso." };
+}
+export async function listProgramsAction({
+  page,
+  perPage,
+}: {
+  page: number;
+  perPage: number;
+}) {
+  try {
+    const { data, count } = await getProgramsWithRelations(page, perPage);
+    return { success: true, data, count };
+  } catch (error: any) {
+    console.error("Server Action error listing programs:", error);
+    return { success: false, error: "Falha ao listar programas." };
+  }
 }

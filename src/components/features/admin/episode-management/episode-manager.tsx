@@ -185,14 +185,14 @@ export function EpisodeManager({
   return (
     <div className="w-full">
       <div className="mx-auto max-w-screen-2xl px-4 py-6 lg:py-8">
-        <div className="mb-6 flex flex-col gap-2 lg:mb-8">
+        {/* <div className="mb-6 flex flex-col gap-2 lg:mb-8">
           <h2 className="text-3xl font-bold tracking-tight">
             Gerenciador de Episódios
           </h2>
           <p className="text-sm text-muted-foreground">
             Busque, filtre, edite e gerencie a publicação dos episódios.
           </p>
-        </div>
+        </div> */}
 
         <div className="flex flex-col gap-6">
           <EpisodeStats
@@ -257,6 +257,10 @@ export function EpisodeManager({
                 actionsMode="inline-hover"
                 primaryAction="edit"
                 compactRows
+                categories={[]}
+                subcategories={[]}
+                programs={[]}
+                allTags={[]}
               />
               <EpisodeTablePagination
                 currentPage={page}
