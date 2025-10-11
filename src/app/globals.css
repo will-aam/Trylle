@@ -132,3 +132,51 @@ html {
     animation: marquee 15s linear infinite;
   }
 }
+/* Custom Card Gradients - VERSÃO CORRETA COM AS CORES DO PROTÓTIPO */
+.gradient-default {
+  background-image: linear-gradient(to bottom right, #64748b, #475569, #1e293b);
+}
+/* Mapeado do seu .gradient-3 (Cultura) */
+.gradient-sunset {
+  background-image: linear-gradient(to bottom right, #facc15, #f97316, #ec4899);
+}
+/* Mapeado do seu .gradient-4 (Ciência) */
+.gradient-forest {
+  background-image: linear-gradient(to bottom right, #34d399, #14b8a6, #0891b2);
+}
+/* Adicionando outros temas bonitos para o futuro */
+.gradient-ocean {
+  background-image: linear-gradient(to bottom right, #60a5fa, #3b82f6, #6366f1);
+}
+.gradient-twilight {
+  background-image: linear-gradient(to bottom right, #a78bfa, #8b5cf6, #7c3aed);
+}
+.gradient-passion {
+  background-image: linear-gradient(to bottom right, #f43f5e, #be123c, #9f1239);
+}
+
+/* Estilos do seu protótipo para garantir que tudo funcione */
+.rings .deco-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  border-style: solid;
+  border-width: 4px;
+}
+.rings .deco-ring-1 {
+  height: 8rem;
+  width: 8rem;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.rings .deco-ring-2 {
+  height: 12rem;
+  width: 12rem;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.rings .deco-ring-3 {
+  height: 16rem;
+  width: 16rem;
+  border-color: rgba(255, 255, 255, 0.1);
+}

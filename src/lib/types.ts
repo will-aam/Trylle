@@ -76,6 +76,7 @@ export interface Category {
   episode_count?: number; // Mantemos opcional para uso em listagens
   subcategories?: Subcategory[]; // (se você já usa isso no client para accordion)
   subcategoriesLoading?: boolean; // flag usada no cliente (se existir)
+  color_theme?: string | null;
 }
 
 /**
@@ -91,3 +92,10 @@ export interface Subcategory {
 }
 
 export type SortDirection = "asc" | "desc";
+
+export type ProgramWithRelations = Program & {
+  categories: Category | null;
+  _count?: {
+    episodes: number;
+  };
+};

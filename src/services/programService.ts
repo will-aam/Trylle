@@ -1,10 +1,12 @@
+// src/services/programService.ts
+
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
 import { Program } from "@/src/lib/types";
 import { unstable_noStore as noStore } from "next/cache";
 
 export async function getPrograms() {
   noStore();
-  const supabase = await createSupabaseServerClient(); // <-- ADICIONADO AWAIT
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.from("programs").select(`
       *,
       category:categories(name)
@@ -19,7 +21,7 @@ export async function getPrograms() {
 
 export async function getProgramById(id: string) {
   noStore();
-  const supabase = await createSupabaseServerClient(); // <-- ADICIONADO AWAIT
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("programs")
     .select("*")
@@ -36,7 +38,7 @@ export async function getProgramById(id: string) {
 export async function createProgram(
   program: Omit<Program, "id" | "created_at">
 ) {
-  const supabase = await createSupabaseServerClient(); // <-- ADICIONADO AWAIT
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("programs")
     .insert([program])
@@ -50,7 +52,7 @@ export async function createProgram(
 }
 
 export async function updateProgram(id: string, program: Partial<Program>) {
-  const supabase = await createSupabaseServerClient(); // <-- ADICIONADO AWAIT
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("programs")
     .update(program)
@@ -65,7 +67,7 @@ export async function updateProgram(id: string, program: Partial<Program>) {
 }
 
 export async function deleteProgram(id: string) {
-  const supabase = await createSupabaseServerClient(); // <-- ADICIONADO AWAIT
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("programs").delete().eq("id", id);
   if (error) {
     console.error("Error deleting program:", error);
@@ -76,7 +78,7 @@ export async function deleteProgram(id: string) {
 
 export async function getCategories() {
   noStore();
-  const supabase = await createSupabaseServerClient(); // <-- ADICIONADO AWAIT
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.from("categories").select("*");
 
   if (error) {
@@ -84,4 +86,38 @@ export async function getCategories() {
     return [];
   }
   return data;
+}
+
+// NOVA FUNÇÃO CORRIGIDA
+export async function getProgramsWithRelations() {
+  noStore();
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("programs")
+    .select(
+      `
+      *,
+      categories (
+        id,
+        name,
+        color_theme
+      ),
+      episodes (
+        count
+      )
+    `
+    )
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching programs with relations:", error);
+    return [];
+  }
+
+  return data.map((program) => ({
+    ...program,
+    _count: {
+      episodes: program.episodes[0]?.count ?? 0,
+    },
+  }));
 }
