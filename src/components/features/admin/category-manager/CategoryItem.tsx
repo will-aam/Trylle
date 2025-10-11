@@ -38,11 +38,15 @@ export function CategoryItem({
   newSubcategoryNames,
   setNewSubcategoryNames,
 }: CategoryItemProps) {
+  // Classe de tema vinda do banco (definida via ThemeSelector e card-themes.css)
+  const themeClass = (category as any)?.color_theme ?? "";
+
   return (
     <AccordionPrimitive.Item
       key={category.id}
       value={category.id}
-      className="border rounded-md px-4 bg-muted/50"
+      // Mantemos "border" como fallback e adicionamos a classe de tema para estilizar a borda colorida
+      className={`border rounded-md px-4 bg-muted/50 ${themeClass}`}
     >
       <AccordionPrimitive.Header className="flex items-center w-full py-2">
         <AccordionPrimitive.Trigger className="flex flex-1 items-center gap-3 text-left font-semibold group">

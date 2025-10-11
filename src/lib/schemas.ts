@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 
 const updateEpisodeSchema = z.object({
   title: z.string().min(1, "O título é obrigatório."),
@@ -26,6 +25,8 @@ export const categoryFormSchema = z.object({
     .max(50, {
       message: "O nome da categoria não pode ter mais de 50 caracteres.",
     }),
+  // Campo do tema (classe CSS) que será aplicado visualmente nos cards.
+  // Mantemos como string | null para suportar ausência de tema.
   color_theme: z.string().nullable(),
 });
 export type CategoryFormData = z.infer<typeof categoryFormSchema>;

@@ -1,5 +1,3 @@
-// src/components/features/admin/category-manager/CategoryForm.tsx
-
 "use client";
 
 import { useForm, Controller } from "react-hook-form";
