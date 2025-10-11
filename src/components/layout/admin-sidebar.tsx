@@ -153,13 +153,63 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 </Accordion>
               )}
 
-              <SidebarLink
-                href="/admin/programs"
-                icon={<Radio className="h-4 w-4" />}
-                label="Programas"
-                isCollapsed={isCollapsed}
-                isActive={pathname === "/admin/programs"}
-              />
+              {isCollapsed ? (
+                <SidebarLink
+                  href="/admin/episodes"
+                  icon={<LibraryBig className="h-4 w-4" />}
+                  label="Gerenciar Episódios"
+                  isCollapsed={isCollapsed}
+                  isActive={pathname.startsWith("/admin/episodes")}
+                />
+              ) : (
+                <Accordion
+                  type="single"
+                  collapsible
+                  className="w-full"
+                  defaultValue={
+                    pathname.startsWith("/admin/episodes")
+                      ? "episodes-manager"
+                      : ""
+                  }
+                >
+                  <AccordionItem
+                    value="episodes-manager"
+                    className="border-b-0"
+                  >
+                    <AccordionTrigger
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground hover:no-underline",
+                        pathname.startsWith("/admin/episodes") &&
+                          "bg-accent text-foreground"
+                      )}
+                    >
+                      <Link
+                        href="/admin/programs"
+                        className="flex items-center gap-3 w-full"
+                      >
+                        <Radio className="h-4 w-4" />
+                        <span className="truncate">Gerenciar Programas</span>
+                      </Link>
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-12 mt-1 space-y-2">
+                      <Link
+                        href="#"
+                        className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all text-xs"
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                        <span>Análises</span>
+                      </Link>
+                      <Link
+                        href="#"
+                        className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all text-xs"
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                        <span>Agendamentos</span>
+                      </Link>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              )}
 
               <SidebarLink
                 href="/admin/users"
