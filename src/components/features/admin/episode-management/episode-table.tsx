@@ -196,7 +196,6 @@ export function EpisodeTable({
         </Table>
       </div>
 
-      {/* Renderização do diálogo de agendamento */}
       {schedulingEpisode && (
         <ScheduleEpisodeDialog
           isOpen={!!schedulingEpisode}
@@ -206,8 +205,6 @@ export function EpisodeTable({
           episodeId={schedulingEpisode.id}
           episodeTitle={schedulingEpisode.title}
           defaultDateISO={schedulingEpisode.published_at ?? undefined}
-          // Passa diretamente a action que retorna Promise<boolean>;
-          // o próprio diálogo fecha somente ao sucesso.
           onConfirm={onScheduleEpisode}
         />
       )}

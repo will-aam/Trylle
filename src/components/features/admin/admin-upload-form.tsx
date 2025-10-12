@@ -205,7 +205,7 @@ export function UploadForm() {
   };
 
   return (
-    <div className="w-full h-full p-4 md:p-6">
+    <>
       {justFinished && phase === "finished" && (
         <div
           className="mb-6 flex items-center justify-between rounded-xl border border-green-500/30 bg-green-500/5 p-5 text-sm text-green-700 dark:text-green-400 shadow-lg backdrop-blur-sm animate-in fade-in slide-in-from-bottom-5 duration-500"
@@ -359,7 +359,6 @@ export function UploadForm() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        // CORREÇÃO: Adicionado z-index para colocar o botão por cima do input
                         className="relative z-20 h-8 w-8 p-0 text-muted-foreground hover:bg-destructive/20 hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -541,7 +540,6 @@ export function UploadForm() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        // CORREÇÃO: Adicionado z-index para colocar o botão por cima do input
                         className="relative z-20 h-8 w-8 p-0 text-muted-foreground hover:bg-destructive/20 hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -690,6 +688,6 @@ export function UploadForm() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

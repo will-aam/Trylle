@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription, // <- adicionado
 } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -19,7 +20,6 @@ interface ScheduleEpisodeDialogProps {
   onOpenChange: (open: boolean) => void;
   episodeId: string;
   episodeTitle: string;
-  // A correção está aqui: onConfirm agora espera uma Promise<boolean>
   onConfirm: (episodeId: string, publishAtISO: string) => Promise<boolean>;
   defaultDateISO?: string;
 }
@@ -55,14 +55,12 @@ export function ScheduleEpisodeDialog({
     }
 
     setIsSubmitting(true);
-    // A função onConfirm agora retorna 'true' ou 'false'
     const success = await onConfirm(
       episodeId,
       new Date(publishAt).toISOString()
     );
     setIsSubmitting(false);
 
-    // Só fecha o modal se a operação teve sucesso
     if (success) {
       onOpenChange(false);
     }
@@ -73,7 +71,7 @@ export function ScheduleEpisodeDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Agendar publicação</DialogTitle>
-          <p className="text-sm text-muted-foreground">{`Episódio: ${episodeTitle}`}</p>
+          <DialogDescription>Episódio: {episodeTitle}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

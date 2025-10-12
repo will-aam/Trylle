@@ -315,6 +315,7 @@ export function EpisodeManager({
           if (result.success) {
             sonnerToast.success("Episódio agendado!");
             fetchStatusCounts();
+            fetchEpisodes();
             resolve(true);
           } else {
             setEpisodes(prevEpisodes);

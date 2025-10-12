@@ -995,7 +995,7 @@ export async function scheduleEpisode(
 
     // Revalida os caches para que as páginas mostrem os dados atualizados
     revalidatePath("/programacao"); // A nova página pública
-    revalidatePath("/admin/episodes"); // A tabela de episódios no admin
+    // revalidatePath("/admin/episodes");
 
     return { success: "Episódio agendado com sucesso!" };
   } catch (error) {
