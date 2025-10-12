@@ -165,7 +165,6 @@ export function useEpisodesData(
     programIds,
     sortBy,
     order,
-    episodes,
     startTransition,
   ]);
 

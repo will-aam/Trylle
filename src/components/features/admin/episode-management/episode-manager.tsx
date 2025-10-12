@@ -31,7 +31,7 @@ import { EpisodeStats } from "./episode-stats";
 import { EpisodeTablePagination } from "./episode-table-pagination";
 import { BulkStatusBar } from "./bulk-status-bar";
 import { EditEpisodeDialog } from "./edit/edit-episode-dialog";
-import { toast as sonnerToast } from "sonner";
+import { toast as sonnerToast } from "@/src/lib/safe-toast";
 
 type SortableEpisodeColumns =
   | "title"
