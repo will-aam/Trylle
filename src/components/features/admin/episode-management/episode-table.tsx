@@ -159,10 +159,10 @@ export function EpisodeTable({
                   <TableCell>
                     <StatusBadgeSelector
                       status={ep.status}
+                      disabled={updating}
                       onStatusChange={(newStatus) =>
                         onStatusChange(ep.id, newStatus)
                       }
-                      // Lógica de agendamento conectada corretamente
                       onSchedule={() => setSchedulingEpisode(ep)}
                     />
                   </TableCell>

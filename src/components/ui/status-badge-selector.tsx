@@ -1,7 +1,6 @@
-// src/components/ui/status-badge-selector.tsx
-
 "use client";
 
+import React, { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +17,6 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-// Usando o tipo diretamente da fonte da verdade
 type Status = Episode["status"];
 
 interface StatusBadgeSelectorProps {
@@ -28,7 +26,6 @@ interface StatusBadgeSelectorProps {
   disabled?: boolean;
 }
 
-// Objeto de configuração apenas com os 3 status necessários
 const statusConfig: Record<
   Status,
   {
@@ -58,11 +55,13 @@ export function StatusBadgeSelector({
   onSchedule,
   disabled = false,
 }: StatusBadgeSelectorProps) {
+  const [open, setOpen] = useState(false);
+
   const current = statusConfig[status];
   const options = Object.keys(statusConfig) as Status[];
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild disabled={disabled}>
         <Badge
           variant={current.variant}
@@ -81,12 +80,15 @@ export function StatusBadgeSelector({
       <DropdownMenuContent>
         {options.map((opt) => {
           const config = statusConfig[opt];
+          const isSchedule = opt === "scheduled";
           return (
             <DropdownMenuItem
               key={opt}
-              onClick={() => {
-                if (opt === "scheduled") {
-                  onSchedule();
+              onSelect={(e) => {
+                e.preventDefault();
+                setOpen(false);
+                if (isSchedule) {
+                  setTimeout(() => onSchedule(), 0);
                 } else {
                   onStatusChange(opt);
                 }

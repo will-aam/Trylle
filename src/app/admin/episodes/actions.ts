@@ -420,7 +420,12 @@ export async function createEpisodeAction(
     }
 
     const fullRow = full as unknown as RawEpisodeRow;
-    revalidatePath("/admin/episodes");
+
+    // Evitar revalidação do admin em DEV para não causar remount/refresh em cascata
+    if (process.env.NODE_ENV === "production") {
+      revalidatePath("/admin/episodes");
+    }
+
     return { success: true, episode: mapRawToEpisode(fullRow) };
   } catch (e: any) {
     return {
@@ -473,7 +478,7 @@ export async function updateEpisodeAction(
 
     // Regra 1: Se o novo status é 'published', a data não pode ser futura.
     if (data.status === "published" && publishedAt > now) {
-      // Força a data para agora, como definido na regra do Trello.
+      // Força a data para agora
       data.published_at = now.toISOString();
     }
 
@@ -620,7 +625,12 @@ export async function updateEpisodeAction(
   }
 
   const updatedNorm = updatedRow as unknown as RawEpisodeRow;
-  revalidatePath("/admin/episodes");
+
+  // Evitar revalidação do admin em DEV para não causar remount/refresh em cascata
+  if (process.env.NODE_ENV === "production") {
+    revalidatePath("/admin/episodes");
+  }
+
   return { success: true, episode: mapRawToEpisode(updatedNorm) };
 }
 
@@ -670,7 +680,11 @@ export async function deleteEpisodeAction(
       };
     }
 
-    revalidatePath("/admin/episodes");
+    // Evitar revalidação do admin em DEV para não causar remount/refresh em cascata
+    if (process.env.NODE_ENV === "production") {
+      revalidatePath("/admin/episodes");
+    }
+
     return { success: true };
   } catch (e: any) {
     return { success: false, error: e?.message || "Erro inesperado." };
@@ -969,8 +983,8 @@ export async function getEpisodeByIdAction(
     return { success: false, error: e?.message || "Falha ao buscar episódio." };
   }
 }
-// Adicione esta nova função ao final do arquivo src/app/admin/episodes/actions.ts
 
+// Adicione esta nova função ao final do arquivo src/app/admin/episodes/actions.ts
 export async function scheduleEpisode(
   episodeId: string,
   publicationDate: string
@@ -995,7 +1009,7 @@ export async function scheduleEpisode(
 
     // Revalida os caches para que as páginas mostrem os dados atualizados
     revalidatePath("/programacao"); // A nova página pública
-    // revalidatePath("/admin/episodes");
+    // NÃO revalidar /admin/episodes em dev
 
     return { success: "Episódio agendado com sucesso!" };
   } catch (error) {

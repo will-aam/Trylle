@@ -1,6 +1,3 @@
-// Versão baseada na que você enviou (carregando tags direto via Supabase).
-// Comentários extras adicionados para possíveis evoluções.
-
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -23,9 +20,6 @@ import {
   buildUserMessage,
   type NormalizedUploadError,
 } from "@/src/lib/upload/errors";
-
-// NOTE: Se quiser voltar a usar server action (mais consistente): substitua a parte de tags
-// em reloadReferenceData por uma chamada listTagsAction e mapping.
 
 export type EpisodeUploadPhase =
   | "idle"
@@ -205,9 +199,7 @@ export function useEpisodeUpload(
         );
         const count = await extractPdfPageCount(documentFile);
         if (count && !isNaN(count)) setDocPageCount(String(count));
-      } catch {
-        /* silencioso */
-      }
+      } catch {}
     })();
   }, [documentFile, docPageCount]);
 
