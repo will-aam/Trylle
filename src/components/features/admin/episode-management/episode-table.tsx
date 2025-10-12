@@ -24,7 +24,7 @@ import {
 import { StatusBadgeSelector } from "@/src/components/ui/status-badge-selector";
 import { cn } from "@/src/lib/utils";
 import type { UpdateEpisodeInput } from "./edit/edit-episode-dialog";
-import { ScheduleEpisodeDialog } from "./ScheduleEpisodeDialog";
+import { ScheduleEpisodeDialog } from "./schedule-episode-dialog";
 
 export interface EpisodeTableProps {
   episodes: Episode[];
@@ -199,18 +199,16 @@ export function EpisodeTable({
       {/* Renderização do diálogo de agendamento */}
       {schedulingEpisode && (
         <ScheduleEpisodeDialog
-          episodeId={schedulingEpisode.id}
-          episodeTitle={schedulingEpisode.title}
           isOpen={!!schedulingEpisode}
           onOpenChange={(isOpen) => {
-            if (!isOpen) {
-              setSchedulingEpisode(null);
-            }
+            if (!isOpen) setSchedulingEpisode(null);
           }}
-          onConfirm={(date) => {
-            onScheduleEpisode(schedulingEpisode.id, date.toISOString());
-            setSchedulingEpisode(null);
-          }}
+          episodeId={schedulingEpisode.id}
+          episodeTitle={schedulingEpisode.title}
+          defaultDateISO={schedulingEpisode.published_at ?? undefined}
+          // Passa diretamente a action que retorna Promise<boolean>;
+          // o próprio diálogo fecha somente ao sucesso.
+          onConfirm={onScheduleEpisode}
         />
       )}
     </div>

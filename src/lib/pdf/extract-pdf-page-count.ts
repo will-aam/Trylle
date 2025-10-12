@@ -16,10 +16,15 @@ export async function extractPdfPageCount(file: File): Promise<number | null> {
     let fallback = heuristic > 0 ? heuristic : null;
 
     try {
-      // Import dinâmico (typed)
-      const pdfjs = await import("pdfjs-dist");
-      // Em versões recentes o worker pode ser auto-configurado.
-      // Se aparecer warning, você pode configurar workerSrc manualmente.
+      // Import dinâmico do build legacy (evita erros no Webpack/Next)
+      // Tipagem solta para evitar conflitos de d.ts entre os builds
+      const pdfjs: any = await import("pdfjs-dist/legacy/build/pdf");
+
+      // Configuração explícita do worker para evitar warnings/erros de bundle
+      if (pdfjs?.GlobalWorkerOptions) {
+        const version = pdfjs?.version || "5.4.296";
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/legacy/build/pdf.worker.min.js`;
+      }
 
       const loadingTask = pdfjs.getDocument({ data: buffer });
       const pdf = await loadingTask.promise;
