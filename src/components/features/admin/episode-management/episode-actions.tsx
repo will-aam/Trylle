@@ -3,7 +3,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +15,6 @@ import { Button } from "@/src/components/ui/button";
 import { MoreHorizontal, CalendarClock, Edit, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Episode, Category, Subcategory, Program, Tag } from "@/src/lib/types";
-import { deleteEpisodeAction } from "@/src/app/admin/episodes/actions"; // Fallback para delete quando manager não prover callback
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 import { JsonViewDialog } from "./JsonViewDialog";
 import {
@@ -25,24 +23,22 @@ import {
 } from "./edit/edit-episode-dialog";
 import { ScheduleEpisodeDialog } from "./schedule-episode-dialog";
 
-// Props expandidas para incluir callbacks do Manager
 export interface EpisodeActionsProps {
   episode: Episode;
   categories: Category[];
   subcategories: Subcategory[];
   programs: Program[];
   allTags: Tag[];
-  // Callbacks opcionais para integração com Optimistic UI (fornecidos pelo EpisodeManager)
-  onDelete?: (episode: Episode) => Promise<void>;
-  onUpdate?: (
+  onDelete: (episode: Episode) => Promise<boolean>;
+  onUpdate: (
     episodeId: string,
     updates: Partial<UpdateEpisodeInput>
   ) => Promise<boolean>;
-  // Callback para agendamento (episodeId + ISO datetime)
-  onScheduleEpisode?: (
+  // A correção está aqui: a prop agora espera Promise<boolean>
+  onScheduleEpisode: (
     episodeId: string,
     publishAtISO: string
-  ) => Promise<void> | void;
+  ) => Promise<boolean>;
 }
 
 export function EpisodeActions({
@@ -55,33 +51,15 @@ export function EpisodeActions({
   onUpdate,
   onScheduleEpisode,
 }: EpisodeActionsProps) {
-  const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isJsonDialogOpen, setIsJsonDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isJsonDialogOpen, setIsJsonDialogOpen] = useState(false);
 
   const handleDelete = async () => {
-    // Preferir callback do Manager (UI otimista)
-    if (onDelete) {
-      try {
-        await onDelete(episode);
-        setIsDeleteDialogOpen(false);
-      } catch (error: any) {
-        toast.error(error?.message || "Erro ao excluir o episódio.");
-      }
-      return;
-    }
-
-    // Fallback: server action direta + refresh (legado)
-    const result = await deleteEpisodeAction(episode.id);
-    if (result.success) {
-      toast.success(result.success);
-      setIsDeleteDialogOpen(false);
-      router.refresh();
-    } else {
-      toast.error(result.error);
-    }
+    // A função onDelete já foi fornecida pelo manager, apenas a chamamos
+    await onDelete(episode);
+    // O manager é responsável por toasts e UI otimista
   };
 
   return (
@@ -95,24 +73,21 @@ export function EpisodeActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Ações</DropdownMenuLabel>
-          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
             <Edit className="mr-2 h-4 w-4" />
             Editar
           </DropdownMenuItem>
-          {episode.status === "draft" && (
-            <DropdownMenuItem onClick={() => setIsScheduleDialogOpen(true)}>
-              <CalendarClock className="mr-2 h-4 w-4" />
-              Agendar
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem onClick={() => setIsScheduleDialogOpen(true)}>
+            <CalendarClock className="mr-2 h-4 w-4" />
+            Agendar
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setIsJsonDialogOpen(true)}>
             <Eye className="mr-2 h-4 w-4" />
             Ver JSON
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            className="text-red-600 focus:text-red-600"
+            className="text-red-500"
             onClick={() => setIsDeleteDialogOpen(true)}
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -121,20 +96,18 @@ export function EpisodeActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Diálogo de agendamento: delega ao Manager via onScheduleEpisode */}
+      {/* --- DIÁLOGOS --- */}
+
       <ScheduleEpisodeDialog
         isOpen={isScheduleDialogOpen}
         onOpenChange={setIsScheduleDialogOpen}
         episodeId={episode.id}
         episodeTitle={episode.title}
-        onConfirm={
-          onScheduleEpisode
-            ? (id, iso) => onScheduleEpisode(id, iso)
-            : undefined // Dialog mostra erro se onConfirm estiver indisponível
-        }
+        // Agora o tipo da prop está correto
+        onConfirm={onScheduleEpisode}
+        defaultDateISO={episode.published_at}
       />
 
-      {/* Diálogo de edição: delega atualização ao Manager via onUpdate */}
       <EditEpisodeDialog
         isOpen={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
@@ -143,18 +116,7 @@ export function EpisodeActions({
         subcategories={subcategories}
         programs={programs}
         allTags={allTags}
-        onUpdate={async (
-          episodeId: string,
-          updates: Partial<UpdateEpisodeInput>
-        ): Promise<boolean> => {
-          if (!onUpdate) {
-            toast.error(
-              "Ação de atualização não está disponível. Tente novamente mais tarde."
-            );
-            return false;
-          }
-          return await onUpdate(episodeId, updates);
-        }}
+        onUpdate={onUpdate}
       />
 
       <JsonViewDialog

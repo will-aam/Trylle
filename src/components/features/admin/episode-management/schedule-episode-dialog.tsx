@@ -1,6 +1,8 @@
+// src/components/features/admin/episode-management/schedule-episode-dialog.tsx
+
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,10 +19,8 @@ interface ScheduleEpisodeDialogProps {
   onOpenChange: (open: boolean) => void;
   episodeId: string;
   episodeTitle: string;
-  // Callback fornecido pelo EpisodeManager para aplicar o agendamento
-  // Recebe o episodeId e a data/hora em ISO
-  onConfirm?: (episodeId: string, publishAtISO: string) => Promise<void> | void;
-  // Opcional: valor inicial
+  // A correção está aqui: onConfirm agora espera uma Promise<boolean>
+  onConfirm: (episodeId: string, publishAtISO: string) => Promise<boolean>;
   defaultDateISO?: string;
 }
 
@@ -32,59 +32,61 @@ export function ScheduleEpisodeDialog({
   onConfirm,
   defaultDateISO,
 }: ScheduleEpisodeDialogProps) {
-  const [publishAt, setPublishAt] = useState<string>(defaultDateISO ?? "");
-  const [isPending, startTransition] = useTransition();
+  const [publishAt, setPublishAt] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Limpa ou seta o valor inicial ao abrir
     if (isOpen) {
-      setPublishAt(defaultDateISO ?? "");
+      const initialDate = defaultDateISO
+        ? new Date(defaultDateISO)
+        : new Date();
+      initialDate.setMinutes(
+        initialDate.getMinutes() - initialDate.getTimezoneOffset()
+      );
+      setPublishAt(initialDate.toISOString().slice(0, 16));
     }
   }, [isOpen, defaultDateISO]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!publishAt) {
-      toast.error("Selecione uma data/hora válida.");
-      return;
-    }
-    if (!onConfirm) {
-      toast.error("Função de agendamento indisponível.");
+      toast.error("Por favor, selecione uma data e hora.");
       return;
     }
 
-    // Dispara via transition para alinhar prioridade de renderização
-    startTransition(async () => {
-      try {
-        await onConfirm(episodeId, publishAt);
-        onOpenChange(false);
-      } catch (err: any) {
-        toast.error(err?.message || "Erro ao agendar.");
-      }
-    });
+    setIsSubmitting(true);
+    // A função onConfirm agora retorna 'true' ou 'false'
+    const success = await onConfirm(
+      episodeId,
+      new Date(publishAt).toISOString()
+    );
+    setIsSubmitting(false);
+
+    // Só fecha o modal se a operação teve sucesso
+    if (success) {
+      onOpenChange(false);
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent aria-busy={isPending}>
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Agendar publicação</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            {episodeTitle ? `Episódio: ${episodeTitle}` : ""}
-          </p>
+          <p className="text-sm text-muted-foreground">{`Episódio: ${episodeTitle}`}</p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label htmlFor="publishAt" className="text-sm font-medium">
-              Data e hora de publicação
+              Data e hora
             </label>
             <Input
               id="publishAt"
               type="datetime-local"
               value={publishAt}
               onChange={(e) => setPublishAt(e.target.value)}
-              disabled={isPending}
+              disabled={isSubmitting}
               required
             />
           </div>
@@ -94,12 +96,12 @@ export function ScheduleEpisodeDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isPending}
+              disabled={isSubmitting}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Agendando..." : "Agendar"}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Agendando..." : "Agendar"}
             </Button>
           </DialogFooter>
         </form>

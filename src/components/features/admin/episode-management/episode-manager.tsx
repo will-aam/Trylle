@@ -17,14 +17,13 @@ import {
   Tag,
   SortDirection,
 } from "@/src/lib/types";
-import { useToast } from "@/src/hooks/use-toast";
 import {
   listEpisodesAction,
   updateEpisodeAction,
   deleteEpisodeAction,
   getEpisodeStatusCountsAction,
   UpdateEpisodeServerInput,
-  scheduleEpisode, // <- action para agendar
+  scheduleEpisode,
 } from "@/src/app/admin/episodes/actions";
 import { EpisodeFilters } from "./episode-filters";
 import { EpisodeTable } from "./episode-table";
@@ -62,7 +61,6 @@ export function EpisodeManager({
   programs,
   allTags,
 }: EpisodeManagerProps) {
-  const { toast } = useToast();
   const [isFetching, startTransition] = useTransition();
 
   const [episodes, setEpisodes] = useState<Episode[]>(initialData.episodes);
@@ -83,11 +81,8 @@ export function EpisodeManager({
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
-
-  // Mapa de atualização por episódio (spinner/disable)
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
 
-  // Helper: ordena localmente respeitando sort atual
   const sortEpisodesLocal = useCallback(
     (list: Episode[]) => {
       const sorted = [...list];
@@ -96,7 +91,6 @@ export function EpisodeManager({
         const col = sortColumn;
         const va = (a as any)[col];
         const vb = (b as any)[col];
-
         if (col === "published_at" || col === "created_at") {
           const da = va ? new Date(va).getTime() : 0;
           const db = vb ? new Date(vb).getTime() : 0;
@@ -134,10 +128,8 @@ export function EpisodeManager({
         setEpisodes(result.data);
         setTotalCount(result.totalFiltered);
       } else {
-        toast({
-          title: "Erro ao buscar episódios",
+        sonnerToast.error("Erro ao buscar episódios", {
           description: result.error,
-          variant: "destructive",
         });
       }
     });
@@ -149,7 +141,6 @@ export function EpisodeManager({
     categoryFilter,
     sortColumn,
     sortDirection,
-    toast,
   ]);
 
   const fetchStatusCounts = useCallback(async () => {
@@ -159,13 +150,8 @@ export function EpisodeManager({
     }
   }, []);
 
-  const refreshData = useCallback(() => {
-    fetchEpisodes();
-    fetchStatusCounts();
-  }, [fetchEpisodes, fetchStatusCounts]);
-
   useEffect(() => {
-    refreshData();
+    fetchEpisodes();
   }, [
     currentPage,
     itemsPerPage,
@@ -174,8 +160,12 @@ export function EpisodeManager({
     categoryFilter,
     sortColumn,
     sortDirection,
-    refreshData,
+    fetchEpisodes,
   ]);
+
+  useEffect(() => {
+    fetchStatusCounts();
+  }, []);
 
   const hasActiveFilters = useMemo(
     () =>
@@ -215,211 +205,178 @@ export function EpisodeManager({
     setCurrentPage(1);
   };
 
-  // Atualização otimista genérica (edição/status) com startTransition para evitar o erro do React
-  const handleUpdateEpisode = async (
+  const handleUpdateEpisode = (
     episodeId: string,
     updates: Partial<UpdateEpisodeServerInput>
   ): Promise<boolean> => {
-    const prevEpisodes = [...episodes];
-
-    // Otimista imediato
-    setIsUpdating((prev) => ({ ...prev, [episodeId]: true }));
-    setEpisodes((curr) =>
-      sortEpisodesLocal(
-        curr.map((ep) =>
-          ep.id === episodeId ? ({ ...ep, ...updates } as Episode) : ep
+    return new Promise((resolve) => {
+      const prevEpisodes = [...episodes];
+      setIsUpdating((prev) => ({ ...prev, [episodeId]: true }));
+      setEpisodes((curr) =>
+        sortEpisodesLocal(
+          curr.map((ep) =>
+            ep.id === episodeId ? ({ ...ep, ...updates } as Episode) : ep
+          )
         )
-      )
-    );
-
-    // Chamada de servidor + toasts dentro de transition
-    startTransition(async () => {
-      try {
-        const result = await updateEpisodeAction(episodeId, updates);
-        if (result.success) {
-          sonnerToast.success("Episódio atualizado com sucesso!");
-          fetchStatusCounts(); // background
-        } else {
-          throw new Error(result.error);
+      );
+      startTransition(async () => {
+        try {
+          const result = await updateEpisodeAction(episodeId, updates);
+          if (result.success) {
+            sonnerToast.success("Episódio atualizado!");
+            fetchStatusCounts();
+            resolve(true);
+          } else {
+            // As server actions agora podem lançar um erro com a propriedade 'error'
+            throw new Error((result as any).error || "Erro desconhecido");
+          }
+        } catch (error: any) {
+          setEpisodes(prevEpisodes);
+          sonnerToast.error("Falha ao atualizar", {
+            description: error?.message,
+          });
+          resolve(false);
+        } finally {
+          setIsUpdating((prev) => ({ ...prev, [episodeId]: false }));
         }
-      } catch (error: any) {
-        // Reversão
-        setEpisodes(prevEpisodes);
-        toast({
-          title: "Erro ao atualizar episódio",
-          description: error?.message || "Tente novamente.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsUpdating((prev) => ({ ...prev, [episodeId]: false }));
-      }
+      });
     });
-
-    // Retorna true de forma otimista para fechar diálogos
-    return true;
   };
 
-  const handleStatusChange = async (
+  const handleStatusChange = (
     episodeId: string,
     newStatus: Episode["status"]
   ) => {
-    await handleUpdateEpisode(episodeId, { status: newStatus });
+    handleUpdateEpisode(episodeId, { status: newStatus });
   };
 
-  // Remoção otimista com transition
-  const handleDelete = async (episode: Episode) => {
-    const prevEpisodes = [...episodes];
-    const prevTotal = totalCount;
-    const isLastItemOnPage = episodes.length === 1;
+  const handleDelete = (episode: Episode): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const prevEpisodes = [...episodes];
+      const prevTotal = totalCount;
+      const isLastItemOnPage = episodes.length === 1 && currentPage > 1;
 
-    // Otimista
-    setEpisodes((curr) => curr.filter((ep) => ep.id !== episode.id));
-    setSelectedEpisodes((prev) => prev.filter((id) => id !== episode.id));
-    setTotalCount((c) => Math.max(0, c - 1));
-    if (isLastItemOnPage && currentPage > 1) {
-      setCurrentPage((p) => p - 1);
-    }
+      setEpisodes((curr) => curr.filter((ep) => ep.id !== episode.id));
+      setSelectedEpisodes((prev) => prev.filter((id) => id !== episode.id));
+      setTotalCount((c) => Math.max(0, c - 1));
+      if (isLastItemOnPage) {
+        setCurrentPage((p) => p - 1);
+      }
 
-    startTransition(async () => {
-      try {
-        const result = await deleteEpisodeAction(episode.id);
-        if (result.success) {
+      startTransition(async () => {
+        try {
+          const result = await deleteEpisodeAction(episode.id);
+          if (!result.success)
+            throw new Error((result as any).error || "Erro ao deletar");
+
           sonnerToast.success(`Episódio "${episode.title}" excluído.`);
           fetchStatusCounts();
           if (!isLastItemOnPage) fetchEpisodes();
-        } else {
-          throw new Error(result.error);
+          resolve(true);
+        } catch (error: any) {
+          setEpisodes(prevEpisodes);
+          setTotalCount(prevTotal);
+          sonnerToast.error("Falha ao excluir", {
+            description: error?.message,
+          });
+          resolve(false);
         }
-      } catch (error: any) {
-        // Reverte
-        setEpisodes(prevEpisodes);
-        setTotalCount(prevTotal);
-        toast({
-          title: "Erro ao excluir",
-          description: error?.message || "Tente novamente.",
-          variant: "destructive",
-        });
-      }
+      });
     });
   };
 
-  // Agendamento otimista com transition
-  const handleScheduleEpisode = (episodeId: string, publishAtISO: string) => {
-    const prevEpisodes = [...episodes];
-
-    // Otimista: status + published_at
-    setIsUpdating((prev) => ({ ...prev, [episodeId]: true }));
-    setEpisodes((curr) =>
-      sortEpisodesLocal(
-        curr.map((ep) =>
-          ep.id === episodeId
-            ? ({
-                ...ep,
-                status: "scheduled",
-                published_at: publishAtISO,
-              } as Episode)
-            : ep
+  const handleScheduleEpisode = (
+    episodeId: string,
+    publishAtISO: string
+  ): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const prevEpisodes = [...episodes];
+      setIsUpdating((prev) => ({ ...prev, [episodeId]: true }));
+      setEpisodes((curr) =>
+        sortEpisodesLocal(
+          curr.map((ep) =>
+            ep.id === episodeId
+              ? ({
+                  ...ep,
+                  status: "scheduled",
+                  published_at: publishAtISO,
+                } as Episode)
+              : ep
+          )
         )
-      )
-    );
+      );
 
-    startTransition(async () => {
-      try {
-        // scheduleEpisode não retorna { success, error }; tratar erro via catch
-        await scheduleEpisode(episodeId, publishAtISO);
-        sonnerToast.success("Episódio agendado com sucesso!");
-        fetchStatusCounts();
-      } catch (error: any) {
-        // Reversão
-        setEpisodes(prevEpisodes);
-        toast({
-          title: "Erro ao agendar",
-          description: error?.message || "Tente novamente.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsUpdating((prev) => ({ ...prev, [episodeId]: false }));
-      }
+      startTransition(async () => {
+        try {
+          await scheduleEpisode(episodeId, publishAtISO);
+          sonnerToast.success("Episódio agendado!");
+          fetchStatusCounts();
+          resolve(true);
+        } catch (error: any) {
+          setEpisodes(prevEpisodes);
+          sonnerToast.error("Falha ao agendar", {
+            description: error?.message,
+          });
+          resolve(false);
+        } finally {
+          setIsUpdating((prev) => ({ ...prev, [episodeId]: false }));
+        }
+      });
     });
   };
 
-  // Bulk update otimista com transition e reversão granular
-  const handleBulkUpdate = async (
+  const handleBulkUpdate = (
     ids: string[],
     newStatus: Episode["status"]
-  ) => {
-    const prevEpisodes = [...episodes];
-
-    // Otimista
-    setEpisodes((curr) =>
-      sortEpisodesLocal(
-        curr.map((ep) =>
-          ids.includes(ep.id) ? ({ ...ep, status: newStatus } as Episode) : ep
-        )
-      )
-    );
-    ids.forEach((id) =>
-      setIsUpdating((prev) => ({
-        ...prev,
-        [id]: true,
-      }))
-    );
-
-    startTransition(async () => {
-      const results = await Promise.all(
-        ids.map((id) =>
-          updateEpisodeAction(id, { status: newStatus }).then((res) => ({
-            id,
-            success: res.success,
-            error: res.success ? "" : res.error,
-          }))
+  ): Promise<{ ok: number; fail: number }> => {
+    return new Promise((resolve) => {
+      const prevEpisodes = [...episodes];
+      setEpisodes((curr) =>
+        sortEpisodesLocal(
+          curr.map((ep) =>
+            ids.includes(ep.id) ? ({ ...ep, status: newStatus } as Episode) : ep
+          )
         )
       );
-
-      ids.forEach((id) =>
-        setIsUpdating((prev) => ({
-          ...prev,
-          [id]: false,
-        }))
-      );
-
-      const failedIds = results.filter((r) => !r.success).map((r) => r.id);
-      const ok = results.length - failedIds.length;
-      const fail = failedIds.length;
-
-      if (fail > 0) {
-        // Reversão apenas para os que falharam
-        setEpisodes((curr) =>
-          sortEpisodesLocal(
-            curr.map((ep) =>
-              failedIds.includes(ep.id)
-                ? ({
-                    ...ep,
-                    status: (prevEpisodes.find((p) => p.id === ep.id)?.status ??
-                      ep.status) as Episode["status"],
-                  } as Episode)
-                : ep
-            )
+      ids.forEach((id) => setIsUpdating((prev) => ({ ...prev, [id]: true })));
+      startTransition(async () => {
+        const results = await Promise.all(
+          ids.map((id) =>
+            updateEpisodeAction(id, { status: newStatus }).then((res) => ({
+              id,
+              success: res.success,
+              error: (res as any).error,
+            }))
           )
         );
-        toast({
-          title: "Falha ao atualizar em massa",
-          description: `${fail} de ${ids.length} atualizações falharam.`,
-          variant: "destructive",
+        ids.forEach((id) =>
+          setIsUpdating((prev) => ({ ...prev, [id]: false }))
+        );
+        const failedIds = results.filter((r) => !r.success).map((r) => r.id);
+        if (failedIds.length > 0) {
+          setEpisodes((curr) =>
+            sortEpisodesLocal(
+              curr.map((ep) =>
+                failedIds.includes(ep.id)
+                  ? (prevEpisodes.find((p) => p.id === ep.id) as Episode)
+                  : ep
+              )
+            )
+          );
+          sonnerToast.error("Falha na atualização em massa", {
+            description: `${failedIds.length} de ${ids.length} falharam.`,
+          });
+        } else {
+          sonnerToast.success("Episódios atualizados!");
+        }
+        fetchStatusCounts();
+        resolve({
+          ok: results.length - failedIds.length,
+          fail: failedIds.length,
         });
-      } else {
-        sonnerToast.success("Episódios atualizados com sucesso!");
-      }
-
-      fetchStatusCounts();
+      });
     });
-
-    return { ok: 0, fail: 0 };
   };
-
-  useEffect(() => {
-    setSelectedEpisodes([]);
-  }, [episodes]);
 
   return (
     <div className="space-y-4">
@@ -429,7 +386,6 @@ export function EpisodeManager({
         draftCount={statusCounts.draft}
         scheduledCount={statusCounts.scheduled}
       />
-
       <EpisodeFilters
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -441,7 +397,6 @@ export function EpisodeManager({
         onClearFilters={clearAllFilters}
         categories={categories}
       />
-
       {selectedEpisodes.length > 0 && (
         <BulkStatusBar
           selectedCount={selectedEpisodes.length}
@@ -451,11 +406,9 @@ export function EpisodeManager({
           isPending={isFetching}
         />
       )}
-
       <div className="rounded-lg border">
         <EpisodeTable
           episodes={episodes}
-          onEdit={setEditingEpisode}
           onDelete={handleDelete}
           onSort={handleSort}
           sortColumn={sortColumn}
@@ -471,8 +424,7 @@ export function EpisodeManager({
           }
           onStatusChange={handleStatusChange}
           isUpdating={isUpdating}
-          onUpdateEpisode={(id, u) => handleUpdateEpisode(id, u as any)}
-          // Conecta agendamento
+          onUpdateEpisode={handleUpdateEpisode}
           onScheduleEpisode={handleScheduleEpisode}
           categories={categories}
           subcategories={subcategories}
@@ -480,7 +432,6 @@ export function EpisodeManager({
           allTags={allTags}
         />
       </div>
-
       <EpisodeTablePagination
         currentPage={currentPage}
         totalCount={totalCount}
@@ -492,7 +443,6 @@ export function EpisodeManager({
         }}
         isLoading={isFetching}
       />
-
       {editingEpisode && (
         <EditEpisodeDialog
           isOpen={!!editingEpisode}
