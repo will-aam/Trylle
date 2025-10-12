@@ -84,20 +84,18 @@ function EpisodeCard({
 }) {
   return (
     <div
-      className="group relative flex cursor-pointer items-center gap-4 overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-5 transition-all duration-500 hover:scale-[1.02] hover:bg-white/20 hover:shadow-2xl hover:shadow-blue-500/20 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 dark:hover:border-white/20"
+      className="group relative flex cursor-pointer items-center gap-4 overflow-hidden rounded-2xl bg-white/10 p-3 transition-all duration-500 dark:bg-white/5"
       onClick={onClick}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/5 to-pink-500/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-
       <div
-        className={`relative flex-none w-16 h-16 rounded-xl ${episode.color} flex items-center justify-center shadow-xl group-hover:scale-110 transition-all duration-500 overflow-hidden`}
+        className={`relative flex-none w-16 h-16 rounded-xl ${episode.color} flex items-center justify-center shadow-xl transition-all duration-500 overflow-hidden`}
       >
         <div className="absolute inset-0 bg-white/20" />
         <Play className="relative z-10 h-7 w-7 fill-white text-white drop-shadow-lg" />
       </div>
 
       <div className="relative z-10 min-w-0 flex-1">
-        <h3 className="truncate text-xs font-bold leading-tight text-foreground transition-colors duration-300 group-hover:text-blue-400">
+        <h3 className="truncate text-xs font-bold leading-tight text-foreground">
           Ep. {episode.episodeNumber} - {episode.title}
         </h3>
         <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-foreground/80 h-5">
@@ -135,6 +133,7 @@ export function NewEpisodesCarousel() {
 
   const maxIndex = Math.max(0, newEpisodes.length - itemsPerView);
 
+  // Auto-avanço para desktop
   useEffect(() => {
     if (isPaused || isDragging) return;
     const interval = setInterval(() => {
@@ -142,6 +141,17 @@ export function NewEpisodesCarousel() {
     }, 4000);
     return () => clearInterval(interval);
   }, [isPaused, isDragging, maxIndex]);
+
+  // Auto-avanço para mobile
+  useEffect(() => {
+    if (isPaused) return;
+    const interval = setInterval(() => {
+      setMobileIndex((prev) =>
+        prev === newEpisodes.length - 1 ? 0 : prev + 1
+      );
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isPaused]);
 
   const goToIndex = (index: number) =>
     setCurrentIndex(Math.max(0, Math.min(index, maxIndex)));
@@ -202,19 +212,19 @@ export function NewEpisodesCarousel() {
   };
 
   return (
-    <section className="relative overflow-hidden py-12">
-      <div className="container px-4">
+    <section className="relative overflow-hidden py-8">
+      <div>
         {/* --- CONTÊINER PRINCIPAL (ESTILO DE VIDRO) --- */}
-        <div className="rounded-2xl bg-gradient-to-br from-blue-500/20 via-indigo-600/20 to-black/20 p-4 shadow-xl backdrop-blur-xl md:rounded-3xl">
-          <div className="mb-8 flex items-center justify-between">
+        <div>
+          <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3 md:gap-4">
               <div>
                 <h2 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-xl font-bold text-transparent md:text-3xl">
                   Novos Episódios
                 </h2>
-                <p className="text-xs font-medium text-muted-foreground md:text-sm">
+                {/* <p className="text-xs font-medium text-muted-foreground md:text-sm">
                   Novos conteúdos toda semana
-                </p>
+                </p> */}
               </div>
             </div>
             {/* Botões de navegação do Desktop - visíveis apenas em telas maiores */}
@@ -223,17 +233,17 @@ export function NewEpisodesCarousel() {
                 variant="outline"
                 size="icon"
                 onClick={prevSlide}
-                className="h-11 w-11 rounded-2xl border-white/30 bg-white/20 shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:bg-white/30 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/20"
+                className="h-8 w-8 rounded-lg border-white/20 bg-white/5 backdrop-blur-sm dark:border-white/10 dark:bg-white/5"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={nextSlide}
-                className="h-11 w-11 rounded-2xl border-white/30 bg-white/20 shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:bg-white/30 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/20"
+                className="h-8 w-8 rounded-lg border-white/20 bg-white/5 backdrop-blur-sm dark:border-white/10 dark:bg-white/5"
               >
-                <ChevronRight className="h-5 w-5" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -296,7 +306,7 @@ export function NewEpisodesCarousel() {
               </div>
             </div>
             {/* Controles de navegação e paginação do Mobile */}
-            <div className="mt-4 flex items-center justify-center">
+            <div className="mt-3 flex items-center justify-center">
               <div className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 p-1.5 backdrop-blur-md">
                 {newEpisodes.map((_, index) => (
                   <button
