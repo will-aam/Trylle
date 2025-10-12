@@ -45,7 +45,7 @@ import { cn } from "@/src/lib/utils";
 import { useEpisodeUpload } from "@/src/hooks/useEpisodeUpload";
 import { createTagAction } from "@/src/app/admin/tags/actions";
 import { Tag } from "@/src/lib/types";
-import { toast } from "sonner"; // Importando o sonner
+import { toast } from "@/src/lib/safe-toast"; // Importando o sonner
 
 export function UploadForm() {
   const { toast: legacyToast } = useToast(); // Mantendo o legacy para outros usos se houver

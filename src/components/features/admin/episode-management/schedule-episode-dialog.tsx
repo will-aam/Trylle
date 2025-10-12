@@ -12,7 +12,7 @@ import {
 } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { toast } from "sonner";
+import { toast } from "@/src/lib/safe-toast";
 
 interface ScheduleEpisodeDialogProps {
   isOpen: boolean;

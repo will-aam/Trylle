@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { toast } from "sonner"; // 1. Mude a importação para "sonner"
+import { toast } from "@/src/lib/safe-toast"; // 1. Mude a importação para "sonner"
 import { Gift, Mail } from "lucide-react";
 
 export function FinalCTASection() {

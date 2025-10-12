@@ -9,7 +9,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/src/components/ui/select";
-import { toast } from "sonner";
+import { toast } from "@/src/lib/safe-toast";
 import { cn } from "@/src/lib/utils";
 import {
   AlertDialog,

@@ -17,7 +17,7 @@ import {
   deleteEpisodeAction,
 } from "@/src/app/admin/episodes/actions";
 import { Episode } from "@/src/lib/types";
-import { toast } from "sonner";
+import { toast } from "@/src/lib/safe-toast";
 
 export interface UseEpisodesDataParams {
   search?: string;

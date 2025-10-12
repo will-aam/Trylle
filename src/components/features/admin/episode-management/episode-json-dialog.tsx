@@ -12,7 +12,7 @@ import {
 import { DialogOverlay } from "@/src/components/ui/dialog-overlay";
 import { Button } from "@/src/components/ui/button";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
-import { toast } from "sonner";
+import { toast } from "@/src/lib/safe-toast";
 import { Episode } from "@/src/lib/types";
 
 interface EpisodeJsonDialogProps {
