@@ -25,6 +25,7 @@ import { StatusBadgeSelector } from "@/src/components/ui/status-badge-selector";
 import { cn } from "@/src/lib/utils";
 import type { UpdateEpisodeInput } from "./edit/edit-episode-dialog";
 import { ScheduleEpisodeDialog } from "./schedule-episode-dialog";
+import { Loader2 } from "lucide-react";
 
 export interface EpisodeTableProps {
   episodes: Episode[];
@@ -157,14 +158,22 @@ export function EpisodeTable({
                     {ep.programs?.title || "—"}
                   </TableCell>
                   <TableCell>
-                    <StatusBadgeSelector
-                      status={ep.status}
-                      disabled={updating}
-                      onStatusChange={(newStatus) =>
-                        onStatusChange(ep.id, newStatus)
-                      }
-                      onSchedule={() => setSchedulingEpisode(ep)}
-                    />
+                    <div className="flex items-center">
+                      {updating && (
+                        <Loader2
+                          className="mr-2 h-4 w-4 animate-spin text-muted-foreground"
+                          aria-label="Atualizando status..."
+                        />
+                      )}
+                      <StatusBadgeSelector
+                        status={ep.status}
+                        disabled={updating}
+                        onStatusChange={(newStatus) =>
+                          onStatusChange(ep.id, newStatus)
+                        }
+                        onSchedule={() => setSchedulingEpisode(ep)}
+                      />
+                    </div>
                   </TableCell>
                   <TableCell>{formatDate(ep.published_at)}</TableCell>
                   <TableCell className="py-2">

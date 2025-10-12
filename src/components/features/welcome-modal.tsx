@@ -15,7 +15,8 @@ import { Gift } from "lucide-react";
 import { DialogOverlay } from "@/src/components/ui/dialog-overlay";
 
 export function WelcomeModal() {
-  const [open, setOpen] = useState(true);
+  // desativado temparariamente
+  const [open, setOpen] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
