@@ -16,7 +16,7 @@ import { Button } from "@/src/components/ui/button";
 import { MoreHorizontal, CalendarClock, Edit, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { Episode, Category, Subcategory, Program, Tag } from "@/src/lib/types";
-import { deleteEpisodeAction } from "@/src/app/admin/episodes/actions"; // Fallback enquanto não conectamos o Manager
+import { deleteEpisodeAction } from "@/src/app/admin/episodes/actions"; // Fallback para delete quando manager não prover callback
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 import { JsonViewDialog } from "./JsonViewDialog";
 import {
@@ -25,19 +25,24 @@ import {
 } from "./edit/edit-episode-dialog";
 import { ScheduleEpisodeDialog } from "./schedule-episode-dialog";
 
-// Props expandidas para incluir dados necessários pelos diálogos filhos
+// Props expandidas para incluir callbacks do Manager
 export interface EpisodeActionsProps {
   episode: Episode;
   categories: Category[];
   subcategories: Subcategory[];
   programs: Program[];
   allTags: Tag[];
-  // Novos callbacks opcionais para integração com Optimistic UI (fornecidos pelo EpisodeManager)
+  // Callbacks opcionais para integração com Optimistic UI (fornecidos pelo EpisodeManager)
   onDelete?: (episode: Episode) => Promise<void>;
   onUpdate?: (
     episodeId: string,
     updates: Partial<UpdateEpisodeInput>
   ) => Promise<boolean>;
+  // Callback para agendamento (episodeId + ISO datetime)
+  onScheduleEpisode?: (
+    episodeId: string,
+    publishAtISO: string
+  ) => Promise<void> | void;
 }
 
 export function EpisodeActions({
@@ -48,6 +53,7 @@ export function EpisodeActions({
   allTags,
   onDelete,
   onUpdate,
+  onScheduleEpisode,
 }: EpisodeActionsProps) {
   const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -56,7 +62,7 @@ export function EpisodeActions({
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
 
   const handleDelete = async () => {
-    // Se vier callback do Manager, usamos ele (permite UI otimista)
+    // Preferir callback do Manager (UI otimista)
     if (onDelete) {
       try {
         await onDelete(episode);
@@ -67,7 +73,7 @@ export function EpisodeActions({
       return;
     }
 
-    // Fallback: comportamento atual (server action direta + refresh)
+    // Fallback: server action direta + refresh (legado)
     const result = await deleteEpisodeAction(episode.id);
     if (result.success) {
       toast.success(result.success);
@@ -115,15 +121,20 @@ export function EpisodeActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Renderiza o diálogo de agendamento */}
+      {/* Diálogo de agendamento: delega ao Manager via onScheduleEpisode */}
       <ScheduleEpisodeDialog
         isOpen={isScheduleDialogOpen}
         onOpenChange={setIsScheduleDialogOpen}
         episodeId={episode.id}
         episodeTitle={episode.title}
+        onConfirm={
+          onScheduleEpisode
+            ? (id, iso) => onScheduleEpisode(id, iso)
+            : undefined // Dialog mostra erro se onConfirm estiver indisponível
+        }
       />
 
-      {/* Diálogo de edição agora delega a atualização ao callback, quando existir */}
+      {/* Diálogo de edição: delega atualização ao Manager via onUpdate */}
       <EditEpisodeDialog
         isOpen={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}

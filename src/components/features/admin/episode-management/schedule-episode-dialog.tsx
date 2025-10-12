@@ -1,87 +1,108 @@
-// src/components/features/admin/episode-management/schedule-episode-dialog.tsx
-
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/src/components/ui/button";
-import { Calendar } from "@/src/components/ui/calendar";
+import { useState, useTransition, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
 } from "@/src/components/ui/dialog";
-import { scheduleEpisode } from "@/src/app/admin/episodes/actions";
+import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
 import { toast } from "sonner";
 
 interface ScheduleEpisodeDialogProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
   episodeId: string;
   episodeTitle: string;
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
+  // Callback fornecido pelo EpisodeManager para aplicar o agendamento
+  // Recebe o episodeId e a data/hora em ISO
+  onConfirm?: (episodeId: string, publishAtISO: string) => Promise<void> | void;
+  // Opcional: valor inicial
+  defaultDateISO?: string;
 }
 
 export function ScheduleEpisodeDialog({
-  episodeId,
-  episodeTitle,
   isOpen,
   onOpenChange,
+  episodeId,
+  episodeTitle,
+  onConfirm,
+  defaultDateISO,
 }: ScheduleEpisodeDialogProps) {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [publishAt, setPublishAt] = useState<string>(defaultDateISO ?? "");
+  const [isPending, startTransition] = useTransition();
 
-  const handleSchedule = async () => {
-    if (!date) {
-      toast.error("Por favor, selecione uma data.");
+  useEffect(() => {
+    // Limpa ou seta o valor inicial ao abrir
+    if (isOpen) {
+      setPublishAt(defaultDateISO ?? "");
+    }
+  }, [isOpen, defaultDateISO]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!publishAt) {
+      toast.error("Selecione uma data/hora válida.");
+      return;
+    }
+    if (!onConfirm) {
+      toast.error("Função de agendamento indisponível.");
       return;
     }
 
-    const now = new Date();
-    date.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
-
-    const result = await scheduleEpisode(episodeId, date.toISOString());
-
-    // Primeiro, fechamos o diálogo.
-    onOpenChange(false);
-
-    // E então, no próximo "tick" do navegador, disparamos a notificação.
-    setTimeout(() => {
-      if (result.success) {
-        toast.success(result.success);
-      } else {
-        toast.error(result.error);
+    // Dispara via transition para alinhar prioridade de renderização
+    startTransition(async () => {
+      try {
+        await onConfirm(episodeId, publishAt);
+        onOpenChange(false);
+      } catch (err: any) {
+        toast.error(err?.message || "Erro ao agendar.");
       }
-    }, 50); // 50ms é um delay seguro e imperceptível.
+    });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent aria-busy={isPending}>
         <DialogHeader>
-          <DialogTitle>Agendar Episódio</DialogTitle>
-          <DialogDescription>
-            Você está agendando o episódio: "{episodeTitle}".
-          </DialogDescription>
+          <DialogTitle>Agendar publicação</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            {episodeTitle ? `Episódio: ${episodeTitle}` : ""}
+          </p>
         </DialogHeader>
-        <div className="flex justify-center py-4">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={setDate}
-            className="rounded-md border"
-            disabled={(currentDate) =>
-              currentDate <
-              new Date(new Date().setDate(new Date().getDate() - 1))
-            }
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSchedule}>Confirmar Agendamento</Button>
-        </DialogFooter>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="publishAt" className="text-sm font-medium">
+              Data e hora de publicação
+            </label>
+            <Input
+              id="publishAt"
+              type="datetime-local"
+              value={publishAt}
+              onChange={(e) => setPublishAt(e.target.value)}
+              disabled={isPending}
+              required
+            />
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? "Agendando..." : "Agendar"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

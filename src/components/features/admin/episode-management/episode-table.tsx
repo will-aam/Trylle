@@ -40,13 +40,19 @@ export interface EpisodeTableProps {
   onSelectEpisode: (episodeId: string) => void;
   onSelectAll: (selectAll: boolean) => void;
   onStatusChange?: (episodeId: string, newStatus: Episode["status"]) => void;
-  // Novo: callback para updates gerais (usado pelo diálogo do EpisodeActions)
+  // Callback para updates gerais (diálogo de edição)
   onUpdateEpisode?: (
     episodeId: string,
     updates: Partial<UpdateEpisodeInput>
   ) => Promise<boolean>;
-  // Novo: estado de atualização por episódio para feedback visual
+  // Estado de atualização por episódio para feedback visual
   isUpdating?: Record<string, boolean>;
+  // Callback para agendamento (episodeId + ISO datetime)
+  onScheduleEpisode?: (
+    episodeId: string,
+    publishAtISO: string
+  ) => Promise<void> | void;
+
   responsiveMode?: "auto" | "table";
   minTableWidthClass?: string;
   hideProgramColumn?: boolean;
@@ -74,6 +80,7 @@ export function EpisodeTable({
   onStatusChange,
   onUpdateEpisode,
   isUpdating = {},
+  onScheduleEpisode,
   responsiveMode = "auto",
   minTableWidthClass = "min-w-[900px]",
   hideProgramColumn = false,
@@ -155,6 +162,7 @@ export function EpisodeTable({
     // Encaminha os callbacks para permitir UI otimista pelo Manager
     onDelete: async (ep) => Promise.resolve(onDelete(ep)),
     onUpdate: onUpdateEpisode,
+    onScheduleEpisode, // repassa para o menu "Agendar"
   });
 
   return (
@@ -212,7 +220,7 @@ export function EpisodeTable({
                         status={ep.status}
                         disabled={updating || !onStatusChange}
                         onStatusChange={(s) => handleStatusChange(ep.id, s)}
-                        onSchedule={() => setEpisodeToSchedule(ep)}
+                        onSchedule={() => setEpisodeToSchedule(ep)} // abrir diálogo embutido
                       />
                     </div>
                     {!hideDateColumn && (
@@ -353,13 +361,14 @@ export function EpisodeTable({
         </div>
       </div>
 
-      {/* Renderiza o diálogo de agendamento aqui */}
+      {/* Renderiza o diálogo de agendamento aqui (embutido) */}
       {episodeToSchedule && (
         <ScheduleEpisodeDialog
           isOpen={!!episodeToSchedule}
           onOpenChange={() => setEpisodeToSchedule(null)}
           episodeId={episodeToSchedule.id}
           episodeTitle={episodeToSchedule.title}
+          onConfirm={onScheduleEpisode} // delega ao Manager
         />
       )}
     </>
