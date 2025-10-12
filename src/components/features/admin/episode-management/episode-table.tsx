@@ -2,7 +2,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Episode,
   SortDirection,
@@ -24,6 +24,7 @@ import {
 import { StatusBadgeSelector } from "@/src/components/ui/status-badge-selector";
 import { cn } from "@/src/lib/utils";
 import type { UpdateEpisodeInput } from "./edit/edit-episode-dialog";
+import { ScheduleEpisodeDialog } from "./ScheduleEpisodeDialog";
 
 export interface EpisodeTableProps {
   episodes: Episode[];
@@ -68,6 +69,10 @@ export function EpisodeTable({
   programs,
   allTags,
 }: EpisodeTableProps) {
+  const [schedulingEpisode, setSchedulingEpisode] = useState<Episode | null>(
+    null
+  );
+
   const formatDate = (isoString: string | null) => {
     if (!isoString) return "—";
     return new Date(isoString).toLocaleDateString("pt-BR", {
@@ -111,6 +116,8 @@ export function EpisodeTable({
               >
                 Título
               </TableHead>
+              {/* Coluna "Programa" Adicionada */}
+              <TableHead>Programa</TableHead>
               <TableHead
                 className="cursor-pointer"
                 onClick={() => onSort("status")}
@@ -121,7 +128,7 @@ export function EpisodeTable({
                 className="cursor-pointer"
                 onClick={() => onSort("published_at")}
               >
-                Publicado em
+                Data de publicação
               </TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -145,16 +152,18 @@ export function EpisodeTable({
                     />
                   </TableCell>
                   <TableCell className="font-medium">{ep.title}</TableCell>
+                  {/* Célula para exibir o nome do programa */}
+                  <TableCell className="text-sm text-muted-foreground">
+                    {ep.programs?.title || "—"}
+                  </TableCell>
                   <TableCell>
-                    {/* CORREÇÃO FINAL E ABSOLUTA: A prop correta é 'status' */}
                     <StatusBadgeSelector
                       status={ep.status}
-                      onStatusChange={(newStatus: Episode["status"]) =>
+                      onStatusChange={(newStatus) =>
                         onStatusChange(ep.id, newStatus)
                       }
-                      onSchedule={function (): void {
-                        throw new Error("Function not implemented.");
-                      }}
+                      // Lógica de agendamento conectada corretamente
+                      onSchedule={() => setSchedulingEpisode(ep)}
                     />
                   </TableCell>
                   <TableCell>{formatDate(ep.published_at)}</TableCell>
@@ -176,7 +185,7 @@ export function EpisodeTable({
             {episodes.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={6} // Ajustado para 6 colunas
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   Nenhum episódio para exibir.
@@ -186,6 +195,24 @@ export function EpisodeTable({
           </TableBody>
         </Table>
       </div>
+
+      {/* Renderização do diálogo de agendamento */}
+      {schedulingEpisode && (
+        <ScheduleEpisodeDialog
+          episodeId={schedulingEpisode.id}
+          episodeTitle={schedulingEpisode.title}
+          isOpen={!!schedulingEpisode}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setSchedulingEpisode(null);
+            }
+          }}
+          onConfirm={(date) => {
+            onScheduleEpisode(schedulingEpisode.id, date.toISOString());
+            setSchedulingEpisode(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -165,7 +165,7 @@ export function EpisodeManager({
 
   useEffect(() => {
     fetchStatusCounts();
-  }, []);
+  }, [fetchStatusCounts]);
 
   const hasActiveFilters = useMemo(
     () =>
@@ -205,6 +205,7 @@ export function EpisodeManager({
     setCurrentPage(1);
   };
 
+  // CORREÇÃO AQUI
   const handleUpdateEpisode = (
     episodeId: string,
     updates: Partial<UpdateEpisodeServerInput>
@@ -219,27 +220,25 @@ export function EpisodeManager({
           )
         )
       );
-      startTransition(async () => {
-        try {
-          const result = await updateEpisodeAction(episodeId, updates);
+
+      (async () => {
+        const result = await updateEpisodeAction(episodeId, updates);
+
+        startTransition(() => {
+          setIsUpdating((prev) => ({ ...prev, [episodeId]: false }));
           if (result.success) {
             sonnerToast.success("Episódio atualizado!");
             fetchStatusCounts();
             resolve(true);
           } else {
-            // As server actions agora podem lançar um erro com a propriedade 'error'
-            throw new Error((result as any).error || "Erro desconhecido");
+            setEpisodes(prevEpisodes);
+            sonnerToast.error("Falha ao atualizar", {
+              description: (result as any).error || "Erro desconhecido",
+            });
+            resolve(false);
           }
-        } catch (error: any) {
-          setEpisodes(prevEpisodes);
-          sonnerToast.error("Falha ao atualizar", {
-            description: error?.message,
-          });
-          resolve(false);
-        } finally {
-          setIsUpdating((prev) => ({ ...prev, [episodeId]: false }));
-        }
-      });
+        });
+      })();
     });
   };
 
@@ -250,6 +249,7 @@ export function EpisodeManager({
     handleUpdateEpisode(episodeId, { status: newStatus });
   };
 
+  // CORREÇÃO AQUI
   const handleDelete = (episode: Episode): Promise<boolean> => {
     return new Promise((resolve) => {
       const prevEpisodes = [...episodes];
@@ -263,28 +263,29 @@ export function EpisodeManager({
         setCurrentPage((p) => p - 1);
       }
 
-      startTransition(async () => {
-        try {
-          const result = await deleteEpisodeAction(episode.id);
-          if (!result.success)
-            throw new Error((result as any).error || "Erro ao deletar");
+      (async () => {
+        const result = await deleteEpisodeAction(episode.id);
 
-          sonnerToast.success(`Episódio "${episode.title}" excluído.`);
-          fetchStatusCounts();
-          if (!isLastItemOnPage) fetchEpisodes();
-          resolve(true);
-        } catch (error: any) {
-          setEpisodes(prevEpisodes);
-          setTotalCount(prevTotal);
-          sonnerToast.error("Falha ao excluir", {
-            description: error?.message,
-          });
-          resolve(false);
-        }
-      });
+        startTransition(() => {
+          if (!result.success) {
+            setEpisodes(prevEpisodes);
+            setTotalCount(prevTotal);
+            sonnerToast.error("Falha ao excluir", {
+              description: (result as any).error || "Erro ao deletar",
+            });
+            resolve(false);
+          } else {
+            sonnerToast.success(`Episódio "${episode.title}" excluído.`);
+            fetchStatusCounts();
+            if (!isLastItemOnPage) fetchEpisodes();
+            resolve(true);
+          }
+        });
+      })();
     });
   };
 
+  // CORREÇÃO AQUI
   const handleScheduleEpisode = (
     episodeId: string,
     publishAtISO: string
@@ -306,25 +307,28 @@ export function EpisodeManager({
         )
       );
 
-      startTransition(async () => {
-        try {
-          await scheduleEpisode(episodeId, publishAtISO);
-          sonnerToast.success("Episódio agendado!");
-          fetchStatusCounts();
-          resolve(true);
-        } catch (error: any) {
-          setEpisodes(prevEpisodes);
-          sonnerToast.error("Falha ao agendar", {
-            description: error?.message,
-          });
-          resolve(false);
-        } finally {
+      (async () => {
+        const result = await scheduleEpisode(episodeId, publishAtISO);
+
+        startTransition(() => {
           setIsUpdating((prev) => ({ ...prev, [episodeId]: false }));
-        }
-      });
+          if (result.success) {
+            sonnerToast.success("Episódio agendado!");
+            fetchStatusCounts();
+            resolve(true);
+          } else {
+            setEpisodes(prevEpisodes);
+            sonnerToast.error("Falha ao agendar", {
+              description: result.error,
+            });
+            resolve(false);
+          }
+        });
+      })();
     });
   };
 
+  // CORREÇÃO AQUI
   const handleBulkUpdate = (
     ids: string[],
     newStatus: Episode["status"]
@@ -339,7 +343,8 @@ export function EpisodeManager({
         )
       );
       ids.forEach((id) => setIsUpdating((prev) => ({ ...prev, [id]: true })));
-      startTransition(async () => {
+
+      (async () => {
         const results = await Promise.all(
           ids.map((id) =>
             updateEpisodeAction(id, { status: newStatus }).then((res) => ({
@@ -349,32 +354,35 @@ export function EpisodeManager({
             }))
           )
         );
-        ids.forEach((id) =>
-          setIsUpdating((prev) => ({ ...prev, [id]: false }))
-        );
-        const failedIds = results.filter((r) => !r.success).map((r) => r.id);
-        if (failedIds.length > 0) {
-          setEpisodes((curr) =>
-            sortEpisodesLocal(
-              curr.map((ep) =>
-                failedIds.includes(ep.id)
-                  ? (prevEpisodes.find((p) => p.id === ep.id) as Episode)
-                  : ep
-              )
-            )
+
+        startTransition(() => {
+          ids.forEach((id) =>
+            setIsUpdating((prev) => ({ ...prev, [id]: false }))
           );
-          sonnerToast.error("Falha na atualização em massa", {
-            description: `${failedIds.length} de ${ids.length} falharam.`,
+          const failedIds = results.filter((r) => !r.success).map((r) => r.id);
+          if (failedIds.length > 0) {
+            setEpisodes((curr) =>
+              sortEpisodesLocal(
+                curr.map((ep) =>
+                  failedIds.includes(ep.id)
+                    ? (prevEpisodes.find((p) => p.id === ep.id) as Episode)
+                    : ep
+                )
+              )
+            );
+            sonnerToast.error("Falha na atualização em massa", {
+              description: `${failedIds.length} de ${ids.length} falharam.`,
+            });
+          } else {
+            sonnerToast.success("Episódios atualizados!");
+          }
+          fetchStatusCounts();
+          resolve({
+            ok: results.length - failedIds.length,
+            fail: failedIds.length,
           });
-        } else {
-          sonnerToast.success("Episódios atualizados!");
-        }
-        fetchStatusCounts();
-        resolve({
-          ok: results.length - failedIds.length,
-          fail: failedIds.length,
         });
-      });
+      })();
     });
   };
 

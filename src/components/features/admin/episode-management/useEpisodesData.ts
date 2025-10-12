@@ -19,11 +19,21 @@ import {
 import { Episode } from "@/src/lib/types";
 import { toast } from "sonner";
 
+export interface UseEpisodesDataParams {
+  search?: string;
+  statusCsv?: string;
+  categoryCsv?: string;
+  programCsv?: string;
+  sortBy?: string;
+  order?: string;
+  page?: number;
+  perPage?: number;
+}
+
 interface StatusCounts {
   draft: number;
   scheduled: number;
   published: number;
-  archived: number;
 }
 
 interface UseEpisodesDataReturn {
@@ -35,16 +45,18 @@ interface UseEpisodesDataReturn {
   statusCounts: StatusCounts | null;
   isPendingTransition: boolean;
   refetch: () => Promise<void>;
-  optimisticUpdateStatus: (id: string, newStatus: Episode["status"]) => void;
+  optimisticUpdateStatus: (id: string, newStatus: Episode["status"]) => void; // Removido Promise<void> para refletir o uso de startTransition
   optimisticBulkStatus: (
     ids: string[],
     newStatus: Episode["status"]
   ) => Promise<{ ok: number; fail: number }>;
-  optimisticDelete: (id: string) => void;
+  optimisticDelete: (id: string) => void; // Removido Promise<boolean>
   refreshOne: (id: string) => Promise<void>;
 }
 
-export function useEpisodesData(params: any): UseEpisodesDataReturn {
+export function useEpisodesData(
+  params: UseEpisodesDataParams
+): UseEpisodesDataReturn {
   const {
     search = "",
     statusCsv = "",
@@ -59,6 +71,7 @@ export function useEpisodesData(params: any): UseEpisodesDataReturn {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [totalFiltered, setTotalFiltered] = useState(0);
   const [statusCounts, setStatusCounts] = useState<StatusCounts | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const mountedRef = useRef(true);
@@ -79,6 +92,16 @@ export function useEpisodesData(params: any): UseEpisodesDataReturn {
     () => (programCsv ? programCsv.split(",").filter(Boolean) : []),
     [programCsv]
   );
+
+  function shallowDiffersEpisodes(a: Episode[], b: Episode[]) {
+    if (a.length !== b.length) return true;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i].id !== b[i].id || a[i].updated_at !== b[i].updated_at) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   const fetchAll = useCallback(async () => {
     if (inFlightRef.current) return;
@@ -101,32 +124,34 @@ export function useEpisodesData(params: any): UseEpisodesDataReturn {
         getEpisodeStatusCountsAction(),
       ]);
 
-      startTransition(() => {
-        if (listRes.success) {
-          if (mountedRef.current) {
-            setEpisodes(listRes.data);
+      if (mountedRef.current) {
+        startTransition(() => {
+          if (listRes.success) {
+            if (shallowDiffersEpisodes(listRes.data, episodes)) {
+              setEpisodes(listRes.data);
+            }
             setTotalFiltered(listRes.totalFiltered);
+          } else {
+            toast.error("Erro ao listar episódios", {
+              description: listRes.error,
+            });
           }
-        } else {
-          toast.error("Erro ao listar episódios", {
-            description: listRes.error,
-          });
-        }
 
-        if (countsRes.success) {
-          if (mountedRef.current) {
-            setStatusCounts(countsRes.counts as StatusCounts);
+          if (countsRes.success) {
+            setStatusCounts(countsRes.counts);
+          } else {
+            toast.error("Erro ao contar status", {
+              description: countsRes.error,
+            });
           }
-        } else {
-          toast.error("Erro ao contar status", {
-            description: countsRes.error,
-          });
-        }
-      });
+        });
+      }
     } catch (e: any) {
-      startTransition(() => {
-        toast.error("Falha inesperada", { description: e?.message });
-      });
+      if (mountedRef.current) {
+        startTransition(() => {
+          toast.error("Falha inesperada", { description: e?.message });
+        });
+      }
     } finally {
       if (mountedRef.current) setLoading(false);
       inFlightRef.current = false;
@@ -140,6 +165,8 @@ export function useEpisodesData(params: any): UseEpisodesDataReturn {
     programIds,
     sortBy,
     order,
+    episodes,
+    startTransition,
   ]);
 
   useEffect(() => {
@@ -156,31 +183,37 @@ export function useEpisodesData(params: any): UseEpisodesDataReturn {
 
   const optimisticUpdateStatus = useCallback(
     (id: string, newStatus: Episode["status"]) => {
-      const prev = [...episodes];
-      setEpisodes((cur) =>
-        cur.map((e) => (e.id === id ? { ...e, status: newStatus } : e))
+      const prevEpisodes = [...episodes];
+      setEpisodes((current) =>
+        current.map((e) => (e.id === id ? { ...e, status: newStatus } : e))
       );
 
-      startTransition(async () => {
-        const res = await updateEpisodeAction(id, { status: newStatus });
-        if (!res.success) {
-          toast.error("Falha ao atualizar status", { description: res.error });
-          setEpisodes(prev);
-        } else {
-          toast.success("Status atualizado");
-          const prevEp = prev.find((p) => p.id === id);
-          if (prevEp && prevEp.status !== newStatus) {
-            setStatusCounts((c) =>
-              c
-                ? {
-                    ...c,
-                    [prevEp.status]: c[prevEp.status as keyof StatusCounts] - 1,
-                    [newStatus]: c[newStatus as keyof StatusCounts] + 1,
-                  }
-                : c
-            );
+      startTransition(() => {
+        (async () => {
+          const res = await updateEpisodeAction(id, { status: newStatus });
+          if (!res.success) {
+            toast.error("Falha ao atualizar status", {
+              description: res.error,
+            });
+            setEpisodes(prevEpisodes); // Rollback
+          } else {
+            toast.success("Status atualizado");
+            // Atualiza contadores
+            const prevEp = prevEpisodes.find((p) => p.id === id);
+            if (prevEp && prevEp.status !== newStatus) {
+              setStatusCounts((c) =>
+                c
+                  ? {
+                      ...c,
+                      [prevEp.status]:
+                        c[prevEp.status as keyof StatusCounts] - 1,
+                      [newStatus]: c[newStatus as keyof StatusCounts] + 1,
+                    }
+                  : c
+              );
+            }
           }
-        }
+        })();
       });
     },
     [episodes, startTransition]
@@ -188,80 +221,82 @@ export function useEpisodesData(params: any): UseEpisodesDataReturn {
 
   const optimisticBulkStatus = useCallback(
     async (ids: string[], newStatus: Episode["status"]) => {
-      // Esta função é mais complexa e já retorna Promise, o setTimeout aqui é mais seguro.
-      // Manteremos como está para evitar refatoração excessiva.
-      const prev = episodes;
-      const prevStatusMap: Record<string, Episode["status"]> = {};
-      prev.forEach((e) => {
-        if (ids.includes(e.id)) prevStatusMap[e.id] = e.status;
-      });
-      setEpisodes((cur) =>
-        cur.map((e) => (ids.includes(e.id) ? { ...e, status: newStatus } : e))
+      setEpisodes((current) =>
+        current.map((e) =>
+          ids.includes(e.id) ? { ...e, status: newStatus } : e
+        )
       );
 
       const results = await Promise.all(
-        ids.map((id) =>
-          updateEpisodeAction(id, { status: newStatus }).then((r) => r.success)
-        )
+        ids.map(async (id) => {
+          const r = await updateEpisodeAction(id, { status: newStatus });
+          return r.success;
+        })
       );
+
       const ok = results.filter(Boolean).length;
       const fail = results.length - ok;
 
-      setTimeout(() => {
+      // Usar startTransition para a atualização de feedback
+      startTransition(() => {
         if (fail > 0) {
           toast.error("Atualização parcial", {
             description: `${ok} sucesso / ${fail} falha(s)`,
           });
-          fetchAll(); // Força a recarga para garantir consistência
         } else {
-          toast.success(`Status atualizado para ${ok} episódio(s)`);
-          fetchAll();
+          toast.success(
+            `Status atualizado para ${newStatus} em ${ok} episódio(s)`
+          );
         }
-      }, 50);
+        // Recarrega os dados para garantir consistência
+        refetch();
+      });
 
       return { ok, fail };
     },
-    [episodes, fetchAll]
+    [refetch, startTransition]
   );
 
   const optimisticDelete = useCallback(
     (id: string) => {
-      const prev = [...episodes];
-      const target = prev.find((e) => e.id === id);
-      setEpisodes((cur) => cur.filter((e) => e.id !== id));
+      const prevEpisodes = [...episodes];
+      const target = prevEpisodes.find((e) => e.id === id);
+      setEpisodes((current) => current.filter((e) => e.id !== id));
 
-      startTransition(async () => {
-        const res = await deleteEpisodeAction(id);
-        if (!res.success) {
-          toast.error("Falha ao deletar", { description: res.error });
-          setEpisodes(prev);
-        } else {
-          toast.success("Episódio deletado");
-          if (target) {
-            setStatusCounts((c) =>
-              c
-                ? {
-                    ...c,
-                    [target.status]: Math.max(
-                      0,
-                      c[target.status as keyof StatusCounts] - 1
-                    ),
-                  }
-                : c
-            );
+      startTransition(() => {
+        (async () => {
+          const res = await deleteEpisodeAction(id);
+          if (!res.success) {
+            toast.error("Falha ao deletar", { description: res.error });
+            setEpisodes(prevEpisodes); // Rollback
+          } else {
+            toast.success("Episódio deletado");
+            if (statusCounts && target) {
+              setStatusCounts((c) =>
+                c
+                  ? {
+                      ...c,
+                      [target.status]: Math.max(
+                        0,
+                        c[target.status as keyof StatusCounts] - 1
+                      ),
+                    }
+                  : c
+              );
+            }
+            setTotalFiltered((t) => Math.max(0, t - 1));
           }
-          setTotalFiltered((t) => Math.max(0, t - 1));
-        }
+        })();
       });
     },
-    [episodes, startTransition]
+    [episodes, statusCounts, startTransition]
   );
 
   const refreshOne = useCallback(
     async (_id: string) => {
-      await fetchAll();
+      await refetch();
     },
-    [fetchAll]
+    [refetch]
   );
 
   return {
