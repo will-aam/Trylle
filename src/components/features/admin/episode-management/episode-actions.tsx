@@ -15,8 +15,8 @@ import {
 import { Button } from "@/src/components/ui/button";
 import { MoreHorizontal, CalendarClock, Edit, Trash2, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { Episode, Category, Subcategory, Program, Tag } from "@/src/lib/types"; // Adicionado mais tipos
-import { deleteEpisodeAction } from "@/src/app/admin/episodes/actions"; // <- CORREÇÃO: Nome da função
+import { Episode, Category, Subcategory, Program, Tag } from "@/src/lib/types";
+import { deleteEpisodeAction } from "@/src/app/admin/episodes/actions"; // Fallback enquanto não conectamos o Manager
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 import { JsonViewDialog } from "./JsonViewDialog";
 import {
@@ -32,6 +32,12 @@ export interface EpisodeActionsProps {
   subcategories: Subcategory[];
   programs: Program[];
   allTags: Tag[];
+  // Novos callbacks opcionais para integração com Optimistic UI (fornecidos pelo EpisodeManager)
+  onDelete?: (episode: Episode) => Promise<void>;
+  onUpdate?: (
+    episodeId: string,
+    updates: Partial<UpdateEpisodeInput>
+  ) => Promise<boolean>;
 }
 
 export function EpisodeActions({
@@ -40,6 +46,8 @@ export function EpisodeActions({
   subcategories,
   programs,
   allTags,
+  onDelete,
+  onUpdate,
 }: EpisodeActionsProps) {
   const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -48,7 +56,19 @@ export function EpisodeActions({
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
 
   const handleDelete = async () => {
-    const result = await deleteEpisodeAction(episode.id); // <- CORREÇÃO: Nome da função
+    // Se vier callback do Manager, usamos ele (permite UI otimista)
+    if (onDelete) {
+      try {
+        await onDelete(episode);
+        setIsDeleteDialogOpen(false);
+      } catch (error: any) {
+        toast.error(error?.message || "Erro ao excluir o episódio.");
+      }
+      return;
+    }
+
+    // Fallback: comportamento atual (server action direta + refresh)
+    const result = await deleteEpisodeAction(episode.id);
     if (result.success) {
       toast.success(result.success);
       setIsDeleteDialogOpen(false);
@@ -103,28 +123,36 @@ export function EpisodeActions({
         episodeTitle={episode.title}
       />
 
-      {/* DIÁLOGOS CORRIGIDOS */}
+      {/* Diálogo de edição agora delega a atualização ao callback, quando existir */}
       <EditEpisodeDialog
         isOpen={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         episode={episode}
-        categories={categories} // <- CORREÇÃO: Prop passada
-        subcategories={subcategories} // <- CORREÇÃO: Prop passada
-        programs={programs} // <- CORREÇÃO: Prop passada
-        allTags={allTags} // <- CORREÇÃO: Prop passada
-        onUpdate={function (
+        categories={categories}
+        subcategories={subcategories}
+        programs={programs}
+        allTags={allTags}
+        onUpdate={async (
           episodeId: string,
           updates: Partial<UpdateEpisodeInput>
-        ): Promise<boolean> {
-          throw new Error("Function not implemented.");
+        ): Promise<boolean> => {
+          if (!onUpdate) {
+            toast.error(
+              "Ação de atualização não está disponível. Tente novamente mais tarde."
+            );
+            return false;
+          }
+          return await onUpdate(episodeId, updates);
         }}
       />
+
       <JsonViewDialog
         isOpen={isJsonDialogOpen}
         onOpenChange={setIsJsonDialogOpen}
-        data={episode} // <- CORREÇÃO: Nome da prop
-        title={""}
+        data={episode}
+        title={`Episódio: ${episode.title}`}
       />
+
       <ConfirmationDialog
         isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}

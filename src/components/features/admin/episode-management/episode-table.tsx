@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState } from "react"; // <- Importa o useState
+import React, { useState } from "react";
 import {
   Episode,
   SortDirection,
@@ -23,9 +23,10 @@ import {
   TableRow,
 } from "@/src/components/ui/table";
 import { StatusBadgeSelector } from "@/src/components/ui/status-badge-selector";
-import { ChevronsUpDown, ArrowDown, ArrowUp } from "lucide-react";
+import { ChevronsUpDown, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
-import { ScheduleEpisodeDialog } from "./schedule-episode-dialog"; // <- Importa o Dialog
+import { ScheduleEpisodeDialog } from "./schedule-episode-dialog";
+import type { UpdateEpisodeInput } from "./edit/edit-episode-dialog";
 
 // Interface de props expandida para os dados de edição
 export interface EpisodeTableProps {
@@ -39,6 +40,13 @@ export interface EpisodeTableProps {
   onSelectEpisode: (episodeId: string) => void;
   onSelectAll: (selectAll: boolean) => void;
   onStatusChange?: (episodeId: string, newStatus: Episode["status"]) => void;
+  // Novo: callback para updates gerais (usado pelo diálogo do EpisodeActions)
+  onUpdateEpisode?: (
+    episodeId: string,
+    updates: Partial<UpdateEpisodeInput>
+  ) => Promise<boolean>;
+  // Novo: estado de atualização por episódio para feedback visual
+  isUpdating?: Record<string, boolean>;
   responsiveMode?: "auto" | "table";
   minTableWidthClass?: string;
   hideProgramColumn?: boolean;
@@ -64,6 +72,8 @@ export function EpisodeTable({
   onSelectEpisode,
   onSelectAll,
   onStatusChange,
+  onUpdateEpisode,
+  isUpdating = {},
   responsiveMode = "auto",
   minTableWidthClass = "min-w-[900px]",
   hideProgramColumn = false,
@@ -142,6 +152,9 @@ export function EpisodeTable({
     subcategories,
     programs,
     allTags,
+    // Encaminha os callbacks para permitir UI otimista pelo Manager
+    onDelete: async (ep) => Promise.resolve(onDelete(ep)),
+    onUpdate: onUpdateEpisode,
   });
 
   return (
@@ -154,6 +167,7 @@ export function EpisodeTable({
           <div className="space-y-4">
             {episodes.map((ep) => {
               const selected = selectedEpisodes.includes(ep.id);
+              const updating = !!isUpdating[ep.id];
               return (
                 <div
                   key={ep.id}
@@ -180,15 +194,27 @@ export function EpisodeTable({
                         )}
                       </div>
                     </div>
-                    <EpisodeActions {...getActionsProps(ep)} />
+                    <div
+                      className={cn(
+                        updating && "pointer-events-none opacity-50"
+                      )}
+                      aria-busy={updating}
+                    >
+                      <EpisodeActions {...getActionsProps(ep)} />
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-3 text-xs">
-                    <StatusBadgeSelector
-                      status={ep.status}
-                      disabled={!onStatusChange}
-                      onStatusChange={(s) => handleStatusChange(ep.id, s)}
-                      onSchedule={() => setEpisodeToSchedule(ep)} // <- CONECTADO AQUI
-                    />
+                    <div className="flex items-center">
+                      {updating && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                      <StatusBadgeSelector
+                        status={ep.status}
+                        disabled={updating || !onStatusChange}
+                        onStatusChange={(s) => handleStatusChange(ep.id, s)}
+                        onSchedule={() => setEpisodeToSchedule(ep)}
+                      />
+                    </div>
                     {!hideDateColumn && (
                       <span className="text-muted-foreground">
                         {formatDate(ep.published_at)}
@@ -237,6 +263,7 @@ export function EpisodeTable({
             <TableBody>
               {episodes.map((ep) => {
                 const selected = selectedEpisodes.includes(ep.id);
+                const updating = !!isUpdating[ep.id];
                 return (
                   <TableRow
                     key={ep.id}
@@ -258,12 +285,17 @@ export function EpisodeTable({
                       </div>
                     </TableCell>
                     <TableCell className={compactRows ? "py-2" : "py-3"}>
-                      <StatusBadgeSelector
-                        status={ep.status}
-                        onStatusChange={(s) => handleStatusChange(ep.id, s)}
-                        disabled={!onStatusChange}
-                        onSchedule={() => setEpisodeToSchedule(ep)} // <- CONECTADO AQUI TAMBÉM
-                      />
+                      <div className="flex items-center">
+                        {updating && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                        <StatusBadgeSelector
+                          status={ep.status}
+                          onStatusChange={(s) => handleStatusChange(ep.id, s)}
+                          disabled={updating || !onStatusChange}
+                          onSchedule={() => setEpisodeToSchedule(ep)}
+                        />
+                      </div>
                     </TableCell>
                     {!hideProgramColumn && (
                       <TableCell
@@ -293,7 +325,14 @@ export function EpisodeTable({
                     )}
                     <TableCell className={cn(compactRows ? "py-2" : "py-3")}>
                       <div className="flex justify-end">
-                        <EpisodeActions {...getActionsProps(ep)} />
+                        <div
+                          className={cn(
+                            updating && "pointer-events-none opacity-50"
+                          )}
+                          aria-busy={updating}
+                        >
+                          <EpisodeActions {...getActionsProps(ep)} />
+                        </div>
                       </div>
                     </TableCell>
                   </TableRow>
