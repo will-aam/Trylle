@@ -71,8 +71,11 @@ export function EpisodeTablePagination({
       aria-label="Controle de paginação"
     >
       {/* Seleção de itens por página */}
-      <div className="grid w-full max-w-max-cols-[auto_auto_auto] grid-cols-3 items-center gap-2">
-        <label htmlFor="items-per-page" className="text-muted-foreground">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+        <label
+          htmlFor="items-per-page"
+          className="text-muted-foreground sm:mr-2"
+        >
           Itens por página
         </label>
         <Select
@@ -82,7 +85,7 @@ export function EpisodeTablePagination({
         >
           <SelectTrigger
             id="items-per-page"
-            className="h-8 w-[90px]"
+            className="h-8 w-[120px]"
             aria-label="Itens por página"
           >
             <SelectValue placeholder={itemsPerPage} />
@@ -95,9 +98,11 @@ export function EpisodeTablePagination({
             ))}
           </SelectContent>
         </Select>
-        {/* <span className="text-muted-foreground">
+
+        {/* Mostrar faixa somente em telas médias+ */}
+        <span className="hidden text-sm text-muted-foreground sm:block">
           Exibindo {startIndex}-{endIndex} de {totalCount}
-        </span> */}
+        </span>
       </div>
 
       {/* Navegação de páginas */}

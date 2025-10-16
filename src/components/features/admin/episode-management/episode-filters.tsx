@@ -17,6 +17,7 @@ import {
 import { Filter, X } from "lucide-react";
 import { Category } from "@/src/lib/types";
 import { useState } from "react";
+import { cn } from "@/src/lib/utils";
 
 interface EpisodeFiltersProps {
   searchTerm: string;
@@ -50,14 +51,17 @@ export function EpisodeFilters({
   const [popoverOpen, setPopoverOpen] = useState(false);
 
   return (
-    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-      <div className="flex-1 w-full md:w-auto">
-        <div className="relative flex items-center w-full max-w-lg border border-input rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 group">
+    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+      {/* Grupo: botão de filtro + campo de busca (mobile ocupa 100%) */}
+      <div className="w-full md:w-auto">
+        <div className="relative flex items-center w-full md:max-w-lg border border-input rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 group">
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="ghost"
                 className="pl-3 pr-2 rounded-r-none border-r border-input group-focus-within:border-ring"
+                aria-expanded={popoverOpen}
+                aria-label="Abrir filtros"
               >
                 <Filter className="h-4 w-4 text-muted-foreground" />
               </Button>
@@ -65,13 +69,10 @@ export function EpisodeFilters({
             <PopoverContent
               side="bottom"
               align="start"
-              className="w-64 p-4 mt-2"
-              style={{
-                minWidth: "16rem",
-                maxWidth: "20rem",
-                marginTop: "0.5rem",
-                zIndex: 50,
-              }}
+              className={cn(
+                "p-4 mt-2 z-50 shadow-md",
+                "w-[min(92vw,20rem)] sm:w-80"
+              )}
             >
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">
@@ -121,6 +122,7 @@ export function EpisodeFilters({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 h-10 border-0 rounded-l-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              aria-label="Campo de busca"
             />
           </div>
         </div>
@@ -130,7 +132,7 @@ export function EpisodeFilters({
         <Button
           variant="outline"
           onClick={onClearFilters}
-          className="shrink-0 bg-transparent"
+          className="bg-transparent w-full md:w-auto self-stretch md:self-auto"
         >
           <X className="mr-2 h-4 w-4" />
           Limpar Filtros

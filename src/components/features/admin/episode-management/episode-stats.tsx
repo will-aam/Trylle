@@ -101,9 +101,9 @@ export function EpisodeStats({
   return (
     <div
       className={cn(
-        "grid w-full gap-3 sm:gap-4",
-        // Layout fluido: mínimo 140px por card
-        "grid-cols-[repeat(auto-fit,minmax(140px,1fr))]",
+        "grid w-full gap-3 sm:gap-4 md:gap-5",
+        // Grid fluido, ajustando o min-width por breakpoint
+        "grid-cols-[repeat(auto-fit,minmax(140px,1fr))] sm:grid-cols-[repeat(auto-fit,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(180px,1fr))]",
         className
       )}
     >
@@ -142,7 +142,10 @@ export function EpisodeStats({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className="h-3.5 w-3.5 opacity-50 hover:opacity-80 cursor-help" />
+                        <Info
+                          className="h-3.5 w-3.5 opacity-50 hover:opacity-80 cursor-help"
+                          aria-label={`Sobre ${stat.label}`}
+                        />
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs">
                         <p className="text-xs leading-relaxed">
@@ -158,7 +161,10 @@ export function EpisodeStats({
                   </TooltipProvider>
                 </span>
               </CardTitle>
-              <Icon className="h-4 w-4 text-muted-foreground" />
+              <Icon
+                className="h-4 w-4 text-muted-foreground"
+                aria-hidden="true"
+              />
             </CardHeader>
             <CardContent
               className={cn(

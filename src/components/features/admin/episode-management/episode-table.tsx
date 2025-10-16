@@ -1,5 +1,3 @@
-// src/components/features/admin/episode-management/episode-table.tsx
-
 "use client";
 
 import React, { useState } from "react";
@@ -99,8 +97,21 @@ export function EpisodeTable({
   });
 
   return (
-    <div className="space-y-2">
-      <div className="overflow-x-auto">
+    <div className="space-y-3">
+      {/* Toolbar mobile: selecionar todos */}
+      <div className="md:hidden flex items-center justify-between">
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={allSelected}
+            onCheckedChange={(checked) => onSelectAll(!!checked)}
+            aria-label="Selecionar todos"
+          />
+          <span>Selecionar todos</span>
+        </label>
+      </div>
+
+      {/* Tabela - somente em md+ */}
+      <div className="hidden md:block overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -116,20 +127,34 @@ export function EpisodeTable({
                 onClick={() => onSort("title")}
               >
                 Título
+                {sortColumn === "title" && (
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    {sortDirection === "asc" ? "↑" : "↓"}
+                  </span>
+                )}
               </TableHead>
-              {/* Coluna "Programa" Adicionada */}
               <TableHead>Programa</TableHead>
               <TableHead
                 className="cursor-pointer"
                 onClick={() => onSort("status")}
               >
                 Status
+                {sortColumn === "status" && (
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    {sortDirection === "asc" ? "↑" : "↓"}
+                  </span>
+                )}
               </TableHead>
               <TableHead
                 className="cursor-pointer"
                 onClick={() => onSort("published_at")}
               >
                 Data de publicação
+                {sortColumn === "published_at" && (
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    {sortDirection === "asc" ? "↑" : "↓"}
+                  </span>
+                )}
               </TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -153,7 +178,6 @@ export function EpisodeTable({
                     />
                   </TableCell>
                   <TableCell className="font-medium">{ep.title}</TableCell>
-                  {/* Célula para exibir o nome do programa */}
                   <TableCell className="text-sm text-muted-foreground">
                     {ep.programs?.title || "—"}
                   </TableCell>
@@ -194,7 +218,7 @@ export function EpisodeTable({
             {episodes.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6} // Ajustado para 6 colunas
+                  colSpan={6}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   Nenhum episódio para exibir.
@@ -203,6 +227,77 @@ export function EpisodeTable({
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Lista/Card - somente em mobile */}
+      <div className="md:hidden space-y-2">
+        {episodes.map((ep) => {
+          const isSelected = selectedEpisodes.includes(ep.id);
+          const updating = isUpdating[ep.id] ?? false;
+
+          return (
+            <div
+              key={ep.id}
+              className={cn(
+                "rounded-md border bg-background p-3 shadow-sm",
+                isSelected && "ring-1 ring-primary"
+              )}
+            >
+              {/* Linha superior: checkbox + título + ações */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => onSelectEpisode(ep.id)}
+                    aria-label={`Selecionar episódio ${ep.title}`}
+                  />
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{ep.title}</div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {ep.programs?.title || "—"} •{" "}
+                      {formatDate(ep.published_at)}
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  className={cn(
+                    "flex-shrink-0",
+                    updating && "pointer-events-none opacity-50"
+                  )}
+                  aria-busy={updating}
+                >
+                  <EpisodeActions episode={ep} {...getActionsProps(ep)} />
+                </div>
+              </div>
+
+              {/* Linha inferior: status + loading */}
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center">
+                  {updating && (
+                    <Loader2
+                      className="mr-2 h-4 w-4 animate-spin text-muted-foreground"
+                      aria-label="Atualizando status..."
+                    />
+                  )}
+                  <StatusBadgeSelector
+                    status={ep.status}
+                    disabled={updating}
+                    onStatusChange={(newStatus) =>
+                      onStatusChange(ep.id, newStatus)
+                    }
+                    onSchedule={() => setSchedulingEpisode(ep)}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {episodes.length === 0 && (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            Nenhum episódio para exibir.
+          </div>
+        )}
       </div>
 
       {schedulingEpisode && (

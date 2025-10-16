@@ -5,6 +5,9 @@ import { AdminSidebar } from "@/src/components/layout/admin-sidebar";
 import { Toaster } from "@/src/components/ui/sonner";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { AdminPlayerWrapper } from "@/src/components/layout/admin-player-wrapper";
+import { Button } from "@/src/components/ui/button";
+import { Menu } from "lucide-react";
+import { cn } from "@/src/lib/utils";
 
 export default function AdminLayout({
   children,
@@ -16,9 +19,12 @@ export default function AdminLayout({
 
   useEffect(() => {
     setIsMounted(true);
+    // Colapsa por padrão no mobile
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setSidebarCollapsed(true);
+    }
   }, []);
 
-  // Tela de carregamento (seu código original, sem alterações)
   if (!isMounted) {
     return (
       <div className="flex h-screen bg-muted/40">
@@ -40,20 +46,36 @@ export default function AdminLayout({
     );
   }
 
-  // Layout real após a montagem
   return (
     <div className="flex h-screen bg-muted/40">
+      {/* Botão flutuante para abrir a sidebar no mobile quando estiver fechada */}
+      {isSidebarCollapsed && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setSidebarCollapsed(false)}
+          className={cn(
+            "fixed left-3 top-3 z-50 md:hidden h-9 w-9 rounded-full shadow",
+            "bg-background/90 supports-[backdrop-filter]:bg-background/70 backdrop-blur"
+          )}
+          aria-label="Abrir menu"
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+      )}
+
       <AdminSidebar
         isCollapsed={isSidebarCollapsed}
         setCollapsed={() => setSidebarCollapsed((prev) => !prev)}
       />
 
-      {/* AQUI ESTÁ A ÚNICA MUDANÇA REAL */}
       <AdminPlayerWrapper>
         <main
-          className={`flex-1 overflow-y-auto transition-all duration-300 ${
-            isSidebarCollapsed ? "pl-16" : "pl-64"
-          }`}
+          className={cn(
+            "flex-1 overflow-y-auto transition-all duration-300",
+            // No mobile não aplicamos padding-left; no desktop reservamos espaço conforme colapso
+            isSidebarCollapsed ? "md:pl-16" : "md:pl-64"
+          )}
         >
           {children}
         </main>
