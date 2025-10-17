@@ -48,7 +48,6 @@ export function EpisodeActions({
   onUpdate,
 }: EpisodeActionsProps) {
   const [isJsonDialogOpen, setIsJsonDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   return (
@@ -63,10 +62,7 @@ export function EpisodeActions({
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Ações</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Editar
-          </DropdownMenuItem>
+
           <DropdownMenuItem onClick={() => setIsJsonDialogOpen(true)}>
             <Eye className="mr-2 h-4 w-4" />
             Ver JSON
@@ -81,17 +77,6 @@ export function EpisodeActions({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-
-      <EditEpisodeDialog
-        episode={episode}
-        isOpen={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        categories={categories}
-        subcategories={subcategories}
-        programs={programs}
-        allTags={allTags}
-        onUpdate={onUpdate}
-      />
       <JsonViewDialog
         isOpen={isJsonDialogOpen}
         onOpenChange={setIsJsonDialogOpen}

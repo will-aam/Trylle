@@ -23,8 +23,11 @@ import { StatusBadgeSelector } from "@/src/components/ui/status-badge-selector";
 import { cn } from "@/src/lib/utils";
 import type { UpdateEpisodeInput } from "./edit/edit-episode-dialog";
 import { ScheduleEpisodeDialog } from "./schedule-episode-dialog";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, Pencil, SquarePen } from "lucide-react";
 import { Input } from "@/src/components/ui/input";
+import { Button } from "@/src/components/ui/button";
+import { FilePenLine } from "lucide-react";
+import { EditEpisodeDialog } from "./edit/edit-episode-dialog";
 
 export interface EpisodeTableProps {
   episodes: Episode[];
@@ -77,6 +80,7 @@ export function EpisodeTable({
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [editingEpisodeId, setEditingEpisodeId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>("");
+  const [editingEpisode, setEditingEpisode] = useState<Episode | null>(null);
 
   const formatDate = (isoString: string | null) => {
     if (!isoString) return "—";
@@ -258,7 +262,22 @@ export function EpisodeTable({
                   </TableCell>
                   <TableCell>{formatDate(ep.published_at)}</TableCell>
                   <TableCell className="py-2">
-                    <div className="flex justify-end">
+                    <div className="flex items-center justify-end gap-1">
+                      {/* Ícone de Edição Principal */}
+                      <Button
+                        variant="ghost"
+                        className={cn(
+                          "h-8 w-8 p-0",
+                          updating && "pointer-events-none opacity-50"
+                        )}
+                        aria-label="Editar episódio"
+                        disabled={updating}
+                        onClick={() => setEditingEpisode(ep)}
+                      >
+                        <SquarePen className="h-4 w-4" />
+                      </Button>
+
+                      {/* Menu de Ações Secundárias */}
                       <div
                         className={cn(
                           updating && "pointer-events-none opacity-50"
@@ -356,6 +375,25 @@ export function EpisodeTable({
           episodeTitle={schedulingEpisode.title}
           defaultDateISO={schedulingEpisode.published_at ?? undefined}
           onConfirm={onScheduleEpisode}
+        />
+      )}
+
+      {/* Modal de Edição de Episódio */}
+      {editingEpisode && (
+        <EditEpisodeDialog
+          key={editingEpisode.id}
+          episode={editingEpisode}
+          isOpen={!!editingEpisode}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setEditingEpisode(null);
+            }
+          }}
+          onUpdate={onUpdateEpisode}
+          categories={categories}
+          subcategories={subcategories}
+          programs={programs}
+          allTags={allTags}
         />
       )}
     </div>
