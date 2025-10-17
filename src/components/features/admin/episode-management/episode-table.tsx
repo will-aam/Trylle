@@ -23,7 +23,8 @@ import { StatusBadgeSelector } from "@/src/components/ui/status-badge-selector";
 import { cn } from "@/src/lib/utils";
 import type { UpdateEpisodeInput } from "./edit/edit-episode-dialog";
 import { ScheduleEpisodeDialog } from "./schedule-episode-dialog";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
+import { Input } from "@/src/components/ui/input";
 
 export interface EpisodeTableProps {
   episodes: Episode[];
@@ -72,6 +73,11 @@ export function EpisodeTable({
     null
   );
 
+  // Estados para controlar a edição inline do título (usado apenas no desktop)
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [editingEpisodeId, setEditingEpisodeId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>("");
+
   const formatDate = (isoString: string | null) => {
     if (!isoString) return "—";
     return new Date(isoString).toLocaleDateString("pt-BR", {
@@ -96,9 +102,44 @@ export function EpisodeTable({
     onScheduleEpisode,
   });
 
+  // Funções para manipular a edição inline (usado apenas no desktop)
+  const handleStartEditing = (episode: Episode) => {
+    setEditingEpisodeId(episode.id);
+    setEditingTitle(episode.title);
+  };
+
+  const handleCancelEditing = () => {
+    setEditingEpisodeId(null);
+    setEditingTitle("");
+  };
+
+  const handleSaveTitle = async () => {
+    if (!editingEpisodeId) return;
+
+    const originalEpisode = episodes.find((ep) => ep.id === editingEpisodeId);
+
+    if (
+      originalEpisode &&
+      editingTitle.trim() &&
+      originalEpisode.title !== editingTitle.trim()
+    ) {
+      await onUpdateEpisode(editingEpisodeId, { title: editingTitle.trim() });
+    }
+
+    handleCancelEditing();
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      handleSaveTitle();
+    } else if (event.key === "Escape") {
+      handleCancelEditing();
+    }
+  };
+
   return (
     <div className="space-y-3">
-      {/* Tabela - somente em md+ (mantém seleção por checkbox) */}
+      {/* Tabela - somente em md+ (mantém seleção por checkbox e edição inline) */}
       <div className="hidden md:block overflow-x-auto">
         <Table>
           <TableHeader>
@@ -111,7 +152,7 @@ export function EpisodeTable({
                 />
               </TableHead>
               <TableHead
-                className="cursor-pointer"
+                className="cursor-pointer max-w-xs"
                 onClick={() => onSort("title")}
               >
                 Título
@@ -151,6 +192,7 @@ export function EpisodeTable({
             {episodes.map((ep) => {
               const isSelected = selectedEpisodes.includes(ep.id);
               const updating = isUpdating[ep.id] ?? false;
+              const isEditing = editingEpisodeId === ep.id;
 
               return (
                 <TableRow
@@ -165,7 +207,34 @@ export function EpisodeTable({
                       aria-label={`Selecionar episódio ${ep.title}`}
                     />
                   </TableCell>
-                  <TableCell className="font-medium">{ep.title}</TableCell>
+                  <TableCell
+                    className="font-medium py-2 max-w-xs"
+                    onMouseEnter={() => setHoveredRow(ep.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                  >
+                    {isEditing ? (
+                      <Input
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onBlur={handleSaveTitle}
+                        onKeyDown={handleKeyDown}
+                        autoFocus
+                        className="h-8"
+                      />
+                    ) : (
+                      <div className="relative pr-8 group/item">
+                        <span className="block truncate">{ep.title}</span>
+                        {hoveredRow === ep.id && !updating && (
+                          <button
+                            onClick={() => handleStartEditing(ep)}
+                            className="absolute top-1/2 -translate-y-1/2 right-0 p-1 text-muted-foreground hover:text-foreground bg-background/90 backdrop-blur-sm rounded-sm shadow-sm"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {ep.programs?.title || "—"}
                   </TableCell>
@@ -217,7 +286,7 @@ export function EpisodeTable({
         </Table>
       </div>
 
-      {/* Lista/Card - somente em mobile (SEM checkbox por episódio) */}
+      {/* Lista/Card - somente em mobile (SEM edição inline no título) */}
       <div className="md:hidden space-y-2">
         {episodes.map((ep) => {
           const updating = isUpdating[ep.id] ?? false;
@@ -229,9 +298,10 @@ export function EpisodeTable({
             >
               {/* Linha superior: título + ações (sem checkbox) */}
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
+                  {/* ALTERAÇÃO: Removida toda a lógica de edição inline do título no mobile */}
                   <div className="truncate font-medium">{ep.title}</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">
+                  <div className="mt-1 text-xs text-muted-foreground">
                     {ep.programs?.title || "—"} • {formatDate(ep.published_at)}
                   </div>
                 </div>
