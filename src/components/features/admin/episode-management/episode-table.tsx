@@ -26,7 +26,6 @@ import { ScheduleEpisodeDialog } from "./schedule-episode-dialog";
 import { Loader2, Pencil, SquarePen } from "lucide-react";
 import { Input } from "@/src/components/ui/input";
 import { Button } from "@/src/components/ui/button";
-import { FilePenLine } from "lucide-react";
 import { EditEpisodeDialog } from "./edit/edit-episode-dialog";
 
 export interface EpisodeTableProps {
@@ -231,7 +230,7 @@ export function EpisodeTable({
                         {hoveredRow === ep.id && !updating && (
                           <button
                             onClick={() => handleStartEditing(ep)}
-                            className="absolute top-1/2 -translate-y-1/2 right-0 p-1 text-muted-foreground hover:text-foreground bg-background/90 backdrop-blur-sm rounded-sm shadow-sm"
+                            className="absolute top-1/2 -translate-y-1/2 right-0 p-1 text-muted-foreground hover:text-foreground"
                           >
                             <Pencil size={16} />
                           </button>
