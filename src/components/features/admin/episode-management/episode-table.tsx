@@ -155,7 +155,7 @@ export function EpisodeTable({
                 />
               </TableHead>
               <TableHead
-                className="cursor-pointer max-w-xs"
+                className="cursor-pointer max-w-[250px]"
                 onClick={() => onSort("title")}
               >
                 Título
@@ -165,7 +165,8 @@ export function EpisodeTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead>Programa</TableHead>
+              <TableHead className="max-w-[250px]">Programa</TableHead>{" "}
+              {/* E mude aqui */}
               <TableHead
                 className="cursor-pointer"
                 onClick={() => onSort("status")}
@@ -211,7 +212,7 @@ export function EpisodeTable({
                     />
                   </TableCell>
                   <TableCell
-                    className="font-medium py-2 max-w-xs"
+                    className="font-medium py-2 max-w-[250px]"
                     onMouseEnter={() => setHoveredRow(ep.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
@@ -238,7 +239,8 @@ export function EpisodeTable({
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground max-w-[250px] truncate">
+                    {" "}
                     {ep.programs?.title || "—"}
                   </TableCell>
                   <TableCell>
