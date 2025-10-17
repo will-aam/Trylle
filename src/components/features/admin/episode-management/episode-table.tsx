@@ -98,19 +98,7 @@ export function EpisodeTable({
 
   return (
     <div className="space-y-3">
-      {/* Toolbar mobile: selecionar todos */}
-      <div className="md:hidden flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={allSelected}
-            onCheckedChange={(checked) => onSelectAll(!!checked)}
-            aria-label="Selecionar todos"
-          />
-          <span>Selecionar todos</span>
-        </label>
-      </div>
-
-      {/* Tabela - somente em md+ */}
+      {/* Tabela - somente em md+ (mantém seleção por checkbox) */}
       <div className="hidden md:block overflow-x-auto">
         <Table>
           <TableHeader>
@@ -229,34 +217,22 @@ export function EpisodeTable({
         </Table>
       </div>
 
-      {/* Lista/Card - somente em mobile */}
+      {/* Lista/Card - somente em mobile (SEM checkbox por episódio) */}
       <div className="md:hidden space-y-2">
         {episodes.map((ep) => {
-          const isSelected = selectedEpisodes.includes(ep.id);
           const updating = isUpdating[ep.id] ?? false;
 
           return (
             <div
               key={ep.id}
-              className={cn(
-                "rounded-md border bg-background p-3 shadow-sm",
-                isSelected && "ring-1 ring-primary"
-              )}
+              className={cn("rounded-md border bg-background p-3 shadow-sm")}
             >
-              {/* Linha superior: checkbox + título + ações */}
+              {/* Linha superior: título + ações (sem checkbox) */}
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2">
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => onSelectEpisode(ep.id)}
-                    aria-label={`Selecionar episódio ${ep.title}`}
-                  />
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">{ep.title}</div>
-                    <div className="mt-0.5 text-xs text-muted-foreground">
-                      {ep.programs?.title || "—"} •{" "}
-                      {formatDate(ep.published_at)}
-                    </div>
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{ep.title}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {ep.programs?.title || "—"} • {formatDate(ep.published_at)}
                   </div>
                 </div>
 
