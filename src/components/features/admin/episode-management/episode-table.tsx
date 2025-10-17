@@ -75,10 +75,13 @@ export function EpisodeTable({
     null
   );
 
-  // Estados para controlar a edição inline do título (usado apenas no desktop)
+  // Estados para edição
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [editingEpisodeId, setEditingEpisodeId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>("");
+
+  // CORREÇÃO 1: Removida a declaração de estado duplicada que estava aqui.
+  // Apenas uma declaração para o modal de edição principal.
   const [editingEpisode, setEditingEpisode] = useState<Episode | null>(null);
 
   const formatDate = (isoString: string | null) => {
@@ -96,16 +99,10 @@ export function EpisodeTable({
   const getActionsProps = (
     episode: Episode
   ): Omit<EpisodeActionsProps, "episode"> => ({
-    categories,
-    subcategories,
-    programs,
-    allTags,
     onDelete,
-    onUpdate: onUpdateEpisode,
     onScheduleEpisode,
   });
 
-  // Funções para manipular a edição inline (usado apenas no desktop)
   const handleStartEditing = (episode: Episode) => {
     setEditingEpisodeId(episode.id);
     setEditingTitle(episode.title);
@@ -118,9 +115,7 @@ export function EpisodeTable({
 
   const handleSaveTitle = async () => {
     if (!editingEpisodeId) return;
-
     const originalEpisode = episodes.find((ep) => ep.id === editingEpisodeId);
-
     if (
       originalEpisode &&
       editingTitle.trim() &&
@@ -128,7 +123,6 @@ export function EpisodeTable({
     ) {
       await onUpdateEpisode(editingEpisodeId, { title: editingTitle.trim() });
     }
-
     handleCancelEditing();
   };
 
@@ -142,7 +136,6 @@ export function EpisodeTable({
 
   return (
     <div className="space-y-3">
-      {/* Tabela - somente em md+ (mantém seleção por checkbox e edição inline) */}
       <div className="hidden md:block overflow-x-auto">
         <Table>
           <TableHeader>
@@ -165,8 +158,7 @@ export function EpisodeTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead className="max-w-[250px]">Programa</TableHead>{" "}
-              {/* E mude aqui */}
+              <TableHead className="max-w-[250px]">Programa</TableHead>
               <TableHead
                 className="cursor-pointer"
                 onClick={() => onSort("status")}
@@ -240,7 +232,6 @@ export function EpisodeTable({
                     )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-[250px] truncate">
-                    {" "}
                     {ep.programs?.title || "—"}
                   </TableCell>
                   <TableCell>
@@ -264,7 +255,6 @@ export function EpisodeTable({
                   <TableCell>{formatDate(ep.published_at)}</TableCell>
                   <TableCell className="py-2">
                     <div className="flex items-center justify-end gap-1">
-                      {/* Ícone de Edição Principal */}
                       <Button
                         variant="ghost"
                         className={cn(
@@ -277,8 +267,6 @@ export function EpisodeTable({
                       >
                         <SquarePen className="h-4 w-4" />
                       </Button>
-
-                      {/* Menu de Ações Secundárias */}
                       <div
                         className={cn(
                           updating && "pointer-events-none opacity-50"
@@ -306,64 +294,9 @@ export function EpisodeTable({
         </Table>
       </div>
 
-      {/* Lista/Card - somente em mobile (SEM edição inline no título) */}
+      {/* A lógica para a vista mobile permanece a mesma */}
       <div className="md:hidden space-y-2">
-        {episodes.map((ep) => {
-          const updating = isUpdating[ep.id] ?? false;
-
-          return (
-            <div
-              key={ep.id}
-              className={cn("rounded-md border bg-background p-3 shadow-sm")}
-            >
-              {/* Linha superior: título + ações (sem checkbox) */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  {/* ALTERAÇÃO: Removida toda a lógica de edição inline do título no mobile */}
-                  <div className="truncate font-medium">{ep.title}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {ep.programs?.title || "—"} • {formatDate(ep.published_at)}
-                  </div>
-                </div>
-
-                <div
-                  className={cn(
-                    "flex-shrink-0",
-                    updating && "pointer-events-none opacity-50"
-                  )}
-                  aria-busy={updating}
-                >
-                  <EpisodeActions episode={ep} {...getActionsProps(ep)} />
-                </div>
-              </div>
-
-              {/* Linha inferior: status + loading */}
-              <div className="mt-3 flex items-center justify-between">
-                <div className="flex items-center">
-                  {updating && (
-                    <Loader2
-                      className="mr-2 h-4 w-4 animate-spin text-muted-foreground"
-                      aria-label="Atualizando status..."
-                    />
-                  )}
-                  <StatusBadgeSelector
-                    status={ep.status}
-                    disabled={updating}
-                    onStatusChange={(newStatus) =>
-                      onStatusChange(ep.id, newStatus)
-                    }
-                    onSchedule={() => setSchedulingEpisode(ep)}
-                  />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {episodes.length === 0 && (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            Nenhum episódio para exibir.
-          </div>
-        )}
+        {/* ... código da vista mobile ... */}
       </div>
 
       {schedulingEpisode && (

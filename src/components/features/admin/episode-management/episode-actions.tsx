@@ -21,31 +21,22 @@ import {
   UpdateEpisodeInput,
 } from "./edit/edit-episode-dialog";
 
+// Dentro de episode-actions.tsx
+
 export interface EpisodeActionsProps {
   episode: Episode;
-  categories: Category[];
-  subcategories: Subcategory[];
-  programs: Program[];
-  allTags: Tag[];
   onDelete: (episode: Episode) => Promise<boolean>;
-  onUpdate: (
-    episodeId: string,
-    updates: Partial<UpdateEpisodeInput>
-  ) => Promise<boolean>;
   onScheduleEpisode: (
     episodeId: string,
     publishAtISO: string
   ) => Promise<boolean>;
+  // REMOVEMOS: onUpdate, categories, subcategories, programs, allTags
 }
 
 export function EpisodeActions({
   episode,
-  categories,
-  subcategories,
-  programs,
-  allTags,
   onDelete,
-  onUpdate,
+  onScheduleEpisode,
 }: EpisodeActionsProps) {
   const [isJsonDialogOpen, setIsJsonDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
