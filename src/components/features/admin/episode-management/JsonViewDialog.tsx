@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/dialog";
+import { DialogOverlay } from "@/src/components/ui/dialog-overlay";
 
 interface JsonViewDialogProps {
   isOpen: boolean;
@@ -22,6 +23,8 @@ export function JsonViewDialog({
 }: JsonViewDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogOverlay />
+
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

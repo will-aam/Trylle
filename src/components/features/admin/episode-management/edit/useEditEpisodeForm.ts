@@ -13,44 +13,31 @@ import {
   EpisodeDocument,
 } from "@/src/lib/types";
 
-// Funções utilitárias (sem mudanças)
 function computeDiff(
   original: Record<string, any>,
   current: Record<string, any>
-) {
-  const changed: Record<string, any> = {};
-  const normalize = (v: any) =>
-    Array.isArray(v) ? JSON.stringify([...v].sort()) : v ?? null;
-  for (const key of Object.keys(current)) {
-    if (normalize(original[key]) !== normalize(current[key])) {
-      changed[key] = current[key];
+): Partial<UpdateEpisodeInput> {
+  const changed: Partial<UpdateEpisodeInput> = {};
+  const normalize = (v: any) => {
+    if (Array.isArray(v)) return JSON.stringify([...v].sort());
+    return v === "" || v === undefined ? null : v;
+  };
+  const allKeys = new Set([...Object.keys(original), ...Object.keys(current)]);
+  allKeys.forEach((key) => {
+    const originalValue = normalize(original[key]);
+    const currentValue = normalize(current[key]);
+    if (originalValue !== currentValue) {
+      (changed as any)[key] = current[key];
     }
-  }
+  });
   return changed;
-}
-
-function normalizeEpisodeTags(raw: any): Tag[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .map((t) => {
-      if (!t) return null;
-      if (typeof t === "string") {
-        return { id: t, name: t, created_at: "" } as Tag;
-      }
-      if ("tag" in t && t.tag && typeof t.tag === "object") {
-        return t.tag;
-      }
-      if (t.id && t.name) return t as Tag;
-      return null;
-    })
-    .filter(Boolean) as Tag[];
 }
 
 interface UseEditEpisodeFormProps {
   episode: Episode;
-  categories: Category[]; // Mantido como prop de entrada
+  categories: Category[];
   subcategories: Subcategory[];
-  programs: Program[]; // Mantido como prop de entrada
+  programs: Program[];
   allTags: Tag[];
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
@@ -62,9 +49,9 @@ interface UseEditEpisodeFormProps {
 
 export function useEditEpisodeForm({
   episode,
-  categories, // Ainda necessário para o useMemo
+  categories,
   subcategories,
-  programs, // Ainda necessário para o useMemo
+  programs,
   allTags,
   isOpen,
   onOpenChange,
@@ -76,94 +63,21 @@ export function useEditEpisodeForm({
   const [unsavedAlertOpen, setUnsavedAlertOpen] = useState(false);
   const [allTagsState, setAllTagsState] = useState<Tag[]>(allTags);
 
-  useEffect(() => {
-    setAllTagsState(allTags);
-  }, [allTags]);
+  const originalRef = useRef<UpdateEpisodeInput | null>(null);
 
   const form = useForm<UpdateEpisodeInput>({
     resolver: zodResolver(updateEpisodeSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      program_id: null,
-      category_id: "",
-      subcategory_id: null,
-      episode_number: undefined,
-      tags: [],
-    },
+    defaultValues: { tags: [] },
   });
 
-  const {
-    register,
-    control,
-    handleSubmit,
-    reset,
-    watch,
-    formState: { errors, isDirty, isSubmitting },
-    getValues,
-  } = form;
-
+  const { control, watch, setValue, getValues, reset, handleSubmit } = form;
   const categoryId = watch("category_id");
+
   const filteredSubcategories = useMemo(
-    () => subcategories.filter((s) => s.category_id === categoryId),
+    () =>
+      subcategories.filter((s) => String(s.category_id) === String(categoryId)),
     [categoryId, subcategories]
   );
-
-  const originalRef = useRef<UpdateEpisodeInput | null>(null);
-
-  // Carregar dados quando abre
-  useEffect(() => {
-    if (isOpen && episode) {
-      const normalizedTags = normalizeEpisodeTags(episode.tags);
-      const original: UpdateEpisodeInput = {
-        title: episode.title,
-        description: episode.description ?? "",
-        program_id: episode.program_id ? String(episode.program_id) : null,
-        episode_number: episode.episode_number ?? undefined,
-        category_id: episode.category_id ? String(episode.category_id) : "",
-        subcategory_id: episode.subcategory_id
-          ? String(episode.subcategory_id)
-          : null,
-        tags: normalizedTags.map((t) => t.id),
-      };
-      originalRef.current = original;
-      reset(original, { keepDirty: false });
-      setCurrentDocument(episode.episode_documents?.[0] ?? null);
-
-      setAllTagsState((prev) => {
-        const map = new Map(prev.map((t) => [t.id, t]));
-        normalizedTags.forEach((t) => {
-          if (!map.has(t.id)) map.set(t.id, t);
-        });
-        return Array.from(map.values());
-      });
-    }
-  }, [episode, isOpen, reset]);
-
-  // Reset subcategoria quando categoria muda
-  useEffect(() => {
-    if (!isOpen) return;
-    const currentSub = watch("subcategory_id");
-    if (currentSub && !filteredSubcategories.find((s) => s.id === currentSub)) {
-      form.setValue("subcategory_id", null, { shouldDirty: true });
-    }
-  }, [categoryId, filteredSubcategories, watch, form, isOpen]);
-
-  // Atalhos de teclado
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        void handleSubmit(onSubmit)();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        attemptClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isOpen, handleSubmit]);
 
   const hasRealChanges = useCallback((): boolean => {
     if (!originalRef.current) return false;
@@ -171,39 +85,64 @@ export function useEditEpisodeForm({
     return Object.keys(diff).length > 0;
   }, [getValues]);
 
-  const attemptClose = () => {
-    if (hasRealChanges()) setUnsavedAlertOpen(true);
-    else onOpenChange(false);
-  };
+  const attemptClose = useCallback(() => {
+    hasRealChanges() ? setUnsavedAlertOpen(true) : onOpenChange(false);
+  }, [hasRealChanges, onOpenChange]);
 
-  // Submit
-  const onSubmit = async (data: UpdateEpisodeInput) => {
-    if (!originalRef.current) return;
-    const diff = computeDiff(originalRef.current, data);
-    if (Object.keys(diff).length === 0) {
-      toast({ description: "Nenhuma alteração para salvar." });
-      return;
-    }
-    const ok = await onUpdate(episode.id, diff);
-    if (ok) {
-      toast({ description: "Episódio atualizado com sucesso." });
-      onOpenChange(false);
-    }
-  };
+  const onSubmit = useCallback(
+    async (data: UpdateEpisodeInput) => {
+      if (!originalRef.current) return;
+      const diff = computeDiff(originalRef.current, data);
+      if (Object.keys(diff).length === 0) {
+        toast({ description: "Nenhuma alteração para salvar." });
+        return;
+      }
+      const ok = await onUpdate(episode.id, diff);
+      if (ok) {
+        toast({ description: "Episódio atualizado com sucesso." });
+        onOpenChange(false);
+      }
+    },
+    [episode.id, onUpdate, onOpenChange, toast]
+  );
 
-  // Nova tag criada (callback)
+  useEffect(() => {
+    if (isOpen && episode) {
+      const episodeTagIds = (episode.tags || []).map((tag) => tag.id);
+      const initialValues: UpdateEpisodeInput = {
+        title: episode.title ?? "",
+        description: episode.description ?? "",
+        program_id: episode.program_id ? String(episode.program_id) : null,
+        episode_number: episode.episode_number ?? undefined,
+        category_id: episode.category_id ? String(episode.category_id) : "",
+        subcategory_id: episode.subcategory_id
+          ? String(episode.subcategory_id)
+          : null,
+        tags: episodeTagIds,
+      };
+      reset(initialValues);
+      originalRef.current = initialValues;
+      setCurrentDocument(episode.episode_documents?.[0] ?? null);
+      setAllTagsState(allTags);
+    }
+  }, [episode, allTags, isOpen, reset]);
+
+  useEffect(() => {
+    const subscription = watch((value, { name }) => {
+      if (name === "category_id") {
+        setValue("subcategory_id", null, { shouldDirty: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, setValue]);
+
   const handleCreateTagInSelector = (newTag: Tag) => {
-    setAllTagsState((prev) =>
-      prev.some((t) => t.id === newTag.id) ? prev : [...prev, newTag]
-    );
+    setAllTagsState((prev) => [...prev, newTag]);
   };
 
-  // Retornar tudo que o componente precisa
   return {
     form,
-    // categories, // <-- REMOVIDO
-    // programs,   // <-- REMOVIDO
-    filteredSubcategories,
+    control,
     allTagsState,
     currentDocument,
     setCurrentDocument,
@@ -213,5 +152,6 @@ export function useEditEpisodeForm({
     onSubmit,
     handleCreateTagInSelector,
     hasRealChanges,
+    filteredSubcategories,
   };
 }

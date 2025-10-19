@@ -45,9 +45,9 @@ export default async function AdminEpisodesPage() {
         <h1 className="text-3xl font-bold tracking-tight">
           Gerenciador de Episódios
         </h1>
-        <p className="text-muted-foreground mt-1">
+        {/* <p className="text-muted-foreground mt-1">
           Adicione, edite e organize todo o seu conteúdo.
-        </p>
+        </p> */}
       </header>
 
       {/* 3. Passa todos os dados carregados como props para o componente cliente */}

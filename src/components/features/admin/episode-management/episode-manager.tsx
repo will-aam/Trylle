@@ -123,6 +123,8 @@ export function EpisodeManager({
         categoryIds: categoryFilter,
         sortBy: sortColumn,
         order: sortDirection,
+        includeDocuments: true,
+        includeTags: true,
       });
       if (result.success) {
         setEpisodes(result.data);

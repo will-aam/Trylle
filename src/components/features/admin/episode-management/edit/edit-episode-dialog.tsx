@@ -33,13 +33,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/src/components/ui/alert-dialog";
+// IMPORTAÇÃO ADICIONADA
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/src/components/ui/form";
 import { Episode, Category, Subcategory, Program, Tag } from "@/src/lib/types";
 import { useEditEpisodeForm } from "./useEditEpisodeForm";
 import { AudioField } from "./fields/audio-field";
 import { DocumentField } from "./fields/document-field";
 import { TagSelector } from "@/src/components/features/admin/TagSelector";
 
-/* Lazy load do editor com skeleton */
 const RichTextEditor = dynamic(
   () => import("@/src/components/ui/RichTextEditor"),
   {
@@ -63,9 +70,9 @@ interface EditEpisodeDialogProps {
 
 export function EditEpisodeDialog({
   episode,
-  categories, // Prop original
+  categories,
   subcategories,
-  programs, // Prop original
+  programs,
   allTags,
   isOpen,
   onOpenChange,
@@ -73,8 +80,6 @@ export function EditEpisodeDialog({
 }: EditEpisodeDialogProps) {
   const {
     form,
-    // categories: categoriesFromHook, // <-- REMOVIDO
-    // programs: programsFromHook,   // <-- REMOVIDO
     filteredSubcategories,
     allTagsState,
     currentDocument,
@@ -97,9 +102,9 @@ export function EditEpisodeDialog({
   });
 
   const {
-    register,
-    control,
+    control, // O control agora vem diretamente do 'form'
     handleSubmit,
+    register,
     formState: { errors, isSubmitting },
   } = form;
 
@@ -118,235 +123,221 @@ export function EditEpisodeDialog({
               </DialogTitle>
             </DialogHeader>
 
-            <form
-              onSubmit={handleSubmit(onSubmit)}
-              className="flex-1 flex flex-col overflow-hidden"
-            >
-              <ScrollArea className="flex-1 pr-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
-                  {/* Coluna principal */}
-                  <div className="md:col-span-2 space-y-6">
-                    {/* Título */}
-                    <div className="space-y-2">
-                      <Label htmlFor="title">Título</Label>
-                      <Input
-                        id="title"
-                        {...register("title")}
-                        placeholder="Digite o título..."
-                      />
-                      {errors.title && (
-                        <p className="text-xs text-red-500">
-                          {errors.title.message}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Descrição */}
-                    <div className="space-y-2">
-                      <Label>Descrição</Label>
-                      <Controller
-                        name="description"
+            {/* O WRAPPER <Form> FOI ADICIONADO AQUI */}
+            <Form {...form}>
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex-1 flex flex-col overflow-hidden"
+              >
+                <ScrollArea className="flex-1 pr-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
+                    <div className="md:col-span-2 space-y-6">
+                      {/* Título */}
+                      <FormField
                         control={control}
+                        name="title"
                         render={({ field }) => (
-                          <RichTextEditor
-                            content={field.value ?? ""}
-                            onChange={field.onChange}
-                          />
+                          <FormItem>
+                            <FormLabel>Título</FormLabel>
+                            <Input
+                              placeholder="Digite o título..."
+                              {...field}
+                            />
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Descrição */}
+                      <FormField
+                        control={control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Descrição</FormLabel>
+                            <RichTextEditor
+                              content={field.value ?? ""}
+                              onChange={field.onChange}
+                            />
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Tags */}
+                      <FormField
+                        control={control}
+                        name="tags"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Tags</FormLabel>
+                            <TagSelector
+                              allTags={allTagsState}
+                              value={field.value || []}
+                              onChange={field.onChange}
+                              onCreateTag={handleCreateTagInSelector}
+                              placeholder="Selecione as tags..."
+                              allowCreate
+                            />
+                            <FormMessage />
+                          </FormItem>
                         )}
                       />
                     </div>
 
-                    {/* Tags (IDs) */}
-                    <Controller
-                      name="tags"
-                      control={control}
-                      render={({ field }) => (
-                        <div className="space-y-2">
-                          <Label>Tags</Label>
-                          <TagSelector
-                            allTags={allTagsState}
-                            value={field.value || []}
-                            onChange={field.onChange}
-                            onCreateTag={handleCreateTagInSelector}
-                          />
-                          {errors.tags && (
-                            <p className="text-xs text-red-500">
-                              {(errors.tags as any).message}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    />
-                  </div>
-
-                  {/* Coluna lateral */}
-                  <div className="space-y-6">
-                    {/* Programa */}
-                    <div className="space-y-2">
-                      <Label>Programa</Label>
-                      <Controller
-                        name="program_id"
+                    <div className="space-y-6">
+                      {/* Programa */}
+                      <FormField
                         control={control}
+                        name="program_id"
                         render={({ field }) => (
-                          <Select
-                            onValueChange={(v) =>
-                              field.onChange(v === "" ? null : v)
-                            }
-                            value={field.value ?? ""}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Nenhum programa" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {programs.map(
-                                (
-                                  p // <-- USANDO A PROP DIRETAMENTE
-                                ) => (
+                          <FormItem>
+                            <FormLabel>Programa</FormLabel>
+                            <Select
+                              onValueChange={(v) =>
+                                field.onChange(v === "" ? null : v)
+                              }
+                              value={field.value ?? ""}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Nenhum programa" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {programs.map((p) => (
                                   <SelectItem key={p.id} value={p.id}>
                                     {p.title}
                                   </SelectItem>
-                                )
-                              )}
-                            </SelectContent>
-                          </Select>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
                         )}
                       />
-                    </div>
 
-                    {/* Número */}
-                    <div className="space-y-2">
-                      <Label htmlFor="episode_number">Nº do Episódio</Label>
-                      <Input
-                        id="episode_number"
-                        type="number"
-                        min={1}
-                        placeholder="Ex: 12"
-                        {...register("episode_number")}
-                      />
-                      {errors.episode_number && (
-                        <p className="text-xs text-red-500">
-                          {errors.episode_number.message as string}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Categoria */}
-                    <div className="space-y-2">
-                      <Label>Categoria</Label>
-                      <Controller
-                        name="category_id"
+                      {/* Número do Episódio */}
+                      <FormField
                         control={control}
+                        name="episode_number"
                         render={({ field }) => (
-                          <Select
-                            value={field.value}
-                            onValueChange={(v) => field.onChange(v)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories.map(
-                                (
-                                  c // <-- USANDO A PROP DIRETAMENTE
-                                ) => (
+                          <FormItem>
+                            <FormLabel>Nº do Episódio</FormLabel>
+                            <Input
+                              type="number"
+                              min={1}
+                              placeholder="Ex: 12"
+                              {...field}
+                              onChange={(event) =>
+                                field.onChange(+event.target.value)
+                              }
+                            />
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Categoria */}
+                      <FormField
+                        control={control}
+                        name="category_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Categoria</FormLabel>
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map((c) => (
                                   <SelectItem key={c.id} value={c.id}>
                                     {c.name}
                                   </SelectItem>
-                                )
-                              )}
-                            </SelectContent>
-                          </Select>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
                         )}
                       />
-                      {errors.category_id && (
-                        <p className="text-xs text-red-500">
-                          {errors.category_id.message}
-                        </p>
-                      )}
-                    </div>
 
-                    {/* Subcategoria */}
-                    <div className="space-y-2">
-                      <Label>Subcategoria</Label>
-                      <Controller
-                        name="subcategory_id"
+                      {/* Subcategoria */}
+                      <FormField
                         control={control}
+                        name="subcategory_id"
                         render={({ field }) => (
-                          <Select
-                            value={field.value ?? ""}
-                            onValueChange={(v) =>
-                              field.onChange(v === "" ? null : v)
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {filteredSubcategories.length === 0 && (
-                                <div className="px-3 py-2 text-xs text-muted-foreground">
-                                  Nenhuma subcategoria
-                                </div>
-                              )}
-                              {filteredSubcategories.map((s) => (
-                                <SelectItem key={s.id} value={s.id}>
-                                  {s.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormItem>
+                            <FormLabel>Subcategoria</FormLabel>
+                            <Select
+                              value={field.value ?? ""}
+                              onValueChange={(v) =>
+                                field.onChange(v === "" ? null : v)
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {filteredSubcategories.length === 0 && (
+                                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                                    Nenhuma subcategoria
+                                  </div>
+                                )}
+                                {filteredSubcategories.map((s: Subcategory) => (
+                                  <SelectItem key={s.id} value={s.id}>
+                                    {s.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
                         )}
                       />
-                      {errors.subcategory_id && (
-                        <p className="text-xs text-red-500">
-                          {errors.subcategory_id.message}
-                        </p>
-                      )}
+
+                      {/* Campos que não são do formulário */}
+                      <AudioField
+                        episodeId={episode.id}
+                        currentFileName={episode.file_name || null}
+                        currentAudioUrl={episode.audio_url}
+                        onReplaced={() => {}}
+                      />
+                      <DocumentField
+                        episodeId={episode.id}
+                        document={currentDocument}
+                        onUpload={setCurrentDocument}
+                        onDelete={() => setCurrentDocument(null)}
+                        disabled={isSubmitting}
+                      />
                     </div>
-
-                    {/* Áudio (substituição não mexe no form diff) */}
-                    <AudioField
-                      episodeId={episode.id}
-                      currentFileName={episode.file_name || null}
-                      currentAudioUrl={episode.audio_url}
-                      onReplaced={() => {
-                        // Aqui você pode usar o toast do hook se quiser
-                      }}
-                    />
-
-                    {/* Documento */}
-                    <DocumentField
-                      episodeId={episode.id}
-                      document={currentDocument}
-                      onUpload={(doc) => setCurrentDocument(doc)}
-                      onDelete={() => setCurrentDocument(null)}
-                      disabled={isSubmitting}
-                    />
                   </div>
-                </div>
-              </ScrollArea>
+                </ScrollArea>
 
-              <DialogFooter className="mt-auto pt-4 border-t">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={attemptClose}
-                  disabled={isSubmitting}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || !hasRealChanges()}
-                >
-                  {isSubmitting ? "Salvando..." : "Salvar Alterações"}
-                </Button>
-              </DialogFooter>
-            </form>
+                <DialogFooter className="mt-auto pt-4 border-t">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={attemptClose}
+                    disabled={isSubmitting}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || !hasRealChanges()}
+                  >
+                    {isSubmitting ? "Salvando..." : "Salvar Alterações"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </DialogContent>
         </DialogPortal>
       </Dialog>
 
-      {/* Dialog de alterações não salvas */}
+      {/* AlertDialog não precisa de mudanças */}
       <AlertDialog open={unsavedAlertOpen} onOpenChange={setUnsavedAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
