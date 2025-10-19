@@ -160,48 +160,44 @@ export function UploadForm() {
     setIsScheduleDialogOpen(false);
   };
 
-  const handleCreateTag = (incoming: Tag) => {
-    (async () => {
-      const rawName = incoming?.name || "";
-      const name = rawName.trim().toLowerCase();
-      if (!name) return;
+  const handleCreateTag = async (tagName: string): Promise<Tag | null> => {
+    const name = tagName.trim().toLowerCase();
+    if (!name) return null;
 
-      const existingById = tags.find((t) => t.id === incoming.id);
-      if (existingById) {
-        setSelectedTagIds((prev) =>
-          prev.includes(existingById.id) ? prev : [...prev, existingById.id]
-        );
-        return;
+    // Verifica se a tag já existe pelo nome para evitar duplicatas
+    const existingByName = tags.find((t) => t.name.toLowerCase() === name);
+    if (existingByName) {
+      // Se já existe, apenas seleciona e não cria uma nova
+      if (!selectedTagIds.includes(existingByName.id)) {
+        setSelectedTagIds((prev) => [...prev, existingByName.id]);
       }
+      return null; // Retorna null porque não houve criação
+    }
 
-      const existingByName = tags.find(
-        (t) => t.name.toLowerCase() === name.toLowerCase()
-      );
-      if (existingByName) {
-        setSelectedTagIds((prev) =>
-          prev.includes(existingByName.id) ? prev : [...prev, existingByName.id]
-        );
-        return;
-      }
-
+    try {
       const res = await createTagAction({ name, groupId: null });
       if (!res.success) {
-        toast.error("Erro ao criar tag", {
-          description: res.error,
-        });
-        return;
+        toast.error("Erro ao criar tag", { description: res.error });
+        return null;
       }
 
-      createAndSelectTag({
+      const newTag: Tag = {
         id: res.tag.id,
         name: res.tag.name,
         created_at: res.tag.created_at,
-      });
-    })().catch((e) => {
+      };
+
+      // Adiciona a nova tag ao estado local e já a seleciona
+      createAndSelectTag(newTag);
+
+      // Retorna a tag para o componente TagSelector
+      return newTag;
+    } catch (e: any) {
       toast.error("Erro inesperado", {
         description: e?.message || "Falha ao criar tag.",
       });
-    });
+      return null;
+    }
   };
 
   return (

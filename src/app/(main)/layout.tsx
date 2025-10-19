@@ -3,7 +3,6 @@
 import { useEffect, useState, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
-import { Navbar } from "@/src/components/layout/navbar";
 import { BottomNavbar } from "@/src/components/layout/bottom-navbar";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
@@ -46,7 +45,6 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
-      <Navbar />
       <main className="flex flex-1 flex-col gap-4 md:gap-8 overflow-hidden">
         {children}
       </main>
