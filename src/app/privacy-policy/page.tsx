@@ -41,8 +41,8 @@ export default function PrivacyPolicyPage() {
                 <li>Endereço de e-mail</li>
                 <li>Senha (armazenada de forma criptografada)</li>
                 <li>
-                  Informações do perfil do Google (quando utilizar "Entrar com
-                  Google")
+                  Informações do perfil do Google (quando utilizar &quot;Entrar
+                  com Google&quot;)
                 </li>
               </ul>
 

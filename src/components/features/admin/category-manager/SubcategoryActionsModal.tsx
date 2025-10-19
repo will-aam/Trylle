@@ -132,7 +132,8 @@ export function SubcategoryActionsModal({
                     <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
                     <AlertDialogDescription>
                       Esta ação não pode ser desfeita. Isso excluirá
-                      permanentemente a subcategoria "{subcategory.name}".
+                      permanentemente a subcategoria &quot;{subcategory.name}
+                      &quot;.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

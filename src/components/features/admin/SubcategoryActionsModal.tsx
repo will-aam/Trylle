@@ -64,7 +64,8 @@ export function SubcategoryActionsModal({
         <AlertDialogHeader>
           <AlertDialogTitle>Ações para a Subcategoria</AlertDialogTitle>
           <AlertDialogDescription>
-            Edite o nome ou exclua a subcategoria "{subcategory?.name}"
+            Edite o nome ou exclua a subcategoria &quot;{subcategory?.name}
+            &quot;?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="flex flex-col gap-4 py-4">

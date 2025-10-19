@@ -121,7 +121,8 @@ export function CategoryItem({
                 <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
                 <AlertDialogDescription>
                   Esta ação não pode ser desfeita. Isso excluirá permanentemente
-                  a categoria "{category.name}" e TODAS as suas subcategorias.
+                  a categoria &quot;{category.name}&quot; e TODAS as suas
+                  subcategorias.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

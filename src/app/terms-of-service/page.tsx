@@ -223,7 +223,8 @@ export default function TermsOfServicePage() {
                 7. Limitação de Responsabilidade
               </h2>
               <p className="text-muted-foreground leading-relaxed">
-                A Trylle fornece o serviço "como está" e não garante que:
+                A Trylle fornece o serviço &quot;como está&quot; e não garante
+                que:
               </p>
               <ul className="list-disc pl-6 space-y-2 text-muted-foreground mt-2">
                 <li>O serviço será ininterrupto ou livre de erros</li>

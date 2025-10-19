@@ -4,13 +4,9 @@
     "no-restricted-imports": [
       "error",
       {
-        "paths": [
-          {
-            "name": "sonner",
-            "message": "Import toast from '@/src/lib/safe-toast' instead of importing directly from 'sonner'."
-          }
-        ],
-        "patterns": []
+        "name": "sonner",
+        "message": "Import toast from '@/src/lib/safe-toast' instead of importing directly from 'sonner'.",
+        "allow": ["src/lib/safe-toast.ts"] // <-- A MÁGICA ESTÁ AQUI
       }
     ]
   }
