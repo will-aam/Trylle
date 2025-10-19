@@ -22,7 +22,7 @@ import {
 } from "@/src/components/ui/table";
 import { StatusBadgeSelector } from "@/src/components/ui/status-badge-selector";
 import { cn } from "@/src/lib/utils";
-import type { UpdateEpisodeInput } from "./edit/edit-episode-dialog";
+import type { UpdateEpisodeInput } from "./edit/edit-episode.schema";
 import { ScheduleEpisodeDialog } from "./schedule-episode-dialog";
 import { Loader2 } from "lucide-react";
 import { FileCode, Play, SquarePen } from "lucide-react";

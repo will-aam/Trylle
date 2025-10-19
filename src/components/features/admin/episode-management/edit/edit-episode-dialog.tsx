@@ -1,11 +1,8 @@
+// src/components/features/admin/episode-management/edit/edit-episode-dialog.tsx
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { useForm, Controller } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-
+import { Controller } from "react-hook-form";
 import {
   Dialog,
   DialogContent,
@@ -36,17 +33,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/src/components/ui/alert-dialog";
-import { useToast } from "@/src/hooks/use-toast";
-
-import {
-  Episode,
-  Category,
-  Subcategory,
-  Program,
-  Tag,
-  EpisodeDocument,
-} from "@/src/lib/types";
-
+import { Episode, Category, Subcategory, Program, Tag } from "@/src/lib/types";
+import { useEditEpisodeForm } from "./useEditEpisodeForm";
 import { AudioField } from "./fields/audio-field";
 import { DocumentField } from "./fields/document-field";
 import { TagSelector } from "@/src/components/features/admin/TagSelector";
@@ -62,30 +50,6 @@ const RichTextEditor = dynamic(
   }
 );
 
-/* ---------------- Schema & Types ---------------- */
-const updateEpisodeSchema = z
-  .object({
-    title: z.string().min(1, "O título é obrigatório."),
-    description: z.string().optional().nullable(),
-    program_id: z.string().optional().nullable(),
-    episode_number: z
-      .preprocess(
-        (val) => (val === "" || val === null ? undefined : Number(val)),
-        z
-          .number()
-          .int("Deve ser um número inteiro.")
-          .positive("Deve ser um número positivo.")
-          .optional()
-      )
-      .optional(),
-    category_id: z.string().min(1, "A categoria é obrigatória."),
-    subcategory_id: z.string().optional().nullable(),
-    tags: z.array(z.string()).optional().default([]),
-  })
-  .strict();
-
-export type UpdateEpisodeInput = z.infer<typeof updateEpisodeSchema>;
-
 interface EditEpisodeDialogProps {
   episode: Episode;
   categories: Category[];
@@ -94,46 +58,7 @@ interface EditEpisodeDialogProps {
   allTags: Tag[];
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onUpdate: (
-    episodeId: string,
-    updates: Partial<UpdateEpisodeInput>
-  ) => Promise<boolean>;
-}
-
-/* ---------------- Util: diff ---------------- */
-function computeDiff(
-  original: Record<string, any>,
-  current: Record<string, any>
-) {
-  const changed: Record<string, any> = {};
-  const normalize = (v: any) =>
-    Array.isArray(v) ? JSON.stringify([...v].sort()) : v ?? null;
-  for (const key of Object.keys(current)) {
-    if (normalize(original[key]) !== normalize(current[key])) {
-      changed[key] = current[key];
-    }
-  }
-  return changed;
-}
-
-/**
- * Normaliza tags para formato consistente
- */
-function normalizeEpisodeTags(raw: any): Tag[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .map((t) => {
-      if (!t) return null;
-      if (typeof t === "string") {
-        return { id: t, name: t, created_at: "" } as Tag;
-      }
-      if ("tag" in t && t.tag && typeof t.tag === "object") {
-        return t.tag;
-      }
-      if (t.id && t.name) return t as Tag;
-      return null;
-    })
-    .filter(Boolean) as Tag[];
+  onUpdate: (episodeId: string, updates: Partial<any>) => Promise<boolean>;
 }
 
 export function EditEpisodeDialog({
@@ -146,135 +71,37 @@ export function EditEpisodeDialog({
   onOpenChange,
   onUpdate,
 }: EditEpisodeDialogProps) {
-  const { toast } = useToast();
-
-  const [currentDocument, setCurrentDocument] =
-    useState<EpisodeDocument | null>(null);
-  const [unsavedAlertOpen, setUnsavedAlertOpen] = useState(false);
-  const [allTagsState, setAllTagsState] = useState<Tag[]>(allTags);
-
-  useEffect(() => {
-    setAllTagsState(allTags);
-  }, [allTags]);
-
-  const form = useForm<UpdateEpisodeInput>({
-    resolver: zodResolver(updateEpisodeSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      program_id: null,
-      category_id: "",
-      subcategory_id: null,
-      episode_number: undefined,
-      tags: [],
-    },
+  const {
+    form,
+    categories: categoriesFromHook,
+    programs: programsFromHook,
+    filteredSubcategories,
+    allTagsState,
+    currentDocument,
+    setCurrentDocument,
+    unsavedAlertOpen,
+    setUnsavedAlertOpen,
+    attemptClose,
+    onSubmit,
+    handleCreateTagInSelector,
+    hasRealChanges,
+  } = useEditEpisodeForm({
+    episode,
+    categories,
+    subcategories,
+    programs,
+    allTags,
+    isOpen,
+    onOpenChange,
+    onUpdate,
   });
 
   const {
     register,
     control,
     handleSubmit,
-    reset,
-    watch,
-    formState: { errors, isDirty, isSubmitting },
-    getValues,
+    formState: { errors, isSubmitting },
   } = form;
-
-  const categoryId = watch("category_id");
-  const filteredSubcategories = useMemo(
-    () => subcategories.filter((s) => s.category_id === categoryId),
-    [categoryId, subcategories]
-  );
-
-  const originalRef = useRef<UpdateEpisodeInput | null>(null);
-
-  /* ------------- Carregar dados quando abre ------------- */
-  useEffect(() => {
-    if (isOpen && episode) {
-      const normalizedTags = normalizeEpisodeTags(episode.tags);
-      const original: UpdateEpisodeInput = {
-        title: episode.title,
-        description: episode.description ?? "",
-        program_id: episode.program_id ? String(episode.program_id) : null,
-        episode_number: episode.episode_number ?? undefined,
-        category_id: episode.category_id ? String(episode.category_id) : "",
-        subcategory_id: episode.subcategory_id
-          ? String(episode.subcategory_id)
-          : null,
-        tags: normalizedTags.map((t) => t.id),
-      };
-      originalRef.current = original;
-      reset(original, { keepDirty: false });
-      setCurrentDocument(episode.episode_documents?.[0] ?? null);
-
-      // Garantir tags recém associadas
-      setAllTagsState((prev) => {
-        const map = new Map(prev.map((t) => [t.id, t]));
-        normalizedTags.forEach((t) => {
-          if (!map.has(t.id)) map.set(t.id, t);
-        });
-        return Array.from(map.values());
-      });
-    }
-  }, [episode, isOpen, reset]);
-
-  /* ------------- Reset subcategoria quando categoria muda ------------- */
-  useEffect(() => {
-    if (!isOpen) return;
-    const currentSub = watch("subcategory_id");
-    if (currentSub && !filteredSubcategories.find((s) => s.id === currentSub)) {
-      form.setValue("subcategory_id", null, { shouldDirty: true });
-    }
-  }, [categoryId, filteredSubcategories, watch, form, isOpen]);
-
-  /* ------------- Atalhos de teclado ------------- */
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        void handleSubmit(onSubmit)();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        attemptClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isOpen, handleSubmit]);
-
-  const hasRealChanges = useCallback((): boolean => {
-    if (!originalRef.current) return false;
-    const diff = computeDiff(originalRef.current, getValues());
-    return Object.keys(diff).length > 0;
-  }, [getValues]);
-
-  const attemptClose = () => {
-    if (hasRealChanges()) setUnsavedAlertOpen(true);
-    else onOpenChange(false);
-  };
-
-  /* ------------- Submit ------------- */
-  const onSubmit = async (data: UpdateEpisodeInput) => {
-    if (!originalRef.current) return;
-    const diff = computeDiff(originalRef.current, data);
-    if (Object.keys(diff).length === 0) {
-      toast({ description: "Nenhuma alteração para salvar." });
-      return;
-    }
-    const ok = await onUpdate(episode.id, diff);
-    if (ok) {
-      toast({ description: "Episódio atualizado com sucesso." });
-      onOpenChange(false);
-    }
-  };
-
-  /* ------------- Nova tag criada (callback) ------------- */
-  const handleCreateTagInSelector = (newTag: Tag) => {
-    setAllTagsState((prev) =>
-      prev.some((t) => t.id === newTag.id) ? prev : [...prev, newTag]
-    );
-  };
 
   return (
     <>
@@ -371,7 +198,7 @@ export function EditEpisodeDialog({
                               <SelectValue placeholder="Nenhum programa" />
                             </SelectTrigger>
                             <SelectContent>
-                              {programs.map((p) => (
+                              {programsFromHook.map((p) => (
                                 <SelectItem key={p.id} value={p.id}>
                                   {p.title}
                                 </SelectItem>
@@ -414,7 +241,7 @@ export function EditEpisodeDialog({
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                             <SelectContent>
-                              {categories.map((c) => (
+                              {categoriesFromHook.map((c) => (
                                 <SelectItem key={c.id} value={c.id}>
                                   {c.name}
                                 </SelectItem>
@@ -474,7 +301,7 @@ export function EditEpisodeDialog({
                       currentFileName={episode.file_name || null}
                       currentAudioUrl={episode.audio_url}
                       onReplaced={() => {
-                        toast({ description: "Áudio substituído." });
+                        // Aqui você pode usar o toast do hook se quiser
                       }}
                     />
 
