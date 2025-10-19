@@ -2,7 +2,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Controller } from "react-hook-form";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +12,6 @@ import {
 } from "@/src/components/ui/dialog";
 import { DialogOverlay } from "@/src/components/ui/dialog-overlay";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -33,7 +31,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/src/components/ui/alert-dialog";
-// IMPORTAÇÃO ADICIONADA
 import {
   Form,
   FormField,
@@ -45,7 +42,7 @@ import { Episode, Category, Subcategory, Program, Tag } from "@/src/lib/types";
 import { useEditEpisodeForm } from "./useEditEpisodeForm";
 import { AudioField } from "./fields/audio-field";
 import { DocumentField } from "./fields/document-field";
-import { TagSelector } from "@/src/components/features/admin/TagSelector";
+import { TagsField } from "./fields/tags-field"; // Importação corrigida para usar TagsField
 
 const RichTextEditor = dynamic(
   () => import("@/src/components/ui/RichTextEditor"),
@@ -102,11 +99,13 @@ export function EditEpisodeDialog({
   });
 
   const {
-    control, // O control agora vem diretamente do 'form'
+    control,
     handleSubmit,
-    register,
     formState: { errors, isSubmitting },
   } = form;
+
+  // Variável para verificar se o episódio tem tags
+  const hasNoTags = !episode.tags || episode.tags.length === 0;
 
   return (
     <>
@@ -123,7 +122,6 @@ export function EditEpisodeDialog({
               </DialogTitle>
             </DialogHeader>
 
-            {/* O WRAPPER <Form> FOI ADICIONADO AQUI */}
             <Form {...form}>
               <form
                 onSubmit={handleSubmit(onSubmit)}
@@ -164,25 +162,26 @@ export function EditEpisodeDialog({
                         )}
                       />
 
-                      {/* Tags */}
+                      {/* Tags - Corrigido para usar TagsField */}
                       <FormField
                         control={control}
                         name="tags"
                         render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Tags</FormLabel>
-                            <TagSelector
-                              allTags={allTagsState}
-                              value={field.value || []}
-                              onChange={field.onChange}
-                              onCreateTag={handleCreateTagInSelector}
-                              placeholder="Selecione as tags..."
-                              allowCreate
-                            />
-                            <FormMessage />
-                          </FormItem>
+                          <TagsField
+                            allTags={allTagsState}
+                            field={field}
+                            onCreateTag={handleCreateTagInSelector}
+                            placeholder="Selecione as tags..."
+                          />
                         )}
                       />
+
+                      {/* ADICIONADO AQUI: Mensagem de verificação */}
+                      {hasNoTags && (
+                        <p className="text-sm text-red-500">
+                          Este episódio não contém tags.
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-6">

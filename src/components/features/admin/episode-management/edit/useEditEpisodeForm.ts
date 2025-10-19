@@ -12,6 +12,7 @@ import {
   Tag,
   EpisodeDocument,
 } from "@/src/lib/types";
+import { createTagAction } from "@/src/app/admin/tags/actions";
 
 function computeDiff(
   original: Record<string, any>,
@@ -136,9 +137,36 @@ export function useEditEpisodeForm({
     return () => subscription.unsubscribe();
   }, [watch, setValue]);
 
-  const handleCreateTagInSelector = (newTag: Tag) => {
-    setAllTagsState((prev) => [...prev, newTag]);
-  };
+  // VERSÃO FINAL - CORRESPONDENDO AO SEU ACTIONS.TS
+  const handleCreateTagInSelector = useCallback(
+    async (tagName: string): Promise<Tag | null> => {
+      const result = await createTagAction({ name: tagName });
+
+      // 1. Verificação de Sucesso:
+      // A sua action retorna a propriedade `success: true`. Usamos isso para verificar.
+      if (result.success) {
+        // Se deu certo, a tag está em `result.tag`.
+        const newTag = result.tag;
+        setAllTagsState((prev) => [...prev, newTag]);
+        toast({ description: `Tag "${newTag.name}" criada.` });
+        return newTag;
+      }
+
+      // 2. Tratamento de Erro:
+      // Se `result.success` for falso, tratamos o erro.
+      else {
+        toast({
+          variant: "destructive",
+          title: "Erro ao criar tag",
+          // A mensagem de erro está em `result.error`.
+          description: result.error || "Verifique os dados.",
+        });
+      }
+
+      return null;
+    },
+    [toast]
+  );
 
   return {
     form,
