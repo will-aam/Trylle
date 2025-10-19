@@ -11,7 +11,6 @@ import {
   Program,
   Tag,
 } from "@/src/lib/types";
-import { EpisodeActions, EpisodeActionsProps } from "./episode-actions";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import {
   Table,
@@ -26,6 +25,16 @@ import { cn } from "@/src/lib/utils";
 import type { UpdateEpisodeInput } from "./edit/edit-episode-dialog";
 import { ScheduleEpisodeDialog } from "./schedule-episode-dialog";
 import { Loader2 } from "lucide-react";
+import { FileCode, Play, SquarePen } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/src/components/ui/tooltip";
+import { EditEpisodeDialog } from "./edit/edit-episode-dialog";
+import { JsonViewDialog } from "./JsonViewDialog";
+import { usePlayer } from "@/src/hooks/use-player";
 
 export interface EpisodeTableProps {
   episodes: Episode[];
@@ -73,6 +82,11 @@ export function EpisodeTable({
   const [schedulingEpisode, setSchedulingEpisode] = useState<Episode | null>(
     null
   );
+  const [editingEpisode, setEditingEpisode] = useState<Episode | null>(null);
+  const [viewingJsonEpisode, setViewingJsonEpisode] = useState<Episode | null>(
+    null
+  );
+  const player = usePlayer();
 
   const formatDate = (isoString: string | null) => {
     if (!isoString) return "—";
@@ -85,18 +99,6 @@ export function EpisodeTable({
 
   const allSelected =
     episodes.length > 0 && selectedEpisodes.length === episodes.length;
-
-  const getActionsProps = (
-    episode: Episode
-  ): Omit<EpisodeActionsProps, "episode"> => ({
-    categories,
-    subcategories,
-    programs,
-    allTags,
-    onDelete,
-    onUpdate: onUpdateEpisode,
-    onScheduleEpisode,
-  });
 
   return (
     <div className="space-y-2">
@@ -187,15 +189,62 @@ export function EpisodeTable({
                     {formatDate(ep.published_at)}
                   </TableCell>
                   <TableCell className="py-2 w-32">
-                    <div className="flex justify-end">
-                      <div
-                        className={cn(
-                          updating && "pointer-events-none opacity-50"
-                        )}
-                        aria-busy={updating}
-                      >
-                        <EpisodeActions episode={ep} {...getActionsProps(ep)} />
-                      </div>
+                    <div className="flex items-center justify-end">
+                      <TooltipProvider>
+                        {/* Botão Ver JSON */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={cn(
+                                "p-1 cursor-pointer rounded-sm hover:bg-muted/60 transition-colors",
+                                updating && "pointer-events-none opacity-50"
+                              )}
+                              onClick={() => setViewingJsonEpisode(ep)}
+                            >
+                              <FileCode className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Ver JSON</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {/* Botão Tocar Episódio */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={cn(
+                                "p-1 cursor-pointer rounded-sm hover:bg-muted/60 transition-colors",
+                                updating && "pointer-events-none opacity-50"
+                              )}
+                              onClick={() => player.setEpisode(ep)}
+                            >
+                              <Play className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Tocar Episódio</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {/* Botão Editar Episódio */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={cn(
+                                "p-1 cursor-pointer rounded-sm hover:bg-muted/60 transition-colors",
+                                updating && "pointer-events-none opacity-50"
+                              )}
+                              onClick={() => setEditingEpisode(ep)}
+                            >
+                              <SquarePen className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Editar Episódio</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -225,6 +274,31 @@ export function EpisodeTable({
           episodeTitle={schedulingEpisode.title}
           defaultDateISO={schedulingEpisode.published_at ?? undefined}
           onConfirm={onScheduleEpisode}
+        />
+      )}
+
+      {viewingJsonEpisode && (
+        <JsonViewDialog
+          data={viewingJsonEpisode} // Trocamos 'episode' por 'data'
+          title={`JSON do Episódio: ${viewingJsonEpisode.title}`} // Adicionamos um título
+          isOpen={!!viewingJsonEpisode}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setViewingJsonEpisode(null);
+          }}
+        />
+      )}
+      {editingEpisode && (
+        <EditEpisodeDialog
+          episode={editingEpisode}
+          onUpdate={onUpdateEpisode}
+          isOpen={!!editingEpisode}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setEditingEpisode(null);
+          }}
+          categories={categories}
+          subcategories={subcategories}
+          programs={programs}
+          allTags={allTags}
         />
       )}
     </div>
