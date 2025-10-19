@@ -63,9 +63,9 @@ interface EditEpisodeDialogProps {
 
 export function EditEpisodeDialog({
   episode,
-  categories,
+  categories, // Prop original
   subcategories,
-  programs,
+  programs, // Prop original
   allTags,
   isOpen,
   onOpenChange,
@@ -73,8 +73,8 @@ export function EditEpisodeDialog({
 }: EditEpisodeDialogProps) {
   const {
     form,
-    categories: categoriesFromHook,
-    programs: programsFromHook,
+    // categories: categoriesFromHook, // <-- REMOVIDO
+    // programs: programsFromHook,   // <-- REMOVIDO
     filteredSubcategories,
     allTagsState,
     currentDocument,
@@ -198,11 +198,15 @@ export function EditEpisodeDialog({
                               <SelectValue placeholder="Nenhum programa" />
                             </SelectTrigger>
                             <SelectContent>
-                              {programsFromHook.map((p) => (
-                                <SelectItem key={p.id} value={p.id}>
-                                  {p.title}
-                                </SelectItem>
-                              ))}
+                              {programs.map(
+                                (
+                                  p // <-- USANDO A PROP DIRETAMENTE
+                                ) => (
+                                  <SelectItem key={p.id} value={p.id}>
+                                    {p.title}
+                                  </SelectItem>
+                                )
+                              )}
                             </SelectContent>
                           </Select>
                         )}
@@ -241,11 +245,15 @@ export function EditEpisodeDialog({
                               <SelectValue placeholder="Selecione" />
                             </SelectTrigger>
                             <SelectContent>
-                              {categoriesFromHook.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  {c.name}
-                                </SelectItem>
-                              ))}
+                              {categories.map(
+                                (
+                                  c // <-- USANDO A PROP DIRETAMENTE
+                                ) => (
+                                  <SelectItem key={c.id} value={c.id}>
+                                    {c.name}
+                                  </SelectItem>
+                                )
+                              )}
                             </SelectContent>
                           </Select>
                         )}

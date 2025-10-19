@@ -1,6 +1,6 @@
 // src/components/features/admin/episode-management/edit/useEditEpisodeForm.ts
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/src/hooks/use-toast";
 import { updateEpisodeSchema, UpdateEpisodeInput } from "./edit-episode.schema";
@@ -13,7 +13,7 @@ import {
   EpisodeDocument,
 } from "@/src/lib/types";
 
-// Funções utilitárias
+// Funções utilitárias (sem mudanças)
 function computeDiff(
   original: Record<string, any>,
   current: Record<string, any>
@@ -48,9 +48,9 @@ function normalizeEpisodeTags(raw: any): Tag[] {
 
 interface UseEditEpisodeFormProps {
   episode: Episode;
-  categories: Category[];
+  categories: Category[]; // Mantido como prop de entrada
   subcategories: Subcategory[];
-  programs: Program[];
+  programs: Program[]; // Mantido como prop de entrada
   allTags: Tag[];
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
@@ -62,9 +62,9 @@ interface UseEditEpisodeFormProps {
 
 export function useEditEpisodeForm({
   episode,
-  categories,
+  categories, // Ainda necessário para o useMemo
   subcategories,
-  programs,
+  programs, // Ainda necessário para o useMemo
   allTags,
   isOpen,
   onOpenChange,
@@ -130,7 +130,6 @@ export function useEditEpisodeForm({
       reset(original, { keepDirty: false });
       setCurrentDocument(episode.episode_documents?.[0] ?? null);
 
-      // Garantir tags recém associadas
       setAllTagsState((prev) => {
         const map = new Map(prev.map((t) => [t.id, t]));
         normalizedTags.forEach((t) => {
@@ -202,8 +201,8 @@ export function useEditEpisodeForm({
   // Retornar tudo que o componente precisa
   return {
     form,
-    categories,
-    programs,
+    // categories, // <-- REMOVIDO
+    // programs,   // <-- REMOVIDO
     filteredSubcategories,
     allTagsState,
     currentDocument,
