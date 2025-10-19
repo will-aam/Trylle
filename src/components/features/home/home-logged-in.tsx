@@ -2,11 +2,8 @@ import { Episode } from "@/src/lib/types";
 import { Sidebar } from "@/src/components/features/home/layout/sidebar";
 import { Greeting } from "./greeting";
 import { NewEpisodesCarousel } from "./new-episodes-carousel";
-import { RecentPlaylists } from "./recent-playlists";
 import { WelcomeModal } from "../welcome-modal";
-import { RecommendedForYouCarousel } from "./RecommendedForYouCarousel";
 import { CategoryGrid } from "../category-grid";
-import { FeaturedProgramsCarousel } from "./featured-programs-carousel";
 import MusicDashboard from "@/src/components/features/home/layout/music-dashboard";
 
 interface HomeLoggedInProps {
