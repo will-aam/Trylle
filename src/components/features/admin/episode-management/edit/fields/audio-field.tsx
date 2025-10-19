@@ -170,7 +170,6 @@ export function AudioField({
       <div className="rounded-md border p-3 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
-            <Music className="h-5 w-5 text-muted-foreground" />
             <div className="truncate text-sm">
               {pendingFile
                 ? pendingFile.name
