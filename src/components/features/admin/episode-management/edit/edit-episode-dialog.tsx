@@ -69,12 +69,13 @@ const updateEpisodeSchema = z
     description: z.string().optional().nullable(),
     program_id: z.string().optional().nullable(),
     episode_number: z
-      .union([z.string(), z.number()])
-      .transform((val) => (val === "" ? undefined : Number(val)))
-      .refine(
-        (val) =>
-          val === undefined || (Number.isInteger(val) && Number(val) > 0),
-        { message: "Número deve ser inteiro positivo" }
+      .preprocess(
+        (val) => (val === "" || val === null ? undefined : Number(val)),
+        z
+          .number()
+          .int("Deve ser um número inteiro.")
+          .positive("Deve ser um número positivo.")
+          .optional()
       )
       .optional(),
     category_id: z.string().min(1, "A categoria é obrigatória."),
@@ -500,12 +501,7 @@ export function EditEpisodeDialog({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={
-                    isSubmitting ||
-                    !isDirty ||
-                    !originalRef.current ||
-                    !hasRealChanges()
-                  }
+                  disabled={isSubmitting || !hasRealChanges()}
                 >
                   {isSubmitting ? "Salvando..." : "Salvar Alterações"}
                 </Button>
