@@ -112,26 +112,28 @@ export function EpisodeTable({
                 />
               </TableHead>
               <TableHead
-                className="cursor-pointer"
+                className="cursor-pointer w-[250px] max-w-[250px]"
                 onClick={() => onSort("title")}
               >
                 Título
               </TableHead>
-              {/* Coluna "Programa" Adicionada */}
-              <TableHead>Programa</TableHead>
+              {/* Coluna "Programa" com largura fixa */}
+              <TableHead className="w-[250px] max-w-[250px]">
+                Programa
+              </TableHead>
               <TableHead
-                className="cursor-pointer"
+                className="cursor-pointer w-32"
                 onClick={() => onSort("status")}
               >
                 Status
               </TableHead>
               <TableHead
-                className="cursor-pointer"
+                className="cursor-pointer w-40"
                 onClick={() => onSort("published_at")}
               >
                 Data de publicação
               </TableHead>
-              <TableHead className="text-right">Ações</TableHead>
+              <TableHead className="text-right w-32">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -152,12 +154,18 @@ export function EpisodeTable({
                       aria-label={`Selecionar episódio ${ep.title}`}
                     />
                   </TableCell>
-                  <TableCell className="font-medium">{ep.title}</TableCell>
-                  {/* Célula para exibir o nome do programa */}
-                  <TableCell className="text-sm text-muted-foreground">
-                    {ep.programs?.title || "—"}
+                  <TableCell className="font-medium w-[250px] max-w-[250px]">
+                    <div className="truncate" title={ep.title}>
+                      {ep.title}
+                    </div>
                   </TableCell>
-                  <TableCell>
+                  {/* Célula para exibir o nome do programa com truncamento */}
+                  <TableCell className="text-sm text-muted-foreground w-[250px] max-w-[250px]">
+                    <div className="truncate" title={ep.programs?.title || "—"}>
+                      {ep.programs?.title || "—"}
+                    </div>
+                  </TableCell>
+                  <TableCell className="w-32">
                     <div className="flex items-center">
                       {updating && (
                         <Loader2
@@ -175,8 +183,10 @@ export function EpisodeTable({
                       />
                     </div>
                   </TableCell>
-                  <TableCell>{formatDate(ep.published_at)}</TableCell>
-                  <TableCell className="py-2">
+                  <TableCell className="w-40">
+                    {formatDate(ep.published_at)}
+                  </TableCell>
+                  <TableCell className="py-2 w-32">
                     <div className="flex justify-end">
                       <div
                         className={cn(
