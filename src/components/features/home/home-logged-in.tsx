@@ -1,9 +1,4 @@
 import { Episode } from "@/src/lib/types";
-import { Sidebar } from "@/src/components/features/home/layout/sidebar";
-import { Greeting } from "./greeting";
-import { NewEpisodesCarousel } from "./new-episodes-carousel";
-import { WelcomeModal } from "../welcome-modal";
-import { CategoryGrid } from "../category-grid";
 import MusicDashboard from "@/src/components/features/home/layout/music-dashboard";
 
 interface HomeLoggedInProps {
