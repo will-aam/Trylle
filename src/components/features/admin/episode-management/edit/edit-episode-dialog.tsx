@@ -39,7 +39,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/src/components/ui/form";
-import { useWatch } from "react-hook-form";
 import { Episode, Category, Subcategory, Program, Tag } from "@/src/lib/types";
 import { useEditEpisodeForm } from "./useEditEpisodeForm";
 import { AudioField } from "./fields/audio-field";
@@ -106,9 +105,6 @@ export function EditEpisodeDialog({
     formState: { isSubmitting },
   } = form;
 
-  // DEBUG reativo usando useWatch
-  const tagsValue = useWatch({ control, name: "tags" });
-
   const hasNoTags = !episode.tags || episode.tags.length === 0;
 
   return (
@@ -124,7 +120,6 @@ export function EditEpisodeDialog({
               <DialogTitle className="pr-10">
                 Editar Episódio: {episode.title}
               </DialogTitle>
-              {/* Descrição oculta p/ acessibilidade (remove os avisos) */}
               <DialogDescription className="sr-only">
                 Formulário para editar os campos do episódio selecionado.
               </DialogDescription>
@@ -138,14 +133,6 @@ export function EditEpisodeDialog({
                 <ScrollArea className="flex-1 pr-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
                     <div className="md:col-span-2 space-y-6">
-                      {/* DEBUG: Remover em produção */}
-                      {process.env.NODE_ENV !== "production" && (
-                        <pre className="text-xs text-muted-foreground mb-2">
-                          tags (form): {JSON.stringify(tagsValue)}
-                        </pre>
-                      )}
-
-                      {/* Título */}
                       <FormField
                         control={control}
                         name="title"
@@ -161,7 +148,6 @@ export function EditEpisodeDialog({
                         )}
                       />
 
-                      {/* Descrição */}
                       <FormField
                         control={control}
                         name="description"
@@ -177,7 +163,6 @@ export function EditEpisodeDialog({
                         )}
                       />
 
-                      {/* Tags - Alterado para usar form.setValue */}
                       <FormField
                         control={control}
                         name="tags"
@@ -188,10 +173,6 @@ export function EditEpisodeDialog({
                               allTags={allTagsState}
                               value={field.value || []}
                               onChange={(ids) => {
-                                console.log(
-                                  '[EditEpisodeDialog] setValue("tags") →',
-                                  ids
-                                );
                                 form.setValue("tags", ids, {
                                   shouldDirty: true,
                                   shouldTouch: true,
@@ -214,7 +195,6 @@ export function EditEpisodeDialog({
                     </div>
 
                     <div className="space-y-6">
-                      {/* Programa */}
                       <FormField
                         control={control}
                         name="program_id"
@@ -243,7 +223,6 @@ export function EditEpisodeDialog({
                         )}
                       />
 
-                      {/* Número do Episódio */}
                       <FormField
                         control={control}
                         name="episode_number"
@@ -264,7 +243,6 @@ export function EditEpisodeDialog({
                         )}
                       />
 
-                      {/* Categoria */}
                       <FormField
                         control={control}
                         name="category_id"
@@ -291,7 +269,6 @@ export function EditEpisodeDialog({
                         )}
                       />
 
-                      {/* Subcategoria */}
                       <FormField
                         control={control}
                         name="subcategory_id"
@@ -325,7 +302,6 @@ export function EditEpisodeDialog({
                         )}
                       />
 
-                      {/* Campos que não são do formulário */}
                       <AudioField
                         episodeId={episode.id}
                         currentFileName={episode.file_name || null}
@@ -365,7 +341,6 @@ export function EditEpisodeDialog({
         </DialogPortal>
       </Dialog>
 
-      {/* AlertDialog inalterado */}
       <AlertDialog open={unsavedAlertOpen} onOpenChange={setUnsavedAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -50,7 +50,6 @@ export function TagSelector({
   const handleSelectTag = useCallback(
     (tagId: string) => {
       const next = [...selectedTagIds, tagId];
-      console.log("[TagSelector] handleSelectTag →", { tagId, next });
       onChange(next);
       setInputValue("");
     },
@@ -60,7 +59,6 @@ export function TagSelector({
   const handleRemoveTag = useCallback(
     (tagId: string) => {
       const next = selectedTagIds.filter((id) => id !== tagId);
-      console.log("[TagSelector] handleRemoveTag →", { tagId, next });
       onChange(next);
     },
     [selectedTagIds, onChange]
