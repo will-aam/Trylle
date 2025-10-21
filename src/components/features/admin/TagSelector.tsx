@@ -146,10 +146,10 @@ export function TagSelector({
         </div>
       )}
 
-      {/* Lista de sugestões abaixo do input */}
+      {/* Lista de sugestões abaixo do input (limitada a ~5 itens com rolagem) */}
       <div className="relative">
         {isFocused && (
-          <CommandList>
+          <CommandList className="max-h-[200px] overflow-y-auto">
             <CommandEmpty>
               {onCreateTag
                 ? "Nenhuma tag encontrada. Pressione Enter para criar."
@@ -183,7 +183,7 @@ export function TagSelector({
                       e.stopPropagation();
                       handleCreateTag();
                     }}
-                    onSelect={handleCreateTag} // redundância
+                    onSelect={handleCreateTag}
                     className="flex items-center gap-2 cursor-pointer"
                   >
                     <PlusCircle className="w-4 h-4" />
