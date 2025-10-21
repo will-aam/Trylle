@@ -8,17 +8,9 @@ import {
   Plus,
   Heart,
   Download,
-  TrendingUp,
   Clock,
-  User,
-  Settings,
   LogOut,
   Home,
-  Disc,
-  Album,
-  Mic2,
-  Folder,
-  Music2,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -121,33 +113,6 @@ export function Sidebar() {
               >
                 <Plus className="w-5 h-5" />
                 <span className="text-sm font-medium">Criar Nova</span>
-              </Button>
-            </li>
-          </ul>
-        </div>
-
-        {/* Profile Section */}
-        <div>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-            Perfil
-          </h3>
-          <ul className="space-y-1">
-            <li>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-              >
-                <User className="w-5 h-5" />
-                <span className="text-sm font-medium">Perfil</span>
-              </Button>
-            </li>
-            <li>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-              >
-                <Settings className="w-5 h-5" />
-                <span className="text-sm font-medium">Configurações</span>
               </Button>
             </li>
           </ul>
