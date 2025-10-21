@@ -100,7 +100,7 @@ html {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans; /* <-- ADICIONE font-sans AQUI */
+    @apply bg-background text-foreground font-sans overflow-hidden; /* overflow-hidden garante que apenas colunas internas rolem */
   }
 }
 
