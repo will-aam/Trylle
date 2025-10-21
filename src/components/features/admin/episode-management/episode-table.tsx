@@ -191,24 +191,6 @@ export function EpisodeTable({
                   <TableCell className="py-2 w-32">
                     <div className="flex items-center justify-end">
                       <TooltipProvider>
-                        {/* Botão Ver JSON */}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div
-                              className={cn(
-                                "p-1 cursor-pointer rounded-sm hover:bg-muted/60 transition-colors",
-                                updating && "pointer-events-none opacity-50"
-                              )}
-                              onClick={() => setViewingJsonEpisode(ep)}
-                            >
-                              <FileCode className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Ver JSON</p>
-                          </TooltipContent>
-                        </Tooltip>
-
                         {/* Botão Tocar Episódio */}
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -224,6 +206,24 @@ export function EpisodeTable({
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>Tocar Episódio</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        {/* Botão Ver JSON */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={cn(
+                                "p-1 cursor-pointer rounded-sm hover:bg-muted/60 transition-colors",
+                                updating && "pointer-events-none opacity-50"
+                              )}
+                              onClick={() => setViewingJsonEpisode(ep)}
+                            >
+                              <FileCode className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Ver JSON</p>
                           </TooltipContent>
                         </Tooltip>
 

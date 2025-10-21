@@ -43,10 +43,6 @@ export function TagForm({
         </Button>
       </div>
       <div className="flex justify-between items-center text-xs text-muted-foreground">
-        <span>
-          Tags não utilizadas:{" "}
-          <strong className="text-red-500">{unusedTagCount}</strong>
-        </span>
         <Button
           type="button"
           variant="outline"

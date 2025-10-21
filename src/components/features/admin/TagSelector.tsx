@@ -12,12 +12,11 @@ import {
 } from "@/src/components/ui/command";
 import { Badge } from "@/src/components/ui/badge";
 import { Tag } from "@/src/lib/types";
-import { cn } from "@/src/lib/utils";
 
 interface TagSelectorProps {
   allTags: Tag[];
-  value: string[]; // Recebe um array de IDs das tags selecionadas
-  onChange: (value: string[]) => void; // Notifica o formulário sobre a mudança
+  value: string[]; // IDs selecionados
+  onChange: (value: string[]) => void;
   onCreateTag?: (tagName: string) => Promise<Tag | null>;
   placeholder?: string;
 }
@@ -33,14 +32,11 @@ export function TagSelector({
   const [inputValue, setInputValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
 
-  // Deriva as tags selecionadas a partir dos IDs recebidos. Esta é a fonte da verdade.
   const selectedTags = useMemo(
     () => allTags.filter((tag) => selectedTagIds.includes(tag.id)),
     [selectedTagIds, allTags]
   );
 
-  // Filtra a lista de tags disponíveis para não mostrar as que já foram selecionadas.
-  // Também filtra com base no que o usuário está digitando.
   const filteredAvailableTags = useMemo(
     () =>
       allTags.filter(
@@ -53,29 +49,32 @@ export function TagSelector({
 
   const handleSelectTag = useCallback(
     (tagId: string) => {
-      onChange([...selectedTagIds, tagId]);
-      setInputValue(""); // Limpa o input após a seleção
+      const next = [...selectedTagIds, tagId];
+      console.log("[TagSelector] handleSelectTag →", { tagId, next });
+      onChange(next);
+      setInputValue("");
     },
     [selectedTagIds, onChange]
   );
 
   const handleRemoveTag = useCallback(
     (tagId: string) => {
-      onChange(selectedTagIds.filter((id) => id !== tagId));
+      const next = selectedTagIds.filter((id) => id !== tagId);
+      console.log("[TagSelector] handleRemoveTag →", { tagId, next });
+      onChange(next);
     },
     [selectedTagIds, onChange]
   );
 
   const handleCreateTag = async () => {
-    if (inputValue.trim() === "" || !onCreateTag) return;
+    const name = inputValue.trim();
+    if (name === "" || !onCreateTag) return;
 
-    // Evita criar tag duplicada se já existir (mesmo com case diferente)
     const existingTag = allTags.find(
-      (tag) => tag.name.toLowerCase() === inputValue.trim().toLowerCase()
+      (tag) => tag.name.toLowerCase() === name.toLowerCase()
     );
 
     if (existingTag) {
-      // Se a tag já existe e não está selecionada, apenas a seleciona
       if (!selectedTagIds.includes(existingTag.id)) {
         handleSelectTag(existingTag.id);
       }
@@ -83,7 +82,7 @@ export function TagSelector({
       return;
     }
 
-    const newTag = await onCreateTag(inputValue.trim());
+    const newTag = await onCreateTag(name);
     if (newTag) {
       handleSelectTag(newTag.id);
     }
@@ -101,43 +100,56 @@ export function TagSelector({
   };
 
   return (
-    // O componente Command do ShadCN já gerencia a abertura e o foco, corrigindo o layout.
     <Command
       className="border rounded-md"
       onClick={() => inputRef.current?.focus()}
     >
-      <div className="flex flex-wrap items-center gap-2 p-2">
-        {selectedTags.map((tag) => (
-          <Badge
-            key={tag.id}
-            variant="secondary"
-            className="flex items-center gap-1.5"
-          >
-            {tag.name}
-            <button
-              type="button"
-              className="rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              onClick={(e) => {
-                e.stopPropagation(); // Evita que o clique feche o seletor
-                handleRemoveTag(tag.id);
-              }}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        ))}
+      {/* Input fixo no topo */}
+      <div className="p-2">
         <CommandInput
           ref={inputRef}
           value={inputValue}
           onValueChange={setInputValue}
           onKeyDown={handleKeyDown}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder={selectedTags.length > 0 ? "" : placeholder}
-          className="flex-1 h-auto p-0 bg-transparent border-0 shadow-none outline-none focus:ring-0"
+          onBlur={() => {
+            // permite mousedown selecionar antes do blur fechar a lista
+            setTimeout(() => setIsFocused(false), 0);
+          }}
+          placeholder={placeholder}
+          className="h-8"
         />
       </div>
-      <div className="relative mt-2">
+
+      {/* “Nuvem” de tags selecionadas abaixo do input */}
+      {selectedTags.length > 0 && (
+        <div className="px-2 pb-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedTags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="secondary"
+                className="flex items-center gap-1.5"
+              >
+                {tag.name}
+                <button
+                  type="button"
+                  className="rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveTag(tag.id);
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lista de sugestões abaixo do input */}
+      <div className="relative">
         {isFocused && (
           <CommandList>
             <CommandEmpty>
@@ -149,8 +161,14 @@ export function TagSelector({
               {filteredAvailableTags.map((tag) => (
                 <CommandItem
                   key={tag.id}
-                  onSelect={() => handleSelectTag(tag.id)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSelectTag(tag.id);
+                  }}
+                  onSelect={() => handleSelectTag(tag.id)} // redundância
                   className="cursor-pointer"
+                  data-tag-id={tag.id}
                 >
                   {tag.name}
                 </CommandItem>
@@ -162,7 +180,12 @@ export function TagSelector({
                     t.name.toLowerCase() === inputValue.trim().toLowerCase()
                 ) && (
                   <CommandItem
-                    onSelect={handleCreateTag}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleCreateTag();
+                    }}
+                    onSelect={handleCreateTag} // redundância
                     className="flex items-center gap-2 cursor-pointer"
                   >
                     <PlusCircle className="w-4 h-4" />

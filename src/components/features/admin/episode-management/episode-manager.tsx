@@ -207,7 +207,7 @@ export function EpisodeManager({
     setCurrentPage(1);
   };
 
-  // CORREÇÃO AQUI
+  // ATUALIZADO: Substituído pela nova versão que usa o episódio retornado pelo servidor
   const handleUpdateEpisode = (
     episodeId: string,
     updates: Partial<UpdateEpisodeServerInput>
@@ -215,13 +215,6 @@ export function EpisodeManager({
     return new Promise((resolve) => {
       const prevEpisodes = [...episodes];
       setIsUpdating((prev) => ({ ...prev, [episodeId]: true }));
-      setEpisodes((curr) =>
-        sortEpisodesLocal(
-          curr.map((ep) =>
-            ep.id === episodeId ? ({ ...ep, ...updates } as Episode) : ep
-          )
-        )
-      );
 
       (async () => {
         const result = await updateEpisodeAction(episodeId, updates);
@@ -229,10 +222,18 @@ export function EpisodeManager({
         startTransition(() => {
           setIsUpdating((prev) => ({ ...prev, [episodeId]: false }));
           if (result.success) {
+            // Usa o episódio completo retornado pelo servidor (com tags corretas)
+            const updated = result.episode;
+            setEpisodes((curr) =>
+              sortEpisodesLocal(
+                curr.map((ep) => (ep.id === updated.id ? updated : ep))
+              )
+            );
             sonnerToast.success("Episódio atualizado!");
             fetchStatusCounts();
             resolve(true);
           } else {
+            // rollback não preciso, pois não fizemos optimistic
             setEpisodes(prevEpisodes);
             sonnerToast.error("Falha ao atualizar", {
               description: (result as any).error || "Erro desconhecido",

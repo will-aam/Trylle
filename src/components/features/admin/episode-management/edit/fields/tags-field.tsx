@@ -1,4 +1,3 @@
-// src/components/features/admin/episode-management/edit/fields/tags-field.tsx
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -18,8 +17,6 @@ import {
   PopoverTrigger,
 } from "@/src/components/ui/popover";
 import { FormItem, FormLabel } from "@/src/components/ui/form";
-import { Button } from "@/src/components/ui/button";
-import { Badge } from "@/src/components/ui/badge";
 import { Tag } from "@/src/lib/types";
 
 interface TagsFieldProps {
@@ -58,8 +55,11 @@ export function TagsField({
   const handleSelect = (tagId: string) => {
     const newSelectedIds = new Set(selectedTagIds);
     newSelectedIds.add(tagId);
-    field.onChange(Array.from(newSelectedIds));
+    const next = Array.from(newSelectedIds);
+    console.log("[TagsField] handleSelect →", { tagId, next });
+    field.onChange(next);
     setInputValue("");
+    setOpen(false); // fecha após selecionar
   };
 
   const handleCreate = async () => {
@@ -84,7 +84,9 @@ export function TagsField({
   const handleUnselect = (tagId: string) => {
     const newSelectedIds = new Set(selectedTagIds);
     newSelectedIds.delete(tagId);
-    field.onChange(Array.from(newSelectedIds));
+    const next = Array.from(newSelectedIds);
+    console.log("[TagsField] handleUnselect →", { tagId, next });
+    field.onChange(next);
   };
 
   return (
@@ -92,33 +94,41 @@ export function TagsField({
       <FormLabel>Tags</FormLabel>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant="outline"
+          {/* trigger com div para evitar nesting de <button> */}
+          <div
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between h-auto min-h-11"
+            tabIndex={0}
+            className="w-full h-auto min-h-11 inline-flex items-center justify-between gap-2 whitespace-nowrap rounded-md border bg-background px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <div className="flex flex-wrap gap-1 items-center">
               {selectedTags.length > 0 ? (
                 selectedTags.map((tag) => (
-                  <Badge
+                  <span
                     key={tag.id}
-                    variant="secondary"
-                    className="flex items-center gap-1.5"
+                    className="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs bg-secondary text-secondary-foreground"
                   >
                     {tag.name}
-                    <button
-                      type="button"
+                    <span
+                      role="button"
+                      tabIndex={0}
                       aria-label={`Remover ${tag.name}`}
                       onClick={(e) => {
-                        e.stopPropagation(); // Impede o popover de fechar
+                        e.stopPropagation();
                         handleUnselect(tag.id);
                       }}
-                      className="rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleUnselect(tag.id);
+                        }
+                      }}
+                      className="rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
                     >
                       <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
+                    </span>
+                  </span>
                 ))
               ) : (
                 <span className="text-muted-foreground font-normal">
@@ -127,7 +137,7 @@ export function TagsField({
               )}
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
+          </div>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
           <Command>
@@ -138,15 +148,7 @@ export function TagsField({
             />
             <CommandList className="max-h-[200px] overflow-y-auto">
               <CommandEmpty>
-                <CommandItem
-                  // A CORREÇÃO PRINCIPAL ESTÁ AQUI:
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onSelect={handleCreate}
-                  className="cursor-pointer"
-                >
+                <CommandItem onSelect={handleCreate} className="cursor-pointer">
                   <div className="flex items-center gap-2">
                     <PlusCircle className="h-4 w-4" />
                     Criar tag &quot;{inputValue.trim()}&quot;
@@ -157,11 +159,6 @@ export function TagsField({
                 {filteredAvailableTags.map((tag) => (
                   <CommandItem
                     key={tag.id}
-                    // E A CORREÇÃO ESTÁ AQUI TAMBÉM:
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
                     onSelect={() => handleSelect(tag.id)}
                     className="cursor-pointer"
                   >

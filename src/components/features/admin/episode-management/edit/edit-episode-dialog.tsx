@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogPortal,
   DialogTitle,
+  DialogDescription,
 } from "@/src/components/ui/dialog";
 import { DialogOverlay } from "@/src/components/ui/dialog-overlay";
 import { Input } from "@/src/components/ui/input";
@@ -38,11 +39,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/src/components/ui/form";
+import { useWatch } from "react-hook-form";
 import { Episode, Category, Subcategory, Program, Tag } from "@/src/lib/types";
 import { useEditEpisodeForm } from "./useEditEpisodeForm";
 import { AudioField } from "./fields/audio-field";
 import { DocumentField } from "./fields/document-field";
-import { TagsField } from "./fields/tags-field"; // Importação corrigida para usar TagsField
+import { TagSelector } from "@/src/components/features/admin/TagSelector";
 
 const RichTextEditor = dynamic(
   () => import("@/src/components/ui/RichTextEditor"),
@@ -101,10 +103,12 @@ export function EditEpisodeDialog({
   const {
     control,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { isSubmitting },
   } = form;
 
-  // Variável para verificar se o episódio tem tags
+  // DEBUG reativo usando useWatch
+  const tagsValue = useWatch({ control, name: "tags" });
+
   const hasNoTags = !episode.tags || episode.tags.length === 0;
 
   return (
@@ -120,6 +124,10 @@ export function EditEpisodeDialog({
               <DialogTitle className="pr-10">
                 Editar Episódio: {episode.title}
               </DialogTitle>
+              {/* Descrição oculta p/ acessibilidade (remove os avisos) */}
+              <DialogDescription className="sr-only">
+                Formulário para editar os campos do episódio selecionado.
+              </DialogDescription>
             </DialogHeader>
 
             <Form {...form}>
@@ -130,6 +138,13 @@ export function EditEpisodeDialog({
                 <ScrollArea className="flex-1 pr-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
                     <div className="md:col-span-2 space-y-6">
+                      {/* DEBUG: Remover em produção */}
+                      {process.env.NODE_ENV !== "production" && (
+                        <pre className="text-xs text-muted-foreground mb-2">
+                          tags (form): {JSON.stringify(tagsValue)}
+                        </pre>
+                      )}
+
                       {/* Título */}
                       <FormField
                         control={control}
@@ -162,21 +177,35 @@ export function EditEpisodeDialog({
                         )}
                       />
 
-                      {/* Tags - Corrigido para usar TagsField */}
+                      {/* Tags - Alterado para usar form.setValue */}
                       <FormField
                         control={control}
                         name="tags"
                         render={({ field }) => (
-                          <TagsField
-                            allTags={allTagsState}
-                            field={field}
-                            onCreateTag={handleCreateTagInSelector}
-                            placeholder="Selecione as tags..."
-                          />
+                          <FormItem>
+                            <FormLabel>Tags</FormLabel>
+                            <TagSelector
+                              allTags={allTagsState}
+                              value={field.value || []}
+                              onChange={(ids) => {
+                                console.log(
+                                  '[EditEpisodeDialog] setValue("tags") →',
+                                  ids
+                                );
+                                form.setValue("tags", ids, {
+                                  shouldDirty: true,
+                                  shouldTouch: true,
+                                  shouldValidate: false,
+                                });
+                              }}
+                              onCreateTag={handleCreateTagInSelector}
+                              placeholder="Selecione ou crie tags..."
+                            />
+                            <FormMessage />
+                          </FormItem>
                         )}
                       />
 
-                      {/* ADICIONADO AQUI: Mensagem de verificação */}
                       {hasNoTags && (
                         <p className="text-sm text-red-500">
                           Este episódio não contém tags.
@@ -336,7 +365,7 @@ export function EditEpisodeDialog({
         </DialogPortal>
       </Dialog>
 
-      {/* AlertDialog não precisa de mudanças */}
+      {/* AlertDialog inalterado */}
       <AlertDialog open={unsavedAlertOpen} onOpenChange={setUnsavedAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
