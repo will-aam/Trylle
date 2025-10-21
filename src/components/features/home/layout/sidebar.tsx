@@ -34,14 +34,6 @@ export function Sidebar() {
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
             Menu
           </h3>
-          <Button
-            variant="outline"
-            size="sm"
-            className="hidden sm:inline-flex rounded-full"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Instalar Aplicativo
-          </Button>
           <ul className="space-y-1 mt-3">
             <li>
               <Link href="/">
