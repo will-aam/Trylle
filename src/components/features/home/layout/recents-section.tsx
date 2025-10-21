@@ -1,4 +1,4 @@
-import { RecentSongItem } from "./recent-song-item";
+import { RecentSongItem } from "./recents-play";
 
 const recentSongs = [
   {

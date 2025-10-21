@@ -1,6 +1,6 @@
-import { Sidebar } from "./sidebar"
-import { MainContent } from "./main-content"
-import { RightSidebar } from "./right-sidebar"
+import { Sidebar } from "./sidebar";
+import { MainContent } from "./main-content";
+import { RightSidebar } from "./right-sidebar";
 
 export default function MusicDashboard() {
   return (
@@ -9,5 +9,5 @@ export default function MusicDashboard() {
       <MainContent />
       <RightSidebar />
     </div>
-  )
+  );
 }
