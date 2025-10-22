@@ -11,6 +11,9 @@ import {
   Clock,
   LogOut,
   Home,
+  Trophy,
+  Brain,
+  Users,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -51,8 +54,18 @@ export function Sidebar() {
                 variant="ghost"
                 className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
               >
-                <Search className="w-5 h-5" />
-                <span className="text-sm font-medium">Buscar</span>
+                <Library className="w-5 h-5" />
+                <span className="text-sm font-medium">Minha Biblioteca</span>
+              </Button>
+            </li>
+            {/* NOVOS ITENS ADICIONADOS AQUI */}
+            <li>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <Trophy className="w-5 h-5" />
+                <span className="text-sm font-medium">Minhas Conquistas</span>
               </Button>
             </li>
             <li>
@@ -60,8 +73,17 @@ export function Sidebar() {
                 variant="ghost"
                 className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
               >
-                <Library className="w-5 h-5" />
-                <span className="text-sm font-medium">Sua Biblioteca</span>
+                <Brain className="w-5 h-5" />
+                <span className="text-sm font-medium">Sugerir um Tema</span>
+              </Button>
+            </li>
+            <li>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <Users className="w-5 h-5" />
+                <span className="text-sm font-medium">Comunidade</span>
               </Button>
             </li>
           </ul>
