@@ -1,31 +1,11 @@
-/projeto-com-bd
-/projeto-sem-bd
-
+# Ignore node modules
 /node_modules
-
-.DS_Store
-*.log
-.env
 *.env.local
-.vscode
-.idea
 *.iml
-dist
-build
-.cache
-*.cache
-*.bak
+# Ignore build output
 *.tmp
-*.swp
-Thumbs.db
-*.class
-*.jar
-*.war
-Anotações.md 
 .next
-
-Nova-pasta
-trylle-landing
+# Ignore logs
+Anotações.md 
 cod-supabase.md
 
-testando.md

@@ -9,7 +9,7 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
-      // Adicione este novo objeto para permitir imagens do Freepik
+      // permitir imagens (TEMPORARIO)
       {
         protocol: "https",
         hostname: "img.freepik.com",
@@ -22,7 +22,6 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
-      // --- NOVA CONFIGURAÇÃO AQUI ---
       {
         protocol: "https",
         hostname: "st.depositphotos.com",
@@ -32,7 +31,7 @@ const nextConfig = {
     ],
   },
 
-  // Adicionamos a função de redirecionamento aqui
+  // Função de redirecionamento aqui
   async redirects() {
     return [
       {

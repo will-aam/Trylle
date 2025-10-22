@@ -1,12 +1,14 @@
 {
+  // Baseando-se nas recomendações do Next.js para desempenho e melhores práticas
   "extends": "next/core-web-vitals",
+  // Regra customizada para impor o uso de um wrapper específico para toasts
   "rules": {
     "no-restricted-imports": [
       "error",
       {
         "name": "sonner",
         "message": "Import toast from '@/src/lib/safe-toast' instead of importing directly from 'sonner'.",
-        "allow": ["src/lib/safe-toast.ts"] // <-- A MÁGICA ESTÁ AQUI
+        "allow": ["src/lib/safe-toast.ts"]
       }
     ]
   }
