@@ -24,10 +24,10 @@ export function NowPlaying() {
 
       {/* Song Info */}
       <div className="text-center mb-6">
-        <h3 className="text-2xl font-bold text-white mb-1 drop-shadow-md">
-          Echoes of Midnight
+        <h3 className="text-xl font-bold text-white mb-1 drop-shadow-md">
+          A Guerra das Certificações
         </h3>
-        <p className="text-gray-300">Jon Hickman</p>
+        <p className="text-sm text-gray-300">Tecnologia</p>
       </div>
 
       {/* Waveform */}
