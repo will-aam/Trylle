@@ -15,7 +15,7 @@ import {
 
 export function Sidebar() {
   return (
-    <aside className="h-full w-full rounded-2xl bg-[#0f0f0f]/80 border border-white/10 shadow-lg backdrop-blur-md flex flex-col">
+    <aside className="h-full w-full rounded-2xl bg-[#0f0f0f]/80 shadow-lg backdrop-blur-md flex flex-col">
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* Search - sutil */}
@@ -25,7 +25,7 @@ export function Sidebar() {
             type="text"
             placeholder="Buscar..."
             aria-label="Buscar"
-            className="w-full rounded-full bg-white/5 pl-9 pr-4 py-2 text-sm text-white placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-white/10 border border-white/10"
+            className="w-full rounded-full bg-white/5 pl-9 pr-4 py-2 text-sm text-white placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-white/10"
           />
         </div>
 
@@ -123,7 +123,7 @@ export function Sidebar() {
       </nav>
 
       {/* Logout */}
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 ">
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-red-400 transition-colors"

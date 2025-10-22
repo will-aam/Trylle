@@ -9,6 +9,26 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
+      // Adicione este novo objeto para permitir imagens do Freepik
+      {
+        protocol: "https",
+        hostname: "img.freepik.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "static.vecteezy.com",
+        port: "",
+        pathname: "/**",
+      },
+      // --- NOVA CONFIGURAÇÃO AQUI ---
+      {
+        protocol: "https",
+        hostname: "st.depositphotos.com",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
 

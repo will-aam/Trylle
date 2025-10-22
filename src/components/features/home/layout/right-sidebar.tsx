@@ -13,7 +13,7 @@ export function RightSidebar() {
   };
 
   return (
-    <aside className="h-full w-full rounded-2xl bg-[#0f0f0f]/80 border border-white/10 shadow-lg backdrop-blur-md flex flex-col">
+    <aside className="h-full w-full rounded-2xl bg-[#0f0f0f]/80  shadow-lg backdrop-blur-md flex flex-col">
       {/* Header */}
       <div className="p-6">
         <div className="flex items-center justify-between">

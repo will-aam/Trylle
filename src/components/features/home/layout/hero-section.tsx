@@ -6,37 +6,41 @@ import Image from "next/image";
 export function HeroSection() {
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // Dados dos podcasts/músicas
   const podcasts = [
     {
       id: 1,
       title: "Echoes of Midnight",
       artist: "Jon Hickman",
-      image: "/person-listening-music-red-background.jpg",
+      image:
+        "https://img.freepik.com/vetores-premium/familia-observando-as-estrelas-com-telescopio-ilustracao-em-cores-planas_151150-4952.jpg",
     },
     {
       id: 2,
       title: "Night Vibes",
       artist: "Sarah Johnson",
-      image: "/person-listening-music-red-background.jpg",
+      image:
+        "https://img.freepik.com/vetores-premium/homem-negocios-luta-um-dragao_24381-851.jpg",
     },
     {
       id: 3,
       title: "Urban Rhythms",
       artist: "DJ Martinez",
-      image: "/person-listening-music-red-background.jpg",
+      image:
+        "https://img.freepik.com/vetores-gratis/ilustracao-de-metaverso-de-design-plano-desenhado-a-mao_23-2149243273.jpg?semt=ais_hybrid&w=740",
     },
     {
       id: 4,
       title: "Acoustic Sessions",
       artist: "Emma Wilson",
-      image: "/person-listening-music-red-background.jpg",
+      image:
+        "https://st.depositphotos.com/1173077/52308/v/450/depositphotos_523081264-stock-illustration-trekkers-backpack-trekking-mountain-beautiful.jpg",
     },
     {
       id: 5,
       title: "Electronic Dreams",
       artist: "Alex Chen",
-      image: "/person-listening-music-red-background.jpg",
+      image:
+        "https://img.freepik.com/vetores-premium/empresario-como-um-cavaleiro-do-dragao_24381-549.jpg?semt=ais_hybrid&w=740&q=80",
     },
   ];
 
@@ -49,9 +53,10 @@ export function HeroSection() {
   };
 
   return (
-    // Container principal
     <div className="relative w-full h-48 overflow-hidden rounded-2xl">
-      {/* Áreas de clique para navegação */}
+      <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-black via-black/70 to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-black via-black/70 to-transparent z-10 pointer-events-none" />
+
       <div
         onClick={handlePrev}
         className="absolute left-0 top-0 w-1/4 h-full z-20 cursor-pointer"
@@ -61,47 +66,38 @@ export function HeroSection() {
         className="absolute right-0 top-0 w-1/4 h-full z-20 cursor-pointer"
       />
 
-      {/* Container dos cards */}
       <div className="relative w-full h-full flex items-center justify-center">
         {podcasts.map((podcast, index) => {
           const isActive = index === activeIndex;
 
-          // Posicionamento dos cards
-          let translateX = 0;
+          let translateX: string = "0px";
           let translateY = 0;
           let scale = 1;
           let opacity = 1;
           let zIndex = 1;
-          let rotate = 0;
 
           if (isActive) {
-            // Card central
-            translateX = 0;
+            translateX = "0px";
             translateY = 0;
-            scale = 1.05;
+            scale = 1.03;
             zIndex = 10;
           } else if (
             index ===
             (activeIndex === 0 ? podcasts.length - 1 : activeIndex - 1)
           ) {
-            // Card à esquerda
-            translateX = -280;
-            translateY = 10;
+            translateX = "calc(-100% - 1rem)";
+            translateY = 0;
             scale = 0.95;
             zIndex = 5;
-            rotate = -5;
           } else if (
             index ===
             (activeIndex === podcasts.length - 1 ? 0 : activeIndex + 1)
           ) {
-            // Card à direita
-            translateX = 280;
-            translateY = 10;
+            translateX = "calc(100% + 1rem)";
+            translateY = 0;
             scale = 0.95;
             zIndex = 5;
-            rotate = 5;
           } else {
-            // Cards invisíveis
             opacity = 0;
             zIndex = 1;
           }
@@ -111,7 +107,7 @@ export function HeroSection() {
               key={podcast.id}
               className="absolute transition-all duration-500 ease-out"
               style={{
-                transform: `translateX(${translateX}px) translateY(${translateY}px) scale(${scale}) rotate(${rotate}deg)`,
+                transform: `translateX(${translateX}) translateY(${translateY}px) scale(${scale})`,
                 opacity,
                 zIndex,
               }}
@@ -121,7 +117,6 @@ export function HeroSection() {
                   isActive ? "shadow-2xl" : "shadow-xl"
                 }`}
               >
-                {/* Imagem do podcast */}
                 <Image
                   src={podcast.image}
                   alt={podcast.title}
@@ -129,10 +124,8 @@ export function HeroSection() {
                   className="object-cover"
                 />
 
-                {/* Overlay gradiente */}
                 <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
 
-                {/* Conteúdo do Card */}
                 <div className="absolute inset-0 flex items-center p-6">
                   <div>
                     <h3 className="text-2xl font-bold text-white mb-1 drop-shadow-lg">
@@ -144,7 +137,6 @@ export function HeroSection() {
                   </div>
                 </div>
 
-                {/* Overlay escuro para cards laterais */}
                 {!isActive && (
                   <div className="absolute inset-0 bg-black/40 z-20" />
                 )}
