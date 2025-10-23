@@ -4,20 +4,18 @@
 import { useEffect, useState, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
-import { BottomNavbar } from "@/src/components/layout/bottom-navbar";
+import { Sidebar } from "@/src/components/features/home/layout/sidebar";
+import { RightSidebar } from "@/src/components/features/home/layout/right-sidebar";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
-  const supabase = createSupabaseBrowserClient(); // Mantém o uso correto
+  const supabase = createSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
 
-  // Lógica do seu useEffect original restaurada, que é mais completa
   useEffect(() => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
-
-      // Sua lógica para definir o avatar, agora funcionando com o cliente correto
       if (
         event === "SIGNED_IN" &&
         session &&
@@ -45,11 +43,20 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   }, [supabase]);
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background">
-      <main className="flex flex-1 flex-col gap-4 md:gap-8 overflow-hidden">
-        {children}
-      </main>
-      {user && <BottomNavbar />}
+    <div className="h-screen w-full flex flex-col p-4 gap-4 bg-black text-white overflow-hidden">
+      <div className="flex-1 flex gap-4 overflow-hidden">
+        <div className="w-64 flex-shrink-0">
+          <Sidebar />
+        </div>
+
+        <main className="flex-1 rounded-2xl  overflow-y-auto overflow-x-hidden">
+          {children}
+        </main>
+
+        <div className="w-96 flex-shrink-0">
+          <RightSidebar />
+        </div>
+      </div>
     </div>
   );
 }
