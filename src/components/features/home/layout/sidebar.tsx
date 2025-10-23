@@ -45,18 +45,20 @@ export function Sidebar() {
                   className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
                 >
                   <Home className="w-5 h-5" />
-                  <span className="text-sm font-medium">Explorar</span>
+                  <span className="text-sm font-medium">Início</span>
                 </Button>
               </Link>
             </li>
             <li>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-              >
-                <Library className="w-5 h-5" />
-                <span className="text-sm font-medium">Minha Biblioteca</span>
-              </Button>
+              <Link href="/library-in">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                >
+                  <Library className="w-5 h-5" />
+                  <span className="text-sm font-medium">Minha Biblioteca</span>
+                </Button>
+              </Link>
             </li>
             {/* NOVOS ITENS ADICIONADOS AQUI */}
             <li>
@@ -71,22 +73,26 @@ export function Sidebar() {
               </Link>
             </li>
             <li>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-              >
-                <Brain className="w-5 h-5" />
-                <span className="text-sm font-medium">Sugerir um Tema</span>
-              </Button>
+              <Link href="/suggest-topic-in">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                >
+                  <Brain className="w-5 h-5" />
+                  <span className="text-sm font-medium">Sugerir um Tema</span>
+                </Button>
+              </Link>
             </li>
             <li>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-              >
-                <Users className="w-5 h-5" />
-                <span className="text-sm font-medium">Comunidade</span>
-              </Button>
+              <Link href="/community">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                >
+                  <Users className="w-5 h-5" />
+                  <span className="text-sm font-medium">Comunidade</span>
+                </Button>
+              </Link>
             </li>
           </ul>
         </div>
@@ -98,31 +104,37 @@ export function Sidebar() {
           </h3>
           <ul className="space-y-1">
             <li>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-              >
-                <Clock className="w-5 h-5" />
-                <span className="text-sm font-medium">Recentes</span>
-              </Button>
+              <Link href="/recent-in">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                >
+                  <Clock className="w-5 h-5" />
+                  <span className="text-sm font-medium">Recentes</span>
+                </Button>
+              </Link>
             </li>
             <li>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-              >
-                <Heart className="w-5 h-5" />
-                <span className="text-sm font-medium">Favoritos</span>
-              </Button>
+              <Link href="/favorites-in">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                >
+                  <Heart className="w-5 h-5" />
+                  <span className="text-sm font-medium">Favoritos</span>
+                </Button>
+              </Link>
             </li>
             <li>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-              >
-                <Download className="w-5 h-5" />
-                <span className="text-sm font-medium">Downloads</span>
-              </Button>
+              <Link href="/downloads-in">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                >
+                  <Download className="w-5 h-5" />
+                  <span className="text-sm font-medium">Downloads</span>
+                </Button>
+              </Link>
             </li>
           </ul>
         </div>

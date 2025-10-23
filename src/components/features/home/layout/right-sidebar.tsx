@@ -2,6 +2,7 @@
 
 import { Bell, Settings } from "lucide-react";
 import { NowPlaying } from "./now-playing";
+import Link from "next/link";
 
 export function RightSidebar() {
   // Lógica da saudação
@@ -37,9 +38,12 @@ export function RightSidebar() {
             <button className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all hover:scale-110">
               <Bell className="w-5 h-5 text-gray-400" />
             </button>
-            <button className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all hover:scale-110">
-              <Settings className="w-5 h-5 text-gray-400" />
-            </button>
+
+            <Link href="/settings">
+              <button className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all hover:scale-110">
+                <Settings className="w-5 h-5 text-gray-400" />
+              </button>
+            </Link>
           </div>
         </div>
       </div>
