@@ -1,4 +1,3 @@
-// src/app/suggest-topic/page.tsx
 "use client";
 
 import type React from "react";
@@ -9,7 +8,6 @@ import { Input } from "@/src/components/ui/input";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Badge } from "@/src/components/ui/badge";
 import {
-  ArrowLeft,
   Lightbulb,
   Users,
   TrendingUp,
@@ -22,11 +20,11 @@ import {
   Star,
   MessageSquare,
   X,
-  AlertCircle, // Ícone de erro que vamos usar
+  AlertCircle,
 } from "lucide-react";
-import Link from "next/link";
-import { useTheme } from "next-themes";
-import { ThemeToggle } from "@/src/components/layout/theme-toggle";
+// REMOVIDO: Link e ArrowLeft (não há mais header)
+// REMOVIDO: useTheme e ThemeToggle (controlado pelo layout)
+import { createSupabaseBrowserClient } from "@/src/lib/supabase-client"; // ADICIONADO: Para buscar o usuário
 
 const categories = [
   { name: "Negócios", icon: Briefcase, color: "bg-blue-500 dark:bg-blue-600" },
@@ -58,42 +56,44 @@ const popularSuggestions = [
   { title: "Metodologias Ágeis", votes: 112, category: "Negócios" },
 ];
 
-export default function SugerirTemaPage() {
+export default function SugerirTemaInPage() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     category: "",
-    email: "",
+    email: "", // Será preenchido pelo useEffect
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showTipsModal, setShowTipsModal] = useState(false);
   const [mounted, setMounted] = useState(false);
-
-  // --- NOVOS ESTADOS PARA DAR FEEDBACK AO USUÁRIO ---
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { setTheme } = useTheme();
+  // ADICIONADO: Instância do Supabase client-side
+  const supabase = createSupabaseBrowserClient();
+
+  // REMOVIDO: lógica de 'useTheme'
 
   useEffect(() => {
     setMounted(true);
-    const savedTheme = localStorage.getItem("theme");
-    if (!savedTheme) {
-      setTheme("dark");
-    }
-  }, [setTheme]);
-
-  useEffect(() => {
+    const fetchUserEmail = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setFormData((prev) => ({ ...prev, email: user.email || "" }));
+      }
+    };
+    fetchUserEmail();
     setShowTipsModal(true);
-  }, []);
+  }, [supabase]);
 
   const handleCategorySelect = (category: string) => {
     setSelectedCategory(category);
     setFormData((prev) => ({ ...prev, category }));
   };
 
-  // --- FUNÇÃO DE ENVIO ATUALIZADA ---
   const handleSubmit = async () => {
     setIsLoading(true);
     setError(null);
@@ -111,31 +111,35 @@ export default function SugerirTemaPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        // Se a API retornar um erro, ele será capturado aqui
         throw new Error(result.error || "Algo deu errado. Tente novamente.");
       }
 
-      // Se tudo correu bem, mostra sucesso e limpa o formulário
       setIsSubmitted(true);
-      setFormData({ title: "", description: "", category: "", email: "" });
+      setFormData((prev) => ({
+        ...prev,
+        title: "",
+        description: "",
+        category: "",
+        // O e-mail é mantido, não limpo
+      }));
       setSelectedCategory("");
-      // A mensagem de sucesso some após 5 segundos
       setTimeout(() => setIsSubmitted(false), 5000);
     } catch (err: any) {
-      // Captura qualquer erro e o exibe para o usuário
       setError(err.message);
     } finally {
-      // Garante que o estado de loading seja desativado no final
       setIsLoading(false);
     }
   };
 
   if (!mounted) {
+    // O layout (main) já lida com o "flicker" de renderização
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-black dark:to-black dark:bg-black">
+    // REMOVIDO: 'min-h-screen' e cores de fundo (vem do layout)
+    // ADICIONADO: Padding que estava no container original
+    <div className="py-6 sm:py-8 lg:py-12">
       {showTipsModal && (
         <div className="fixed inset-0 bg-black/50 dark:bg-white/10 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-black dark:border dark:border-zinc-800 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto mx-4 sm:mx-0">
@@ -158,11 +162,11 @@ export default function SugerirTemaPage() {
               </div>
 
               <div className="space-y-3 sm:space-y-4">
+                {/* ... (Conteúdo do Modal permanece o mesmo) ... */}
                 <p className="text-slate-600 dark:text-zinc-300 text-xs sm:text-sm">
                   Para criar uma sugestão que realmente se destaque, siga estas
                   dicas:
                 </p>
-
                 <ul className="space-y-2 sm:space-y-3 text-xs sm:text-sm text-slate-700 dark:text-zinc-200">
                   <li className="flex items-start gap-2 sm:gap-3">
                     <div className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full mt-1.5 sm:mt-2 shrink-0"></div>
@@ -180,25 +184,13 @@ export default function SugerirTemaPage() {
                       Mencione aspectos práticos que poderiam ser abordados
                     </span>
                   </li>
-                  <li className="flex items-start gap-2 sm:gap-3">
-                    <div className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full mt-1.5 sm:mt-2 shrink-0"></div>
-                    <span>
-                      Considere como o tema pode ajudar outros ouvintes
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2 sm:gap-3">
-                    <div className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full mt-1.5 sm:mt-2 shrink-0"></div>
-                    <span>Use exemplos concretos quando possível</span>
-                  </li>
                 </ul>
-
                 <div className="bg-green-50 dark:bg-green-950/50 dark:border dark:border-green-900 rounded-lg p-3 sm:p-4 mt-3 sm:mt-4">
                   <p className="text-xs sm:text-sm text-green-800 dark:text-green-300 font-medium">
                     💡 Lembre-se: quanto mais detalhada sua sugestão, maior a
                     chance de ser selecionada!
                   </p>
                 </div>
-
                 <Button
                   onClick={() => setShowTipsModal(false)}
                   className="w-full mt-4 sm:mt-6 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white h-10 sm:h-12 text-sm sm:text-base"
@@ -211,27 +203,12 @@ export default function SugerirTemaPage() {
         </div>
       )}
 
-      <header className="border-b border-slate-200 dark:border-zinc-800 bg-white/80 dark:bg-black/90 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="font-medium text-sm sm:text-base">Voltar</span>
-            </Link>
-            <div className="flex items-center gap-4">
-              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-5xl font-bold text-slate-900 dark:text-zinc-100">
-                Trylle
-              </h1>
-              <ThemeToggle />
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* REMOVIDO: <header> ... </header>
+          O (main)/layout.tsx já fornece a navegação (BottomNavbar)
+      */}
 
-      <div className="container mx-auto px-4 py-6 sm:py-8 lg:py-12">
+      {/* ADICIONADO: Padding que estava no container do original */}
+      <div className="container mx-auto px-4">
         <div className="text-center mb-8 sm:mb-12 lg:mb-16">
           <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-950 dark:border dark:border-blue-800 text-blue-700 dark:text-blue-300 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium mb-4 sm:mb-6">
             <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -243,9 +220,9 @@ export default function SugerirTemaPage() {
             novos Episódios
           </h1>
           <p className="text-base sm:text-lg lg:text-xl text-slate-600 dark:text-zinc-300 max-w-3xl mx-auto text-pretty px-2">
-            Ajude-nos a criar conteúdo que realmente importa para você. Sua
-            sugestão pode se tornar o próximo episódio que transformará a vida
-            de milhares de pessoas.
+            Ajude a criar conteúdo que realmente importa. Sua sugestão pode se
+            tornar o próximo episódio que transformará a vida de milhares de
+            pessoas.
           </p>
         </div>
 
@@ -262,12 +239,12 @@ export default function SugerirTemaPage() {
                       Nova Sugestão
                     </h2>
                     <p className="text-sm sm:text-base text-slate-600 dark:text-zinc-400">
-                      Compartilhe sua ideia conosco
+                      Compartilhe sua ideia
                     </p>
                   </div>
                 </div>
 
-                {/* --- NOVOS ALERTS DE FEEDBACK --- */}
+                {/* --- Alertas de Feedback --- */}
                 {isSubmitted && (
                   <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6 flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -276,7 +253,7 @@ export default function SugerirTemaPage() {
                         Sugestão enviada com sucesso!
                       </p>
                       <p className="text-sm text-green-600 dark:text-green-400">
-                        Nossa equipe analisará sua proposta em breve.
+                        A equipe analisará sua proposta em breve.
                       </p>
                     </div>
                   </div>
@@ -374,30 +351,9 @@ export default function SugerirTemaPage() {
                     />
                   </div>
 
-                  <div>
-                    <label
-                      htmlFor="email"
-                      className="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-2"
-                    >
-                      Seu e-mail (opcional)
-                    </label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          email: e.target.value,
-                        }))
-                      }
-                      placeholder="seu@email.com"
-                      className="h-10 sm:h-12 text-sm sm:text-base dark:bg-zinc-900/50 dark:border-zinc-700 dark:text-zinc-100 dark:placeholder:text-zinc-500"
-                    />
-                    <p className="text-xs text-slate-500 dark:text-zinc-500 mt-1">
-                      Para te notificarmos quando o episódio for lançado
-                    </p>
-                  </div>
+                  {/* REMOVIDO: Bloco do E-mail.
+                      O e-mail já foi pego do usuário logado e está no 'formData'
+                  */}
 
                   <Button
                     onClick={handleSubmit}
@@ -406,7 +362,7 @@ export default function SugerirTemaPage() {
                       !formData.title ||
                       !formData.description ||
                       !selectedCategory ||
-                      isLoading // Desabilita o botão durante o envio
+                      isLoading
                     }
                   >
                     {isLoading ? "Enviando..." : "Enviar Sugestão"}
@@ -416,6 +372,7 @@ export default function SugerirTemaPage() {
             </Card>
           </div>
 
+          {/* Sidebar de Sugestões Populares (mantido) */}
           <div className="space-y-4 sm:space-y-6">
             <Card className="border-0 dark:border dark:border-blue-800 shadow-lg bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-900 dark:to-blue-950 text-white">
               <CardContent className="p-4 sm:p-6">

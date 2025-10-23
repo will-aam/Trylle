@@ -1,3 +1,4 @@
+// src/app/(main)/page.tsx
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { HomeLoggedIn } from "@/src/components/features/home/home-logged-in";
