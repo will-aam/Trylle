@@ -1,3 +1,4 @@
+// src/app/admin/layout.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -18,7 +19,6 @@ export default function AdminLayout({
     setIsMounted(true);
   }, []);
 
-  // Tela de carregamento (seu código original, sem alterações)
   if (!isMounted) {
     return (
       <div className="flex h-screen bg-muted/40">
@@ -40,7 +40,6 @@ export default function AdminLayout({
     );
   }
 
-  // Layout real após a montagem
   return (
     <div className="flex h-screen bg-muted/40">
       <AdminSidebar
@@ -48,7 +47,6 @@ export default function AdminLayout({
         setCollapsed={() => setSidebarCollapsed((prev) => !prev)}
       />
 
-      {/* AQUI ESTÁ A ÚNICA MUDANÇA REAL */}
       <AdminPlayerWrapper>
         <main
           className={`flex-1 overflow-y-auto transition-all duration-300 ${

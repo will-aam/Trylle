@@ -1,11 +1,12 @@
+// src/app/layout.tsx
 import type { Metadata } from "next";
-import { Sora } from "next/font/google"; // Corrigido para usar a fonte Sora do seu projeto
+import { Sora } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/src/components/theme-provider";
 import { Toaster as SonnerToaster } from "@/src/components/ui/sonner";
 import "@/src/styles/card-themes.css";
 
-const sora = Sora({ subsets: ["latin"] }); // Corrigido para usar a fonte Sora
+const sora = Sora({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Trylle",
@@ -21,7 +22,6 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={sora.className}>
         {" "}
-        {/* Corrigido para usar a fonte Sora */}
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -30,7 +30,6 @@ export default function RootLayout({
         >
           {children}
           <SonnerToaster richColors />{" "}
-          {/* Usando a importação segura e ativando cores ricas */}
         </ThemeProvider>
       </body>
     </html>
