@@ -6,9 +6,13 @@
     "no-restricted-imports": [
       "error",
       {
-        "name": "sonner",
-        "message": "Import toast from '@/src/lib/safe-toast' instead of importing directly from 'sonner'.",
-        "allow": ["src/lib/safe-toast.ts"]
+        "paths": [
+          {
+            "name": "sonner",
+            "message": "Import toast from '@/src/lib/safe-toast' instead of importing directly from 'sonner'.",
+            "allow": ["src/lib/safe-toast.ts"]
+          }
+        ]
       }
     ]
   }
