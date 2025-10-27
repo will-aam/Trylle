@@ -164,14 +164,12 @@ export function UploadForm() {
     const name = tagName.trim().toLowerCase();
     if (!name) return null;
 
-    // Verifica se a tag já existe pelo nome para evitar duplicatas
     const existingByName = tags.find((t) => t.name.toLowerCase() === name);
     if (existingByName) {
-      // Se já existe, apenas seleciona e não cria uma nova
       if (!selectedTagIds.includes(existingByName.id)) {
         setSelectedTagIds((prev) => [...prev, existingByName.id]);
       }
-      return null; // Retorna null porque não houve criação
+      return null;
     }
 
     try {
@@ -187,10 +185,8 @@ export function UploadForm() {
         created_at: res.tag.created_at,
       };
 
-      // Adiciona a nova tag ao estado local e já a seleciona
       createAndSelectTag(newTag);
 
-      // Retorna a tag para o componente TagSelector
       return newTag;
     } catch (e: any) {
       toast.error("Erro inesperado", {
@@ -426,14 +422,10 @@ export function UploadForm() {
                     id="episode-number"
                     type="number"
                     value={form.episodeNumber}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        episodeNumber: e.target.value,
-                      }))
+                    placeholder={
+                      form.programId ? "Auto" : "Selecione um programa"
                     }
-                    placeholder="Ex: 01"
-                    disabled={!form.programId || isBusy}
+                    disabled={true}
                   />
                 </div>
               </div>
@@ -579,35 +571,35 @@ export function UploadForm() {
                         </p>
                       </div>
                     )}
-                  {documentFile && (
-                    <div className="grid grid-cols-2 gap-3 mt-3">
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">
-                          Páginas
-                        </label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={docPageCount}
-                          onChange={(e) => setDocPageCount(e.target.value)}
-                          disabled={isBusy}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">
-                          Referências
-                        </label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={docReferenceCount}
-                          onChange={(e) => setDocReferenceCount(e.target.value)}
-                          disabled={isBusy}
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
+                {documentFile && (
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Páginas
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={docPageCount}
+                        onChange={(e) => setDocPageCount(e.target.value)}
+                        disabled={isBusy}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Referências
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={docReferenceCount}
+                        onChange={(e) => setDocReferenceCount(e.target.value)}
+                        disabled={isBusy}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

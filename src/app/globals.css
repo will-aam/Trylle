@@ -134,9 +134,9 @@ html {
 }
 
 /*
- * ESTILIZAÇÃO GLOBAL DO SCROLLBAR
- * Adicionado em src/app/globals.css
- */
+  * ESTILIZAÇÃO GLOBAL DO SCROLLBAR
+  * Adicionado em src/app/globals.css
+  */
 
 /* Para navegadores baseados em WebKit (Chrome, Safari, Edge, etc.) */
 ::-webkit-scrollbar {
