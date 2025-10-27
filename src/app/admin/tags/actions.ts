@@ -4,9 +4,6 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
 
-/* =========================
-   Schemas
-   ========================= */
 const paginationSchema = z.object({
   page: z.number().int().min(1).default(1),
   perPage: z.number().int().min(1).max(200).default(25),
@@ -34,9 +31,11 @@ const bulkImportSchema = z.object({
   names: z.array(z.string().min(1)).min(1),
 });
 
-/* =========================
-   Tipos utilitários
-   ========================= */
+const createTagAliasSchema = z.object({
+  alias: z.string().min(1).max(255),
+  tag_id: z.string().uuid(),
+});
+
 interface ActionError {
   success: false;
   error: string;
@@ -54,7 +53,7 @@ interface ListTagsResult {
   }[];
   page: number;
   perPage: number;
-  totalFiltered: number; // total considerando search + filterMode
+  totalFiltered: number;
 }
 
 interface TagStatsResult {
@@ -84,9 +83,6 @@ interface MergeTagsResult {
   merged: number;
 }
 
-/* =========================
-   Helpers
-   ========================= */
 function mapTagRow(row: any) {
   return {
     id: row.id,
@@ -97,9 +93,6 @@ function mapTagRow(row: any) {
   };
 }
 
-/* =========================
-   listTagsAction
-   ========================= */
 export async function listTagsAction(
   params: Partial<z.infer<typeof paginationSchema>>
 ): Promise<ListTagsResult | ActionError> {
@@ -108,7 +101,6 @@ export async function listTagsAction(
     const parsed = paginationSchema.parse(params);
     const { page, perPage, search, filterMode } = parsed;
 
-    // Carrega todas as tags com count (depois filtramos e paginamos)
     let query = supabase.from("tags").select("*, episode_tags(count)");
 
     if (search) {
@@ -147,9 +139,6 @@ export async function listTagsAction(
   }
 }
 
-/* =========================
-   getTagGlobalStatsAction
-   ========================= */
 export async function getTagGlobalStatsAction(): Promise<
   TagStatsResult | ActionError
 > {
@@ -189,9 +178,6 @@ export async function getTagGlobalStatsAction(): Promise<
   }
 }
 
-/* =========================
-   createTagAction
-   ========================= */
 export async function createTagAction(
   input: z.infer<typeof createTagSchema>
 ): Promise<SingleTagResult | ActionError> {
@@ -229,9 +215,6 @@ export async function createTagAction(
   }
 }
 
-/* =========================
-   updateTagAction
-   ========================= */
 export async function updateTagAction(
   input: z.infer<typeof updateTagSchema>
 ): Promise<SingleTagResult | ActionError> {
@@ -276,9 +259,6 @@ export async function updateTagAction(
   }
 }
 
-/* =========================
-   deleteTagAction
-   ========================= */
 export async function deleteTagAction(
   id: string
 ): Promise<{ success: true } | ActionError> {
@@ -298,9 +278,6 @@ export async function deleteTagAction(
   }
 }
 
-/* =========================
-   deleteUnusedTagsAction
-   ========================= */
 export async function deleteUnusedTagsAction(): Promise<
   { success: true; deleted: number } | ActionError
 > {
@@ -339,9 +316,6 @@ export async function deleteUnusedTagsAction(): Promise<
   }
 }
 
-/* =========================
-   mergeTagsAction
-   ========================= */
 export async function mergeTagsAction(
   input: z.infer<typeof mergeTagsSchema>
 ): Promise<MergeTagsResult | ActionError> {
@@ -349,7 +323,6 @@ export async function mergeTagsAction(
     const parsed = mergeTagsSchema.parse(input);
     const { mainTagId, otherTagIds } = parsed;
 
-    // Remover caso mainTagId esteja erroneamente na lista
     const others = otherTagIds.filter((id) => id !== mainTagId);
     if (others.length === 0) {
       return {
@@ -361,7 +334,6 @@ export async function mergeTagsAction(
 
     const supabase = await createSupabaseServerClient();
 
-    // Buscar episódios vinculados às outras tags
     const { data: episodes, error: epErr } = await supabase
       .from("episode_tags")
       .select("episode_id, tag_id")
@@ -374,7 +346,6 @@ export async function mergeTagsAction(
     const episodeIds = [...new Set((episodes || []).map((e) => e.episode_id))];
 
     if (episodeIds.length > 0) {
-      // Apagar relacionamentos antigos dessas episodes (todas as tags listadas)
       const { error: delRelErr } = await supabase
         .from("episode_tags")
         .delete()
@@ -387,7 +358,6 @@ export async function mergeTagsAction(
         };
       }
 
-      // Recriar somente com a tag principal
       const rowsToInsert = episodeIds.map((episodeId) => ({
         episode_id: episodeId,
         tag_id: mainTagId,
@@ -404,7 +374,6 @@ export async function mergeTagsAction(
       }
     }
 
-    // Apagar as outras tags
     const { error: delTagsErr } = await supabase
       .from("tags")
       .delete()
@@ -424,22 +393,17 @@ export async function mergeTagsAction(
   }
 }
 
-/* =========================
-   bulkImportTagsAction
-   ========================= */
 export async function bulkImportTagsAction(
   input: z.infer<typeof bulkImportSchema>
 ): Promise<BulkImportResult | ActionError> {
   try {
     const parsed = bulkImportSchema.parse(input);
-    // Normalizar
     const normalized = parsed.names
       .map((n) => n.trim().toLowerCase())
       .filter(Boolean);
     const unique = [...new Set(normalized)];
 
     const supabase = await createSupabaseServerClient();
-    // Buscar existência
     const { data: existing, error: existErr } = await supabase
       .from("tags")
       .select("name")
@@ -472,9 +436,6 @@ export async function bulkImportTagsAction(
   }
 }
 
-/* =========================
-   listTagGroupsAction
-   ========================= */
 export async function listTagGroupsAction(): Promise<
   { success: true; data: { id: string; name: string }[] } | ActionError
 > {
@@ -493,9 +454,6 @@ export async function listTagGroupsAction(): Promise<
   }
 }
 
-/* =========================
-   listAllTagNamesAction (export)
-   ========================= */
 export async function listAllTagNamesAction(): Promise<
   { success: true; data: { name: string }[] } | ActionError
 > {
@@ -543,6 +501,7 @@ export async function getPaginatedTagAliases(page: number, pageSize: number) {
 
   return { aliases, count: count ?? 0 };
 }
+
 export async function getPaginatedTagGroups(page: number, pageSize: number) {
   "use server";
   const supabase = await createSupabaseServerClient();
@@ -552,7 +511,7 @@ export async function getPaginatedTagGroups(page: number, pageSize: number) {
 
   const { data: groups, error } = await supabase
     .from("tag_groups")
-    .select("*, tags(*)") // Inclui as tags de cada grupo
+    .select("*, tags(*)")
     .range(start, end)
     .order("name", { ascending: true });
 
@@ -573,7 +532,9 @@ export async function getPaginatedTagGroups(page: number, pageSize: number) {
   return { groups, count: count ?? 0 };
 }
 
-export async function getAllTags() {
+export async function getAllTags(): Promise<
+  { success: true; tags: any[] } | { success: false; error: string }
+> {
   "use server";
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -583,7 +544,53 @@ export async function getAllTags() {
 
   if (error) {
     console.error("Error fetching all tags:", error);
-    return [];
+    return { success: false, error: error.message };
   }
-  return data;
+  return { success: true, tags: data || [] };
+}
+
+export async function createTagAliasAction(
+  input: z.infer<typeof createTagAliasSchema>
+): Promise<{ success: true; id: string } | ActionError> {
+  try {
+    const parsed = createTagAliasSchema.parse(input);
+    const supabase = await createSupabaseServerClient();
+
+    const { data, error } = await supabase
+      .from("tag_aliases")
+      .insert({
+        alias: parsed.alias.trim().toLowerCase(),
+        tag_id: parsed.tag_id,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      return { success: false, error: error.message, code: error.code };
+    }
+
+    revalidatePath("/admin/tags");
+    return { success: true, id: data.id };
+  } catch (e: any) {
+    return { success: false, error: e?.message || "Erro ao criar sinônimo." };
+  }
+}
+
+export async function deleteTagAliasAction(
+  id: string
+): Promise<{ success: true } | ActionError> {
+  try {
+    if (!id) return { success: false, error: "ID ausente." };
+    const supabase = await createSupabaseServerClient();
+
+    const { error } = await supabase.from("tag_aliases").delete().eq("id", id);
+    if (error) {
+      return { success: false, error: error.message, code: error.code };
+    }
+
+    revalidatePath("/admin/tags");
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e?.message || "Erro ao excluir sinônimo." };
+  }
 }

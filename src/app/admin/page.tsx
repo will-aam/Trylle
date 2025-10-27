@@ -1,3 +1,4 @@
+// src/app/admin/page.tsx
 import { Suspense } from "react";
 import { AdminStats } from "@/src/components/features/admin/admin-stats";
 import { UploadForm } from "@/src/components/features/admin/admin-upload-form";
