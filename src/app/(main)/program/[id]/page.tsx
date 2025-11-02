@@ -1,5 +1,3 @@
-// src/app/(main)/program/[id]/page.tsx
-
 import { notFound } from "next/navigation";
 // 1. DESCOMENTE AS IMPORTAÇÕES
 import { getProgramWithEpisodes } from "@/src/services/programService";
@@ -9,14 +7,16 @@ import { ProgramWithRelations } from "@/src/lib/types"; // Precisamos do tipo co
 
 // Tipos para os parâmetros da página
 interface ProgramPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
+  searchParams: { [key: string]: string | string[] | undefined };
 }
 
 // A página é um Server Component assíncrono
 export default async function ProgramPage({ params }: ProgramPageProps) {
-  const { id } = params;
+  // Desestruturação do params que agora é uma Promise
+  const { id } = await params;
 
   // 2. DESCOMENTE A LÓGICA DE BUSCA DE DADOS
   const programData = (await getProgramWithEpisodes(
