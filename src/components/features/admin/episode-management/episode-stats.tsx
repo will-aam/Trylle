@@ -1,3 +1,4 @@
+// src/components/features/admin/episode-management/episode-stats.tsx
 "use client";
 
 import {
@@ -14,6 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/src/components/ui/tooltip";
+import { useIsMobile } from "@/src/hooks/use-mobile";
 
 interface EpisodeStatsProps {
   /** Count resultante da busca/filtros atuais */
@@ -60,6 +62,12 @@ export function EpisodeStats({
   className,
   compact = false,
 }: EpisodeStatsProps) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return null;
+  }
+
   const effectiveGlobalTotal =
     typeof globalTotal === "number"
       ? globalTotal
@@ -102,7 +110,7 @@ export function EpisodeStats({
     <div
       className={cn(
         "grid w-full gap-3 sm:gap-4",
-        // Layout fluido: mínimo 140px por card
+
         "grid-cols-[repeat(auto-fit,minmax(140px,1fr))]",
         className
       )}
