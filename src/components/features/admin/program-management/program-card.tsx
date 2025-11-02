@@ -24,7 +24,7 @@ import {
 } from "@/src/components/ui/tooltip";
 import { AspectRatio } from "@/src/components/ui/aspect-ratio";
 import Image from "next/image";
-import Link from "next/link"; // 1. ADICIONE O IMPORT
+import Link from "next/link";
 
 interface ProgramCardProps {
   program: ProgramWithRelations;
@@ -54,10 +54,9 @@ export function ProgramCard({ program, onEdit, onDelete }: ProgramCardProps) {
   return (
     <div className="group flex flex-col">
       <Card className="flex flex-col flex-grow overflow-hidden border-slate-700 bg-slate-800 text-white transition-transform duration-300 group-hover:scale-[1.02]">
-        {/* 2. ENVOLVA A IMAGEM E O CONTEÚDO COM O LINK */}
         <Link
-          href={`/program/${program.id}`} // Link para a nova página
-          target="_blank" // Abre em nova aba (boa UX para admin)
+          href={`/program/${program.id}`}
+          target="_blank"
           className="flex flex-col flex-grow"
         >
           <CardHeader className="p-0">
@@ -92,8 +91,8 @@ export function ProgramCard({ program, onEdit, onDelete }: ProgramCardProps) {
         </Link>
       </Card>
 
-      {/* 3. OS BOTÕES JÁ ESTÃO FORA DO CARD, ENTÃO NÃO PRECISAM DE MUDANÇA */}
-      <div className="flex items-center justify-end px-2 pt-3">
+      {/* APLICAÇÃO DAS CLASSES DE RESPONSIVIDADE */}
+      <div className="flex items-center justify-end px-2 pt-3 hidden md:flex">
         <TooltipProvider delayDuration={150}>
           <Tooltip>
             <TooltipTrigger asChild>

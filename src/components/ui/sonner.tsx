@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
+// eslint-disable-next-line no-restricted-imports
 import { Toaster as Sonner } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
