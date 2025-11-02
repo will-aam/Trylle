@@ -25,7 +25,7 @@ import {
 } from "@/src/components/ui/form";
 import { useToast } from "@/src/hooks/use-toast";
 import { Program, Category } from "@/src/lib/types";
-import { saveProgram } from "@/src/app/admin/programs/actions"; // Assumindo que esta ação será criada/ajustada
+import { saveProgram } from "@/src/app/admin/programs/actions";
 
 // 1. NOVOS IMPORTS
 import Image from "next/image";
@@ -61,7 +61,7 @@ export function ProgramForm({
       title: program?.title || "",
       description: program?.description || "",
       category_id: program?.category?.id || "",
-      image_file: undefined, // Inicializa como undefined
+      image_file: undefined,
     },
   });
 
@@ -71,10 +71,9 @@ export function ProgramForm({
       title: program?.title || "",
       description: program?.description || "",
       category_id: program?.category?.id || "",
-      image_file: undefined, // Sempre resetamos o input de arquivo
+      image_file: undefined,
     });
 
-    // Atualiza o preview e estados de controle
     const existingImageUrl = program?.image_url || null;
     setImagePreview(existingImageUrl);
     setUploadError(null);
@@ -92,7 +91,7 @@ export function ProgramForm({
       title: data.title,
       description: data.description,
       category_id: data.category_id,
-      image_url: imageUrl, // A nova URL!
+      image_url: imageUrl,
     });
 
     if (result.success && result.program) {
@@ -101,7 +100,7 @@ export function ProgramForm({
     } else {
       toast({
         title: "Erro ao salvar",
-        description: result.message || "Não foi possível salvar o programa.", // CORRIGIDO: error -> message
+        description: result.message || "Não foi possível salvar o programa.",
         variant: "destructive",
       });
     }
@@ -111,7 +110,6 @@ export function ProgramForm({
   // 5. INSTANCIE O HOOK DE UPLOAD
   const { isUploading, progress, uploadImageFile } = useProgramImageUpload(
     (publicUrl) => {
-      // Upload deu certo!
       if (formDataRef.current) {
         handleSave(formDataRef.current, publicUrl);
       } else {
@@ -123,10 +121,9 @@ export function ProgramForm({
       }
     },
     (error) => {
-      // Upload falhou
       setUploadError(error);
       form.setError("image_file", { type: "manual", message: error });
-      setIsSubmitting(false); // Garante que o botão seja reabilitado
+      setIsSubmitting(false);
     }
   );
 
@@ -134,17 +131,13 @@ export function ProgramForm({
   async function onSubmit(values: ProgramFormData) {
     setIsSubmitting(true);
     setUploadError(null);
-    formDataRef.current = values; // Salva dados (título, etc.) no ref
+    formDataRef.current = values;
 
-    const file = values.image_file?.[0]; // O Zod passa um FileList
+    const file = values.image_file?.[0];
 
     if (file) {
-      // 1. TEM ARQUIVO NOVO: Inicia o upload.
-      // O `onSuccess` do hook (que configuramos acima) vai chamar o `handleSave`.
       uploadImageFile(file);
     } else {
-      // 2. SEM ARQUIVO NOVO: Salva direto.
-      // A URL é a que já existia OU nula se o usuário removeu.
       const finalImageUrl = isRemovingImage ? null : program?.image_url || null;
       handleSave(values, finalImageUrl);
     }
@@ -152,7 +145,11 @@ export function ProgramForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      {/* APLICAÇÃO DAS CLASSES DE RESPONSIVIDADE */}
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-6 max-h-[85vh] overflow-y-auto pr-2"
+      >
         {/* Campos existentes */}
         <FormField
           control={form.control}

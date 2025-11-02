@@ -24,6 +24,7 @@ import {
 } from "@/src/components/ui/tooltip";
 import { AspectRatio } from "@/src/components/ui/aspect-ratio";
 import Image from "next/image";
+import Link from "next/link"; // 1. ADICIONE O IMPORT
 
 interface ProgramCardProps {
   program: ProgramWithRelations;
@@ -53,38 +54,45 @@ export function ProgramCard({ program, onEdit, onDelete }: ProgramCardProps) {
   return (
     <div className="group flex flex-col">
       <Card className="flex flex-col flex-grow overflow-hidden border-slate-700 bg-slate-800 text-white transition-transform duration-300 group-hover:scale-[1.02]">
-        {/* NOVA ESTRUTURA DA IMAGEM */}
-        <CardHeader className="p-0">
-          <AspectRatio ratio={16 / 9}>
-            {program.image_url ? (
-              <Image
-                src={program.image_url}
-                alt={program.title}
-                fill
-                className="object-cover rounded-t-md"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full bg-slate-700 rounded-t-md">
-                <ImageIcon className="h-10 w-10 text-slate-400" />
-              </div>
-            )}
-          </AspectRatio>
-        </CardHeader>
+        {/* 2. ENVOLVA A IMAGEM E O CONTEÚDO COM O LINK */}
+        <Link
+          href={`/program/${program.id}`} // Link para a nova página
+          target="_blank" // Abre em nova aba (boa UX para admin)
+          className="flex flex-col flex-grow"
+        >
+          <CardHeader className="p-0">
+            <AspectRatio ratio={16 / 9}>
+              {program.image_url ? (
+                <Image
+                  src={program.image_url}
+                  alt={program.title}
+                  fill
+                  className="object-cover rounded-t-md"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full bg-slate-700 rounded-t-md">
+                  <ImageIcon className="h-10 w-10 text-slate-400" />
+                </div>
+              )}
+            </AspectRatio>
+          </CardHeader>
 
-        <CardContent className="flex-grow p-4">
-          <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400">
-            {program.categories?.name || "Sem Categoria"}
-          </h3>
-          <h4 className="mt-1 line-clamp-2 h-[48px] font-semibold text-slate-50">
-            {program.title}
-          </h4>
-          <p className="mt-2 text-sm text-slate-400">
-            Série • {episodeCount}{" "}
-            {episodeCount === 1 ? "episódio" : "episódios"}
-          </p>
-        </CardContent>
+          <CardContent className="flex-grow p-4">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400">
+              {program.categories?.name || "Sem Categoria"}
+            </h3>
+            <h4 className="mt-1 line-clamp-2 h-[48px] font-semibold text-slate-50">
+              {program.title}
+            </h4>
+            <p className="mt-2 text-sm text-slate-400">
+              Série • {episodeCount}{" "}
+              {episodeCount === 1 ? "episódio" : "episódios"}
+            </p>
+          </CardContent>
+        </Link>
       </Card>
 
+      {/* 3. OS BOTÕES JÁ ESTÃO FORA DO CARD, ENTÃO NÃO PRECISAM DE MUDANÇA */}
       <div className="flex items-center justify-end px-2 pt-3">
         <TooltipProvider delayDuration={150}>
           <Tooltip>

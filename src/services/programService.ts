@@ -130,3 +130,40 @@ export async function getProgramsWithRelations(page: number, perPage: number) {
   // Retorna os dados da página e a contagem total
   return { data: programs, count: count ?? 0 };
 }
+// (cole isso no final de src/services/programService.ts)
+
+export async function getProgramWithEpisodes(programId: string) {
+  noStore(); // Garante que esta função sempre busque dados novos
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("programs")
+    .select(
+      `
+      *,
+      categories (id, name),
+      episodes (
+        id,
+        title,
+        description,
+        audio_url,
+        episode_number,
+        created_at,
+        status
+      )
+    `
+    )
+    .eq("id", programId)
+    .order("episode_number", { referencedTable: "episodes", ascending: true }) // Ordena os episódios
+    .single(); // Esperamos apenas um programa
+
+  if (error) {
+    console.error(
+      `Error fetching program with episodes (ID: ${programId}):`,
+      error
+    );
+    return null;
+  }
+
+  return data;
+}
