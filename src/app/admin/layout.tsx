@@ -1,4 +1,3 @@
-// src/app/admin/layout.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,6 +5,16 @@ import { AdminSidebar } from "@/src/components/layout/admin-sidebar";
 import { Toaster } from "@/src/components/ui/sonner";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { AdminPlayerWrapper } from "@/src/components/layout/admin-player-wrapper";
+import { useIsMobile } from "@/src/hooks/use-mobile";
+import { Button } from "@/src/components/ui/button";
+import { Menu } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/src/components/ui/sheet";
 
 export default function AdminLayout({
   children,
@@ -14,6 +23,8 @@ export default function AdminLayout({
 }) {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     setIsMounted(true);
@@ -40,21 +51,57 @@ export default function AdminLayout({
     );
   }
 
+  // Versão para desktop - mantida exatamente como estava
+  if (!isMobile) {
+    return (
+      <div className="flex h-screen bg-muted/40">
+        <AdminSidebar
+          isCollapsed={isSidebarCollapsed}
+          setCollapsed={() => setSidebarCollapsed((prev) => !prev)}
+        />
+
+        <AdminPlayerWrapper>
+          <main
+            className={`flex-1 overflow-y-auto transition-all duration-300 ${
+              isSidebarCollapsed ? "pl-16" : "pl-64"
+            }`}
+          >
+            {children}
+          </main>
+        </AdminPlayerWrapper>
+
+        <Toaster position="top-center" richColors />
+      </div>
+    );
+  }
+
+  // Versão para mobile
   return (
     <div className="flex h-screen bg-muted/40">
-      <AdminSidebar
-        isCollapsed={isSidebarCollapsed}
-        setCollapsed={() => setSidebarCollapsed((prev) => !prev)}
-      />
+      {/* Botão flutuante para abrir a sidebar no mobile */}
+      <div className="fixed top-4 left-4 z-50">
+        <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="bg-background">
+              <Menu className="h-4 w-4" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-64">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Menu de Navegação</SheetTitle>
+            </SheetHeader>
+            <AdminSidebar
+              isCollapsed={false}
+              setCollapsed={() => {}}
+              isMobile={true}
+              onCloseSidebar={() => setIsMobileSidebarOpen(false)}
+            />
+          </SheetContent>
+        </Sheet>
+      </div>
 
       <AdminPlayerWrapper>
-        <main
-          className={`flex-1 overflow-y-auto transition-all duration-300 ${
-            isSidebarCollapsed ? "pl-16" : "pl-64"
-          }`}
-        >
-          {children}
-        </main>
+        <main className="flex-1 overflow-y-auto pt-16">{children}</main>
       </AdminPlayerWrapper>
 
       <Toaster position="top-center" richColors />

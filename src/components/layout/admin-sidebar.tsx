@@ -1,3 +1,4 @@
+// src/components/layout/admin-sidebar.tsx
 "use client";
 
 import Link from "next/link";
@@ -35,9 +36,16 @@ import {
 interface AdminSidebarProps {
   isCollapsed: boolean;
   setCollapsed: () => void;
+  isMobile?: boolean;
+  onCloseSidebar?: () => void;
 }
 
-export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
+export function AdminSidebar({
+  isCollapsed,
+  setCollapsed,
+  isMobile = false,
+  onCloseSidebar,
+}: AdminSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createSupabaseBrowserClient();
@@ -45,13 +53,22 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/auth");
+    if (isMobile && onCloseSidebar) {
+      onCloseSidebar();
+    }
+  };
+
+  const handleLinkClick = () => {
+    if (isMobile && onCloseSidebar) {
+      onCloseSidebar();
+    }
   };
 
   return (
     <aside
       className={cn(
         "fixed inset-y-0 left-0 z-10 flex flex-col border-r bg-background transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
+        isCollapsed && !isMobile ? "w-16" : "w-64"
       )}
     >
       <TooltipProvider>
@@ -63,18 +80,20 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
             {isCollapsed && <div className="flex-1" />}
             <div className="flex items-center gap-2">
               {!isCollapsed && <ThemeToggle />}
-              <Button
-                onClick={setCollapsed}
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-              >
-                {isCollapsed ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <ChevronLeft className="h-4 w-4" />
-                )}
-              </Button>
+              {!isMobile && (
+                <Button
+                  onClick={setCollapsed}
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                >
+                  {isCollapsed ? (
+                    <ChevronRight className="h-4 w-4" />
+                  ) : (
+                    <ChevronLeft className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -86,6 +105,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 label="Início"
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/"}
+                onClick={handleLinkClick}
               />
               <SidebarLink
                 href="/admin"
@@ -93,6 +113,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 label={"Painel"}
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/admin"}
+                onClick={handleLinkClick}
               />
 
               {isCollapsed ? (
@@ -103,6 +124,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                     label="Gerenciar Episódios"
                     isCollapsed={isCollapsed}
                     isActive={pathname.startsWith("/admin/episodes")}
+                    onClick={handleLinkClick}
                   />
                   <SidebarLink
                     href="/admin/programs"
@@ -110,6 +132,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                     label="Gerenciar Programas"
                     isCollapsed={isCollapsed}
                     isActive={pathname.startsWith("/admin/programs")}
+                    onClick={handleLinkClick}
                   />
                 </>
               ) : (
@@ -139,6 +162,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                       <Link
                         href="/admin/episodes"
                         className="flex w-full items-center gap-3"
+                        onClick={handleLinkClick}
                       >
                         <LibraryBig className="h-4 w-4" />
                         <span className="truncate">Gerenciar Episódios</span>
@@ -148,6 +172,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                       <Link
                         href="#"
                         className="flex items-center gap-2 text-xs text-muted-foreground transition-all hover:text-foreground"
+                        onClick={handleLinkClick}
                       >
                         <ChevronRight className="h-3 w-3" />
                         <span>Análises</span>
@@ -155,6 +180,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                       <Link
                         href="#"
                         className="flex items-center gap-2 text-xs text-muted-foreground transition-all hover:text-foreground"
+                        onClick={handleLinkClick}
                       >
                         <ChevronRight className="h-3 w-3" />
                         <span>Agendamentos</span>
@@ -175,6 +201,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                       <Link
                         href="/admin/programs"
                         className="flex w-full items-center gap-3"
+                        onClick={handleLinkClick}
                       >
                         <Radio className="h-4 w-4" />
                         <span className="truncate">Gerenciar Programas</span>
@@ -184,6 +211,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                       <Link
                         href="#"
                         className="flex items-center gap-2 text-xs text-muted-foreground transition-all hover:text-foreground"
+                        onClick={handleLinkClick}
                       >
                         <ChevronRight className="h-3 w-3" />
                         <span>Análises</span>
@@ -191,6 +219,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                       <Link
                         href="#"
                         className="flex items-center gap-2 text-xs text-muted-foreground transition-all hover:text-foreground"
+                        onClick={handleLinkClick}
                       >
                         <ChevronRight className="h-3 w-3" />
                         <span>Agendamentos</span>
@@ -206,6 +235,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 label="Gerenciar Usuários"
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/admin/users"}
+                onClick={handleLinkClick}
               />
               <SidebarLink
                 href="/"
@@ -213,6 +243,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 label="Comunidade"
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/community"}
+                onClick={handleLinkClick}
               />
               <SidebarLink
                 href="/admin/financial"
@@ -220,6 +251,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 label="Financeiro"
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/admin/financial"}
+                onClick={handleLinkClick}
               />
               <SidebarLink
                 href="/admin/config"
@@ -227,6 +259,7 @@ export function AdminSidebar({ isCollapsed, setCollapsed }: AdminSidebarProps) {
                 label="Configurações"
                 isCollapsed={isCollapsed}
                 isActive={pathname === "/admin/config"}
+                onClick={handleLinkClick}
               />
             </nav>
           </div>
@@ -266,12 +299,14 @@ function SidebarLink({
   label,
   isCollapsed,
   isActive = false,
+  onClick,
 }: {
   href: string;
   icon: React.ReactNode;
   label: string;
   isCollapsed: boolean;
   isActive?: boolean;
+  onClick?: () => void;
 }) {
   if (isCollapsed) {
     return (
@@ -283,6 +318,7 @@ function SidebarLink({
               "flex items-center justify-center rounded-lg p-3 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
               isActive && "bg-accent text-foreground"
             )}
+            onClick={onClick}
           >
             {icon}
             <span className="sr-only">{label}</span>
@@ -300,6 +336,7 @@ function SidebarLink({
         "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
         isActive && "bg-accent text-foreground"
       )}
+      onClick={onClick}
     >
       {icon}
       <span className="truncate">{label}</span>
