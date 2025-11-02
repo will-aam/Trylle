@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Episode,
   SortDirection,
@@ -61,6 +61,28 @@ export interface EpisodeTableProps {
   allTags: Tag[];
 }
 
+// Hook para detectar se estamos em mobile
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Verificação inicial
+    checkIfMobile();
+
+    // Adicionar listener para mudanças de tamanho
+    window.addEventListener("resize", checkIfMobile);
+
+    // Limpar listener
+    return () => window.removeEventListener("resize", checkIfMobile);
+  }, []);
+
+  return isMobile;
+}
+
 export function EpisodeTable({
   episodes,
   onDelete,
@@ -87,6 +109,7 @@ export function EpisodeTable({
     null
   );
   const player = usePlayer();
+  const isMobile = useIsMobile();
 
   const formatDate = (isoString: string | null) => {
     if (!isoString) return "—";
@@ -100,6 +123,89 @@ export function EpisodeTable({
   const allSelected =
     episodes.length > 0 && selectedEpisodes.length === episodes.length;
 
+  // Versão mobile simplificada
+  if (isMobile) {
+    return (
+      <div className="space-y-2">
+        <div className="w-full">
+          {episodes.map((ep) => {
+            const updating = isUpdating[ep.id] ?? false;
+
+            return (
+              <div
+                key={ep.id}
+                className={cn(
+                  "flex items-center justify-between p-4 border-b",
+                  updating && "opacity-50"
+                )}
+              >
+                <div className="flex-1 pr-4">
+                  <h3 className="font-medium text-sm">{ep.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {ep.programs?.title || "—"}
+                  </p>
+                </div>
+                <div
+                  className={cn(
+                    "p-2 cursor-pointer rounded-full bg-primary/10 hover:bg-primary/20 transition-colors",
+                    updating && "pointer-events-none opacity-50"
+                  )}
+                  onClick={() => player.setEpisode(ep)}
+                >
+                  <Play className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+            );
+          })}
+          {episodes.length === 0 && (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              Nenhum episódio para exibir.
+            </div>
+          )}
+        </div>
+
+        {schedulingEpisode && (
+          <ScheduleEpisodeDialog
+            isOpen={!!schedulingEpisode}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) setSchedulingEpisode(null);
+            }}
+            episodeId={schedulingEpisode.id}
+            episodeTitle={schedulingEpisode.title}
+            defaultDateISO={schedulingEpisode.published_at ?? undefined}
+            onConfirm={onScheduleEpisode}
+          />
+        )}
+
+        {viewingJsonEpisode && (
+          <JsonViewDialog
+            data={viewingJsonEpisode}
+            title={`JSON do Episódio: ${viewingJsonEpisode.title}`}
+            isOpen={!!viewingJsonEpisode}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) setViewingJsonEpisode(null);
+            }}
+          />
+        )}
+        {editingEpisode && (
+          <EditEpisodeDialog
+            episode={editingEpisode}
+            onUpdate={onUpdateEpisode}
+            isOpen={!!editingEpisode}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) setEditingEpisode(null);
+            }}
+            categories={categories}
+            subcategories={subcategories}
+            programs={programs}
+            allTags={allTags}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Versão desktop (mantida original)
   return (
     <div className="space-y-2">
       <div className="overflow-x-auto">
@@ -161,7 +267,7 @@ export function EpisodeTable({
                       {ep.title}
                     </div>
                   </TableCell>
-                  {/* Célula para exibir o nome do programa com truncamento */}
+
                   <TableCell className="text-sm text-muted-foreground w-[250px] max-w-[250px]">
                     <div className="truncate" title={ep.programs?.title || "—"}>
                       {ep.programs?.title || "—"}
@@ -253,7 +359,7 @@ export function EpisodeTable({
             {episodes.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6} // Ajustado para 6 colunas
+                  colSpan={6}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   Nenhum episódio para exibir.
@@ -279,8 +385,8 @@ export function EpisodeTable({
 
       {viewingJsonEpisode && (
         <JsonViewDialog
-          data={viewingJsonEpisode} // Trocamos 'episode' por 'data'
-          title={`JSON do Episódio: ${viewingJsonEpisode.title}`} // Adicionamos um título
+          data={viewingJsonEpisode}
+          title={`JSON do Episódio: ${viewingJsonEpisode.title}`}
           isOpen={!!viewingJsonEpisode}
           onOpenChange={(isOpen) => {
             if (!isOpen) setViewingJsonEpisode(null);

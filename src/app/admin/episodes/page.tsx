@@ -1,3 +1,4 @@
+// src/app/admin/episodes/page.tsx
 import React from "react";
 import { EpisodeManager } from "@/src/components/features/admin/episode-management/episode-manager";
 import { listEpisodesAction } from "./actions";
