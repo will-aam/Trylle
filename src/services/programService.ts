@@ -100,10 +100,9 @@ export async function getProgramsWithRelations(page: number, perPage: number) {
     .select(
       `
       *,
-      categories (
+      categories!left (
         id,
-        name,
-        color_theme
+        name
       ),
       episodes (
         count

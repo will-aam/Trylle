@@ -25,7 +25,7 @@ const r2 = new S3Client({
 // =================================================================
 // CONSTANTES DE VALIDAÇÃO DA IMAGEM
 // =================================================================
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 5 MB
 const ALLOWED_FILE_TYPES = [
   "image/jpeg",
   "image/png",

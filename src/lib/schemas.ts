@@ -41,16 +41,19 @@ export const programSchema = z.object({
     .any()
     .optional()
     .nullable()
+    // .refine(
+    //   (file) => !file || (file && file.size <= 5 * 1024 * 1024),
+    //   `A imagem deve ter no máximo 5MB.`
+    // )
     .refine(
-      (file) => !file || (file && file.size <= 5 * 1024 * 1024), // 5MB max
-      `A imagem deve ter no máximo 5MB.`
-    )
-    .refine(
-      (file) =>
-        !file ||
-        (file &&
+      (
+        file // 'file' aqui é na verdade uma FileList
+      ) =>
+        !file || // Se não houver lista de arquivos
+        file.length === 0 || // Ou se a lista estiver vazia
+        (file[0] && // Ou se o PRIMEIRO item da lista existir E
           ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(
-            file.type
+            file[0].type // Verificamos o tipo dele
           )),
       "Tipo de arquivo de imagem não permitido."
     ),
