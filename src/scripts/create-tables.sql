@@ -1,8 +1,9 @@
+--  src/scripts/create-tables.sql
 -- Adiciona a coluna 'status' à tabela 'episodes'
-ALTER TABLE episodes ADD COLUMN status TEXT DEFAULT 'published' NOT NULL;
+-- ALTER TABLE episodes ADD COLUMN status TEXT DEFAULT 'published' NOT NULL; comentado 02/11/2025
 
 -- Atualiza todos os registros existentes para terem status = 'published'
-UPDATE episodes SET status = 'published';
+-- UPDATE episodes SET status = 'published'; comentado 02/11/2025
 
 -- Adicione ao final do seu arquivo create-tables.sql
 

@@ -1,3 +1,4 @@
+// src/lib/schemas.ts
 import { z } from "zod";
 
 const updateEpisodeSchema = z.object({
@@ -25,9 +26,6 @@ export const categoryFormSchema = z.object({
     .max(50, {
       message: "O nome da categoria não pode ter mais de 50 caracteres.",
     }),
-  // Campo do tema (classe CSS) que será aplicado visualmente nos cards.
-  // Mantemos como string | null para suportar ausência de tema.
-  color_theme: z.string().nullable(),
 });
 export type CategoryFormData = z.infer<typeof categoryFormSchema>;
 

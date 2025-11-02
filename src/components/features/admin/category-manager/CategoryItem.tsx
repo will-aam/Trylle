@@ -31,35 +31,6 @@ interface CategoryItemProps {
   setNewSubcategoryNames: (names: { [key: string]: string }) => void;
 }
 
-// Mapa de temas para suas cores primárias em hexadecimal
-const THEME_COLORS: Record<string, string> = {
-  ocean: "#60a5fa",
-  twilight: "#a78bfa",
-  sunset: "#fbbf24",
-  galaxy: "#312e81",
-  candy: "#f9a8d4",
-  aurora: "#6ee7b7",
-  citrus: "#fde047",
-  ice: "#93c5fd",
-  mod: "#34d399",
-  mint: "#d1fae5",
-  lavender: "#ede9fe",
-  sky: "#e0f2fe",
-  fuchsia: "#fdf4ff",
-  teal: "#ccfbf1",
-  rose: "#ffe4e6",
-  violet: "#e9d5ff",
-  cyan: "#ecfeff",
-  blue: "#dbeafe",
-  emerald: "#d1fae5",
-  indigo: "#e0e7ff",
-  purple: "#f3e8ff",
-  pink: "#fce7f3",
-  vaporwave: "#f472b6",
-  pearl: "#faf5ff",
-  "deep-sea": "#1e3a8a",
-};
-
 export function CategoryItem({
   category,
   onEdit,
@@ -69,22 +40,11 @@ export function CategoryItem({
   newSubcategoryNames,
   setNewSubcategoryNames,
 }: CategoryItemProps) {
-  // 1. Pega o nome do tema diretamente da categoria (ex: "ocean")
-  const themeName = category.color_theme;
-
-  // 2. Busca a cor correspondente no nosso mapa
-  const borderColor = themeName ? THEME_COLORS[themeName] : undefined;
-
   return (
     <AccordionPrimitive.Item
       key={category.id}
       value={category.id}
-      className={cn(
-        "border rounded-md px-4 bg-muted/50 transition-colors",
-        "border-l-[6px]"
-      )}
-      // 3. Aplica a cor dinamicamente usando o atributo 'style'
-      style={{ borderLeftColor: borderColor }}
+      className={cn("border rounded-md px-4 bg-muted/50 transition-colors")}
     >
       <AccordionPrimitive.Header className="flex items-center w-full py-2">
         <AccordionPrimitive.Trigger className="flex flex-1 items-center gap-3 text-left font-semibold group">

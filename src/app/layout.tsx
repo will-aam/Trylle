@@ -4,13 +4,12 @@ import { Sora } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/src/components/theme-provider";
 import { Toaster as SonnerToaster } from "@/src/components/ui/sonner";
-import "@/src/styles/card-themes.css";
 
 const sora = Sora({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Trylle",
-  description: "Ouça o futuro, hoje.",
+  description: "Ouça o futuro, hoje!",
 };
 
 export default function RootLayout({
