@@ -1,3 +1,4 @@
+// src/components/features/admin/tag-alias-manager/TagAliasManager.tsx
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
@@ -246,8 +247,8 @@ export function TagAliasManager() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Esta ação não pode ser desfeita. O sinônimo "
-                              {alias.alias}" será permanentemente deletado.
+                              Esta ação não pode ser desfeita. O sinônimo &quot;
+                              {alias.alias}&quot; será permanentemente deletado.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

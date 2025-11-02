@@ -90,7 +90,8 @@ export default function ProgramPageClient({
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Gerenciar Programas</h1>
-        <Button onClick={handleAddNew}>
+        {/* BOTÃO COM A CLASSE DE RESPONSIVIDADE */}
+        <Button onClick={handleAddNew} className="hidden md:flex">
           <PlusCircle className="mr-2 h-4 w-4" />
           Adicionar Programa
         </Button>
