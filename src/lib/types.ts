@@ -6,6 +6,7 @@ export interface Program {
   title: string;
   description: string;
   category_id: string;
+  image_url: string | null; // <-- ADICIONADO
   created_at: string;
   updated_at: string;
 

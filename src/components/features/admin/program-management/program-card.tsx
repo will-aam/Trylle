@@ -2,11 +2,19 @@
 
 "use client";
 
-import { Card, CardContent } from "@/src/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { ProgramWithRelations } from "@/src/lib/types";
 import { cn } from "@/src/lib/utils";
-import { Calendar, Edit, Trash2, Eye, EyeOff, Ellipsis } from "lucide-react"; // 1. IMPORTADO O ÍCONE
+import {
+  Calendar,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
+  Ellipsis,
+  ImageIcon,
+} from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import {
   Tooltip,
@@ -14,6 +22,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/src/components/ui/tooltip";
+import { AspectRatio } from "@/src/components/ui/aspect-ratio";
+import Image from "next/image";
 
 interface ProgramCardProps {
   program: ProgramWithRelations;
@@ -22,8 +32,6 @@ interface ProgramCardProps {
 }
 
 export function ProgramCard({ program, onEdit, onDelete }: ProgramCardProps) {
-  const colorTheme = program.categories?.color_theme || "default";
-  const gradientClass = `gradient-${colorTheme}`;
   const episodeCount = program._count?.episodes ?? 0;
 
   const [isVisible, setIsVisible] = useState(true);
@@ -45,26 +53,23 @@ export function ProgramCard({ program, onEdit, onDelete }: ProgramCardProps) {
   return (
     <div className="group flex flex-col">
       <Card className="flex flex-col flex-grow overflow-hidden border-slate-700 bg-slate-800 text-white transition-transform duration-300 group-hover:scale-[1.02]">
-        <div
-          className={cn(
-            "relative aspect-video cursor-pointer overflow-hidden",
-            gradientClass
-          )}
-        >
-          <div className="pattern rings">
-            <div className="deco-ring deco-ring-1"></div>
-            <div className="deco-ring deco-ring-2"></div>
-            <div className="deco-ring deco-ring-3"></div>
-          </div>
-
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent transition-colors group-hover:from-black/40"></div>
-
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/95 backdrop-blur-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-white">
-              <div className="ml-1 h-0 w-0 border-b-[14px] border-l-[22px] border-t-[14px] border-b-transparent border-t-transparent border-l-slate-900"></div>
-            </div>
-          </div>
-        </div>
+        {/* NOVA ESTRUTURA DA IMAGEM */}
+        <CardHeader className="p-0">
+          <AspectRatio ratio={16 / 9}>
+            {program.image_url ? (
+              <Image
+                src={program.image_url}
+                alt={program.title}
+                fill
+                className="object-cover rounded-t-md"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full bg-slate-700 rounded-t-md">
+                <ImageIcon className="h-10 w-10 text-slate-400" />
+              </div>
+            )}
+          </AspectRatio>
+        </CardHeader>
 
         <CardContent className="flex-grow p-4">
           <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400">

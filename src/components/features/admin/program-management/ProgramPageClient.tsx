@@ -1,5 +1,4 @@
 // src/components/features/admin/program-management/ProgramPageClient.tsx
-
 "use client";
 
 import { useState } from "react";
@@ -16,7 +15,7 @@ import { PlusCircle } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 import { ProgramCard } from "./program-card";
-import { useProgramManager } from "./useProgramManager"; // Importamos nosso novo hook
+import { useProgramManager } from "./useProgramManager";
 import {
   Pagination,
   PaginationContent,
@@ -26,7 +25,6 @@ import {
 } from "@/src/components/ui/pagination";
 import { Skeleton } from "@/src/components/ui/skeleton";
 
-// O componente agora só precisa receber as categorias para o formulário
 export default function ProgramPageClient({
   categories,
 }: {

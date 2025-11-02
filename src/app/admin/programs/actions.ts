@@ -1,4 +1,3 @@
-// src/app/admin/programs/actions.ts
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -6,6 +5,7 @@ import { getProgramsWithRelations } from "@/src/services/programService";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { Program } from "@/src/lib/types";
+import { z } from "zod";
 
 const createSupabaseServerClient = async () => {
   const cookieStore = await cookies();
@@ -28,19 +28,40 @@ type ProgramActionResponse = {
   program?: Program;
 };
 
-type ProgramFormData = {
-  title: string;
-  description: string;
-  category_id: string;
-};
+// Schema para validação dos dados do programa
+const programActionSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(3, "O título precisa ter pelo menos 3 caracteres."),
+  description: z
+    .string()
+    .min(10, "A descrição precisa ter pelo menos 10 caracteres."),
+  category_id: z.string().min(1, "A categoria é obrigatória."),
+  image_url: z.string().nullable().optional(),
+});
+
+// Tipo atualizado para incluir o campo image_url
+type ProgramFormData = z.infer<typeof programActionSchema>;
 
 export async function createProgram(
   formData: ProgramFormData
 ): Promise<ProgramActionResponse> {
   const supabase = createSupabaseServerClient();
+
+  // Validação dos dados
+  const validation = programActionSchema.omit({ id: true }).safeParse(formData);
+
+  if (!validation.success) {
+    return {
+      success: false,
+      message:
+        "Dados inválidos: " +
+        validation.error.errors.map((e) => e.message).join(", "),
+    };
+  }
+
   const { data, error } = await (await supabase)
     .from("programs")
-    .insert(formData)
+    .insert(validation.data)
     .select(`*, categories(*)`)
     .single();
 
@@ -61,9 +82,27 @@ export async function updateProgram(
   formData: ProgramFormData
 ): Promise<ProgramActionResponse> {
   const supabase = createSupabaseServerClient();
-  const { data, error } = await (await supabase)
+
+  // Validação dos dados
+  const validation = programActionSchema.omit({ id: true }).safeParse(formData);
+
+  if (!validation.success) {
+    return {
+      success: false,
+      message:
+        "Dados inválidos: " +
+        validation.error.errors.map((e) => e.message).join(", "),
+    };
+  }
+
+  const { data, error } = await (
+    await supabase
+  )
     .from("programs")
-    .update(formData)
+    .update({
+      ...validation.data,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", programId)
     .select(`*, categories(*)`)
     .single();
@@ -78,6 +117,17 @@ export async function updateProgram(
     message: "Programa atualizado com sucesso.",
     program: data,
   };
+}
+
+// Função unificada saveProgram para ser usada pelo ProgramForm
+export async function saveProgram(
+  formData: ProgramFormData
+): Promise<ProgramActionResponse> {
+  if (formData.id) {
+    return updateProgram(formData.id, formData);
+  } else {
+    return createProgram(formData);
+  }
 }
 
 export async function deleteProgram(
@@ -96,6 +146,7 @@ export async function deleteProgram(
   revalidatePath("/admin/programs");
   return { success: true, message: "Programa deletado com sucesso." };
 }
+
 export async function listProgramsAction({
   page,
   perPage,
@@ -111,6 +162,7 @@ export async function listProgramsAction({
     return { success: false, error: "Falha ao listar programas." };
   }
 }
+
 export async function getAllPrograms() {
   "use server";
   const supabase = await createSupabaseServerClient();

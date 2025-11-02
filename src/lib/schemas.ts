@@ -37,6 +37,23 @@ export const programSchema = z.object({
     .string()
     .min(10, { message: "A descrição precisa ter pelo menos 10 caracteres." }),
   category_id: z.string().nonempty({ message: "Selecione uma categoria." }),
+  image_file: z
+    .any()
+    .optional()
+    .nullable()
+    .refine(
+      (file) => !file || (file && file.size <= 5 * 1024 * 1024), // 5MB max
+      `A imagem deve ter no máximo 5MB.`
+    )
+    .refine(
+      (file) =>
+        !file ||
+        (file &&
+          ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(
+            file.type
+          )),
+      "Tipo de arquivo de imagem não permitido."
+    ),
 });
 export type ProgramFormData = z.infer<typeof programSchema>;
 

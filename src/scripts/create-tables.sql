@@ -1,12 +1,20 @@
---  src/scripts/create-tables.sql
--- Adiciona a coluna 'status' à tabela 'episodes'
--- ALTER TABLE episodes ADD COLUMN status TEXT DEFAULT 'published' NOT NULL; comentado 02/11/2025
+-- src/scripts/create-tables.sql
 
--- Atualiza todos os registros existentes para terem status = 'published'
--- UPDATE episodes SET status = 'published'; comentado 02/11/2025
+-- =================================================================
+-- TABELA DE PROGRAMAS
+-- =================================================================
+CREATE TABLE IF NOT EXISTS programs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  image_url TEXT NULL, -- Nova coluna para a URL da imagem do programa
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- Adicione ao final do seu arquivo create-tables.sql
-
+-- =================================================================
+-- TABELA DE ANEXOS DE EPISÓDIOS
+-- =================================================================
 -- Tabela para armazenar anexos dos episódios (documentos)
 CREATE TABLE IF NOT EXISTS episode_attachments (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -20,6 +28,9 @@ CREATE TABLE IF NOT EXISTS episode_attachments (
 -- Índice para acelerar a busca de anexos por episódio
 CREATE INDEX IF NOT EXISTS idx_episode_attachments_episode_id ON episode_attachments(episode_id);
 
+-- =================================================================
+-- TABELA DE DOCUMENTOS DE EPISÓDIOS
+-- =================================================================
 -- Tabela para armazenar documentos dos episódios
 CREATE TABLE IF NOT EXISTS episode_documents (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
