@@ -15,17 +15,17 @@ import {
 // =================================================================
 const r2 = new S3Client({
   region: "auto",
-  endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`, // CORRIGIDO
   credentials: {
-    accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!, // CORRIGIDO
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!, // CORRIGIDO
   },
 });
 
 // =================================================================
 // CONSTANTES DE VALIDAÇÃO DA IMAGEM
 // =================================================================
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB - CORRIGIDO (estava 500MB)
 const ALLOWED_FILE_TYPES = [
   "image/jpeg",
   "image/png",
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
 
     // 5. Criar Comando e Gerar Presigned URL
     const command = new PutObjectCommand({
-      Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME!,
+      Bucket: process.env.R2_BUCKET_NAME!, // CORRIGIDO
       Key: storageKey,
       ContentType: fileType,
       ContentLength: fileSize,
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     const presignedUrl = await getSignedUrl(r2, command, { expiresIn: 3600 }); // 1 hora para expirar
 
     // 6. Gerar a URL pública (para salvar no DB)
-    const publicUrl = `${process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL}/${storageKey}`;
+    const publicUrl = `${process.env.NEXT_PUBLIC_R2_PUBLIC_DOMAIN}/${storageKey}`; // CORRIGIDO
 
     // 7. Retornar URLs
     return NextResponse.json({
