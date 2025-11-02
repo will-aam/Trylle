@@ -10,7 +10,7 @@ interface ProgramPageProps {
   params: Promise<{
     id: string;
   }>;
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 // A página é um Server Component assíncrono
