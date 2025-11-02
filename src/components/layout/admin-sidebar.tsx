@@ -107,14 +107,18 @@ export function AdminSidebar({
                 isActive={pathname === "/"}
                 onClick={handleLinkClick}
               />
-              <SidebarLink
-                href="/admin"
-                icon={<MonitorCog className="h-4 w-4" />}
-                label={"Painel"}
-                isCollapsed={isCollapsed}
-                isActive={pathname === "/admin"}
-                onClick={handleLinkClick}
-              />
+
+              {/* ITEM DO PAINEL OCULTO NO MOBILE */}
+              <div className="hidden md:block">
+                <SidebarLink
+                  href="/admin"
+                  icon={<MonitorCog className="h-4 w-4" />}
+                  label={"Painel"}
+                  isCollapsed={isCollapsed}
+                  isActive={pathname === "/admin"}
+                  onClick={handleLinkClick}
+                />
+              </div>
 
               {isCollapsed ? (
                 <>
