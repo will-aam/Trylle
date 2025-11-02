@@ -12,6 +12,10 @@ const nextConfig = {
       // permitir imagens (TEMPORARIO)
       {
         protocol: "https",
+        hostname: "pub-ce0ce0293b9b45198e1f9086e196d8e9.r2.dev",
+      },
+      {
+        protocol: "https",
         hostname: "img.freepik.com",
         port: "",
         pathname: "/**",
