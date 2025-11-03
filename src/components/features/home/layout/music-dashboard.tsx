@@ -12,7 +12,12 @@ export default function MusicDashboard() {
         {/* 3. MUDADO de w-1/4 para w-64 (largura fixa) */}
         {/* Esta div NÃO tem 'pl-4', então a sidebar fica na borda esquerda */}
         <div className="w-64 flex-shrink-0">
-          <Sidebar />
+          <Sidebar
+            isCollapsed={false}
+            setIsCollapsed={function (value: boolean): void {
+              throw new Error("Function not implemented.");
+            }}
+          />
         </div>
 
         {/* Main Content */}
