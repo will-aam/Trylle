@@ -7,13 +7,16 @@ import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { Sidebar } from "@/src/components/features/home/layout/sidebar";
 import { RightSidebar } from "@/src/components/features/home/layout/right-sidebar";
 import { NavbarLoggedOut } from "@/src/components/layout/NavbarLoggedOut";
-import { cn } from "@/src/lib/utils"; // <-- NOVO: Importe o cn
+// NOVOS IMPORTS PARA RESPONSIVIDADE E ESTADO DA SIDEBAR
+import { BottomNavbar } from "@/src/components/layout/bottom-navbar";
+import { cn } from "@/src/lib/utils";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   const supabase = createSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(false); // <-- NOVO: Estado da sidebar
+  // NOVO ESTADO PARA CONTROLAR SE A SIDEBAR ESTÁ ENCOLHIDA
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const {
@@ -48,6 +51,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
+  // LÓGICA DE CARREGAMENTO E USUÁRIO NÃO LOGADO (MANTIDA)
   if (loading) {
     return null;
   }
@@ -61,31 +65,49 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // SE ESTIVER LOGADO: Renderiza o layout do app (ATUALIZADO)
+  // LAYOUT PARA USUÁRIO LOGADO (ATUALIZADO E RESPONSIVO)
   return (
-    <div className="h-screen w-full flex flex-col p-4 gap-4 bg-black text-white overflow-hidden">
-      <div className="flex-1 flex gap-4 overflow-hidden">
-        {/* Div da Sidebar com largura dinâmica e props passadas */}
+    // O container raiz NÃO deve ter padding ou overflow
+    <div className="h-screen w-full flex flex-col bg-black text-white">
+      {/* 1. Área de Conteúdo (Sidebars + Main) 
+          Este div agora tem o padding e o gap
+      */}
+      <div className="flex-1 flex gap-4 overflow-hidden p-4">
+        {/* 2. Div da Sidebar Esquerda (Escondida no mobile) */}
         <div
           className={cn(
             "flex-shrink-0 transition-all duration-300 ease-in-out",
-            isCollapsed ? "w-20" : "w-64" // <-- LARGURA DINÂMICA
+            "hidden md:block", // <-- ESCONDE NO MOBILE (telas < 768px)
+            isCollapsed ? "w-20" : "w-64"
           )}
         >
-          <Sidebar
-            isCollapsed={isCollapsed}
-            setIsCollapsed={setIsCollapsed} // <-- PASSANDO AS PROPS
-          />
+          <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
         </div>
 
+        {/* 3. Conteúdo Principal */}
         <main className="flex-1 rounded-2xl overflow-y-auto overflow-x-hidden">
           {children}
         </main>
 
-        <div className="w-96 flex-shrink-0">
+        {/* 4. Div da Sidebar Direita (Escondida no mobile e tablet) */}
+        <div className="w-96 flex-shrink-0 hidden lg:block">
+          {" "}
+          {/* <-- ESCONDE EM TELAS < 1024px */}
           <RightSidebar />
         </div>
       </div>
+
+      {/* 5. Navbar Mobile (Mostrada apenas no mobile) */}
+      <div className="md:hidden">
+        {" "}
+        {/* <-- MOSTRA APENAS NO MOBILE */}
+        <BottomNavbar />
+      </div>
+
+      {/* 6. Player Global (Seu player pode ir aqui, fora da área de scroll) */}
+      {/* <div className="w-full flex-shrink-0">
+        <Player />
+      </div> */}
     </div>
   );
 }
