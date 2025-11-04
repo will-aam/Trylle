@@ -14,7 +14,7 @@ import { Category, Program, ProgramWithRelations } from "@/src/lib/types";
 import { PlusCircle } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
-import { ProgramCard } from "./program-card";
+import { ProgramTable } from "./ProgramTable";
 import { useProgramManager } from "./useProgramManager";
 import {
   Pagination,
@@ -23,7 +23,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/src/components/ui/pagination";
-import { Skeleton } from "@/src/components/ui/skeleton";
 
 export default function ProgramPageClient({
   categories,
@@ -90,37 +89,18 @@ export default function ProgramPageClient({
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Gerenciar Programas</h1>
-        {/* BOTÃO COM A CLASSE DE RESPONSIVIDADE */}
         <Button onClick={handleAddNew} className="hidden md:flex">
           <PlusCircle className="mr-2 h-4 w-4" />
           Adicionar Programa
         </Button>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
-          {[...Array(itemsPerPage)].map((_, i) => (
-            <div key={i} className="flex flex-col gap-3">
-              <Skeleton className="h-[150px] w-full rounded-xl" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
-          {programs.map((program) => (
-            <ProgramCard
-              key={program.id}
-              program={program}
-              onEdit={handleEdit}
-              onDelete={handleDeleteRequest}
-            />
-          ))}
-        </div>
-      )}
+      <ProgramTable
+        programs={programs}
+        isLoading={loading}
+        onEdit={handleEdit}
+        onDelete={handleDeleteRequest}
+      />
 
       {totalPages > 1 && (
         <Pagination className="mt-8">
