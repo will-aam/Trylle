@@ -77,7 +77,6 @@ export interface Category {
   episode_count?: number; // Mantemos opcional para uso em listagens
   subcategories?: Subcategory[]; // (se você já usa isso no client para accordion)
   subcategoriesLoading?: boolean; // flag usada no cliente (se existir)
-  color_theme?: string | null;
 }
 
 /**
