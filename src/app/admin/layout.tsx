@@ -1,8 +1,8 @@
+// src/app/admin/layout.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { AdminSidebar } from "@/src/components/layout/admin-sidebar";
-import { Toaster } from "@/src/components/ui/sonner";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { AdminPlayerWrapper } from "@/src/components/layout/admin-player-wrapper";
 import { useIsMobile } from "@/src/hooks/use-mobile";
@@ -69,8 +69,6 @@ export default function AdminLayout({
             {children}
           </main>
         </AdminPlayerWrapper>
-
-        <Toaster position="top-center" richColors />
       </div>
     );
   }
@@ -103,8 +101,6 @@ export default function AdminLayout({
       <AdminPlayerWrapper>
         <main className="flex-1 overflow-y-auto pt-16">{children}</main>
       </AdminPlayerWrapper>
-
-      <Toaster position="top-center" richColors />
     </div>
   );
 }

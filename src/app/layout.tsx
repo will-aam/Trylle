@@ -20,7 +20,6 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={sora.className}>
-        {" "}
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -28,7 +27,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
-          <SonnerToaster richColors />{" "}
+          <SonnerToaster richColors position="top-center" />
         </ThemeProvider>
       </body>
     </html>

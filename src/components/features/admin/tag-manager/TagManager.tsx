@@ -1,3 +1,4 @@
+// src/components/features/admin/tag-manager/TagManager.tsx
 "use client";
 
 import { useEffect, useState, useCallback, useTransition } from "react";
@@ -10,7 +11,7 @@ import {
 } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { Check, Download } from "lucide-react";
-import { useToast } from "@/src/hooks/use-toast";
+import { toast } from "@/src/lib/safe-toast"; // <-- Importação correta
 
 import { FileInput } from "./FileInput";
 import { TagFilters } from "./TagFilters";
@@ -39,8 +40,6 @@ import { TagWithCount, FilterMode, TagGroup } from "./types";
 const TAGS_PER_PAGE = 25;
 
 export function TagManager() {
-  const { toast } = useToast();
-
   // Estados principais
   const [tags, setTags] = useState<TagWithCount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,13 +91,11 @@ export function TagManager() {
       setTotalTagCount(res.total);
       setUnusedTagCount(res.unused);
     } else {
-      toast({
-        title: "Erro ao obter estatísticas",
+      toast.error("Erro ao obter estatísticas", {
         description: res.error,
-        variant: "destructive",
       });
     }
-  }, [toast]);
+  }, []);
 
   /* Carregar grupos de tag */
   const loadGroups = useCallback(async () => {
@@ -106,13 +103,11 @@ export function TagManager() {
     if (res.success) {
       setTagGroups(res.data);
     } else {
-      toast({
-        title: "Erro ao carregar grupos",
+      toast.error("Erro ao carregar grupos", {
         description: res.error,
-        variant: "destructive",
       });
     }
-  }, [toast]);
+  }, []);
 
   /* Carregar tags (paginado) */
   const loadTags = useCallback(
@@ -136,15 +131,13 @@ export function TagManager() {
         setTags(mapped);
         setTotalFiltered(res.totalFiltered);
       } else {
-        toast({
-          title: "Erro ao listar tags",
+        toast.error("Erro ao listar tags", {
           description: res.error,
-          variant: "destructive",
         });
       }
       setLoading(false);
     },
-    [currentPage, debouncedSearchTerm, filterMode, toast]
+    [currentPage, debouncedSearchTerm, filterMode]
   );
 
   /* Carregamento inicial e quando dependências mudam */
@@ -170,28 +163,24 @@ export function TagManager() {
       groupId: null,
     });
     if (!res.success) {
-      toast({
-        title: "Erro ao criar tag",
+      toast.error("Erro ao criar tag", {
         description: res.error,
-        variant: "destructive",
       });
       return;
     }
     setNewTagName("");
-    toast({ title: "Sucesso!", description: "Tag criada." });
+    toast.success("Sucesso!", { description: "Tag criada." });
     await refreshAll();
   };
 
   const handleDeleteTag = async (tagId: string) => {
     const res = await deleteTagAction(tagId);
     if (!res.success) {
-      toast({
-        title: "Erro ao excluir tag",
+      toast.error("Erro ao excluir tag", {
         description: res.error,
-        variant: "destructive",
       });
     } else {
-      toast({ title: "Sucesso!", description: "Tag excluída." });
+      toast.success("Sucesso!", { description: "Tag excluída." });
       await refreshAll();
     }
     setSelectedTag(null);
@@ -209,13 +198,11 @@ export function TagManager() {
       groupId: groupId || null,
     });
     if (!res.success) {
-      toast({
-        title: "Erro ao atualizar tag",
+      toast.error("Erro ao atualizar tag", {
         description: res.error,
-        variant: "destructive",
       });
     } else {
-      toast({ title: "Sucesso!", description: "Tag atualizada." });
+      toast.success("Sucesso!", { description: "Tag atualizada." });
       await refreshAll();
     }
     setSelectedTag(null);
@@ -224,19 +211,15 @@ export function TagManager() {
   const handleDeleteUnusedTags = async () => {
     const res = await deleteUnusedTagsAction();
     if (!res.success) {
-      toast({
-        title: "Erro ao excluir tags",
+      toast.error("Erro ao excluir tags", {
         description: res.error,
-        variant: "destructive",
       });
     } else if (res.deleted === 0) {
-      toast({
-        title: "Nenhuma tag para excluir",
+      toast.info("Nenhuma tag para excluir", {
         description: "Todas as tags estão em uso.",
       });
     } else {
-      toast({
-        title: "Limpeza concluída!",
+      toast.success("Limpeza concluída!", {
         description: `${res.deleted} tags não utilizadas foram excluídas.`,
       });
       await refreshAll();
@@ -261,31 +244,23 @@ export function TagManager() {
           .map((n) => n.replace(/^"|"$/g, "").trim())
           .filter(Boolean);
         if (names.length === 0) {
-          toast({
-            title: "Arquivo vazio ou inválido",
-            variant: "destructive",
-          });
+          toast.error("Arquivo vazio ou inválido");
           return;
         }
         const res = await bulkImportTagsAction({ names });
         if (!res.success) {
-          toast({
-            title: "Erro na importação",
+          toast.error("Erro na importação", {
             description: res.error,
-            variant: "destructive",
           });
         } else {
-          toast({
-            title: "Importação concluída!",
+          toast.success("Importação concluída!", {
             description: `${res.inserted} inseridas, ${res.skipped} ignoradas.`,
           });
           await refreshAll();
         }
       } catch (err: any) {
-        toast({
-          title: "Erro ao processar arquivo",
+        toast.error("Erro ao processar arquivo", {
           description: err.message,
-          variant: "destructive",
         });
       }
     };
@@ -295,10 +270,8 @@ export function TagManager() {
   const handleExportTags = async () => {
     const res = await listAllTagNamesAction();
     if (!res.success) {
-      toast({
-        title: "Erro ao exportar",
+      toast.error("Erro ao exportar", {
         description: res.error,
-        variant: "destructive",
       });
       return;
     }
@@ -342,14 +315,11 @@ export function TagManager() {
     });
 
     if (!res.success) {
-      toast({
-        title: "Erro ao mesclar tags",
+      toast.error("Erro ao mesclar tags", {
         description: res.error,
-        variant: "destructive",
       });
     } else {
-      toast({
-        title: "Mesclagem concluída!",
+      toast.success("Mesclagem concluída!", {
         description: `${res.merged} tags foram mescladas em "${mainTag.name}".`,
       });
       setSelectedTags([]);
@@ -480,7 +450,7 @@ export function TagManager() {
           setEditTagName("");
         }}
         onEdit={handleEditTag}
-        onDelete={handleDeleteTag}
+        onDelete={handleDeleteTag} // <-- CORREÇÃO: Prop corrigida
         tagGroups={tagGroups}
         editTagName={editTagName}
         onEditTagNameChange={setEditTagName}
