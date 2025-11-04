@@ -1,3 +1,4 @@
+// src/components/features/admin/category-manager/CategoryEditModal.tsx
 "use client";
 
 import {
@@ -14,7 +15,7 @@ import { CategoryFormData } from "@/src/lib/schemas";
 interface CategoryEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  // Passaremos sempre name + color_theme, e incluiremos id quando estiver editando
+  // A função de submit recebe os dados do formulário e o ID (para edições)
   onSubmit: (data: CategoryFormData & { id?: string }) => void;
   category: Category | null;
   isLoading?: boolean;
@@ -29,14 +30,13 @@ export function CategoryEditModal({
 }: CategoryEditModalProps) {
   const defaultValues = {
     name: category?.name ?? "",
-    color_theme: (category as any)?.color_theme ?? null, // Preenche o seletor com o tema atual
   };
 
-  // Garante que o onSubmit receba color_theme + name + (id quando houver)
+  // Prepara os dados para o submit, incluindo o ID se for uma edição
   const handleSubmit = (data: CategoryFormData) => {
     onSubmit({
       ...data,
-      id: category?.id, // undefined quando for "Nova Categoria"
+      id: category?.id, // Será `undefined` ao criar uma nova categoria
     });
   };
 
@@ -55,7 +55,7 @@ export function CategoryEditModal({
         </DialogHeader>
         <div className="py-4">
           <CategoryForm
-            // key ajuda a resetar os valores quando a categoria mudar
+            // A chave `key` ajuda o React a resetar o formulário quando a categoria muda
             key={category?.id ?? "new"}
             onSubmit={handleSubmit}
             defaultValues={defaultValues}

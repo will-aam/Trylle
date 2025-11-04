@@ -156,7 +156,6 @@ export function useCategoryManager() {
           description: "Categoria atualizada com sucesso.",
         });
       } else {
-        // CRIAÇÃO: enviar color_theme também
         const result = await createCategoryAction({
           name: data.name.trim(),
         });
