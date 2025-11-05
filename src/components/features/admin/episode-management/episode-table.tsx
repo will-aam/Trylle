@@ -1,5 +1,4 @@
 // src/components/features/admin/episode-management/episode-table.tsx
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -140,7 +139,12 @@ export function EpisodeTable({
                 )}
               >
                 <div className="flex-1 pr-4">
-                  <h3 className="font-medium text-sm">{ep.title}</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Ep. {ep.episode_number}
+                    </span>
+                    <h3 className="font-medium text-sm">{ep.title}</h3>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {ep.programs?.title || "—"}
                   </p>
@@ -220,6 +224,12 @@ export function EpisodeTable({
                 />
               </TableHead>
               <TableHead
+                className="cursor-pointer w-[80px]"
+                onClick={() => onSort("episode_number")}
+              >
+                Episódio
+              </TableHead>
+              <TableHead
                 className="cursor-pointer w-[250px] max-w-[250px]"
                 onClick={() => onSort("title")}
               >
@@ -261,6 +271,17 @@ export function EpisodeTable({
                       onCheckedChange={() => onSelectEpisode(ep.id)}
                       aria-label={`Selecionar episódio ${ep.title}`}
                     />
+                  </TableCell>
+                  <TableCell className="font-medium w-[80px]">
+                    <div className="flex items-center">
+                      {updating && (
+                        <Loader2
+                          className="mr-2 h-4 w-4 animate-spin text-muted-foreground"
+                          aria-label="Atualizando status..."
+                        />
+                      )}
+                      Ep. {ep.episode_number}
+                    </div>
                   </TableCell>
                   <TableCell className="font-medium w-[250px] max-w-[250px]">
                     <div className="truncate" title={ep.title}>
@@ -359,7 +380,7 @@ export function EpisodeTable({
             {episodes.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
                   Nenhum episódio para exibir.
