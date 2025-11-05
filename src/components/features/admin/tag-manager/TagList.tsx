@@ -1,3 +1,4 @@
+// src/components/features/admin/tag-manager/TagList.tsx
 "use client";
 import { TagWithCount, FilterMode } from "./types";
 import { TagItem } from "./TagItem";
