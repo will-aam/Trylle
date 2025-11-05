@@ -60,12 +60,11 @@ export function ProgramForm({
     defaultValues: {
       title: program?.title || "",
       description: program?.description || "",
-      category_id: program?.category?.id || "",
+      category_id: program?.categories?.id || "",
       image_file: undefined,
     },
   });
 
-  // 3. useEffect ATUALIZADO
   useEffect(() => {
     form.reset({
       title: program?.title || "",
@@ -80,7 +79,6 @@ export function ProgramForm({
     setIsRemovingImage(false);
   }, [program, form]);
 
-  // 4. FUNÇÃO handleSave
   const handleSave = async (
     data: Omit<ProgramFormData, "image_file">,
     imageUrl: string | null
