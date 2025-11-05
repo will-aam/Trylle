@@ -12,7 +12,7 @@ import { ProgramForm } from "./ProgramForm";
 import { Button } from "@/src/components/ui/button";
 import { Category, Program, ProgramWithRelations } from "@/src/lib/types";
 import { PlusCircle } from "lucide-react";
-import { toast } from "@/src/lib/safe-toast"; // 1. Mude para o safe-toast
+import { toast } from "@/src/lib/safe-toast";
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 import { ProgramTable } from "./ProgramTable";
 import { useProgramManager } from "./useProgramManager";
@@ -22,8 +22,10 @@ import {
   PaginationItem,
   PaginationNext,
   PaginationPrevious,
+  PaginationFirst,
+  PaginationLast,
 } from "@/src/components/ui/pagination";
-import { deleteProgram } from "@/src/app/admin/programs/actions"; // 3. A Server Action
+import { deleteProgram } from "@/src/app/admin/programs/actions";
 
 export default function ProgramPageClient({
   categories,
@@ -46,7 +48,7 @@ export default function ProgramPageClient({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingProgram, setDeletingProgram] =
     useState<ProgramWithRelations | null>(null);
-  const [isPending, startTransition] = useTransition(); // 2. Para estado de loading
+  const [isPending, startTransition] = useTransition();
 
   const handleEdit = (program: ProgramWithRelations) => {
     setEditingProgram(program);
@@ -66,7 +68,7 @@ export default function ProgramPageClient({
 
       if (result.success) {
         toast.success("Programa deletado com sucesso.");
-        fetchData(); // Recarrega os dados da tabela
+        fetchData();
       } else {
         toast.error("Erro ao deletar", {
           description: result.message || "Não foi possível deletar o programa.",
@@ -81,7 +83,7 @@ export default function ProgramPageClient({
   const handleSuccess = (program: Program) => {
     setIsFormOpen(false);
     setEditingProgram(null);
-    fetchData(); // Recarrega os dados da página atual após salvar
+    fetchData();
     toast.success("Sucesso!", { description: "Programa salvo." });
   };
 
@@ -109,49 +111,75 @@ export default function ProgramPageClient({
 
       <ProgramTable
         programs={programs}
-        isLoading={loading || isPending} // <-- Usa os dois
+        isLoading={loading || isPending}
         onEdit={handleEdit}
         onDelete={handleDeleteRequest}
       />
 
-      {totalPages > 1 && (
-        <Pagination className="mt-8">
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage > 1) handlePageChange(currentPage - 1);
-                }}
-                className={
-                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
-                }
-              />
-            </PaginationItem>
-            <PaginationItem>
-              <span className="px-4 text-sm font-medium">
-                Página {currentPage} de {totalPages}
-              </span>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage < totalPages)
-                    handlePageChange(currentPage + 1);
-                }}
-                className={
-                  currentPage === totalPages
-                    ? "pointer-events-none opacity-50"
-                    : ""
-                }
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      )}
+      {/* CONDIÇÃO COMENTADA FORA PARA TESTE */}
+      <Pagination className="mt-8">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationFirst
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                handlePageChange(1);
+              }}
+              className={
+                currentPage === 1 ? "pointer-events-none opacity-50" : ""
+              }
+            />
+          </PaginationItem>
+
+          <PaginationItem>
+            <PaginationPrevious
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                if (currentPage > 1) handlePageChange(currentPage - 1);
+              }}
+              className={
+                currentPage === 1 ? "pointer-events-none opacity-50" : ""
+              }
+            />
+          </PaginationItem>
+          <PaginationItem>
+            <span className="px-4 text-sm font-medium">
+              Página {currentPage} de {totalPages || 1}
+            </span>
+          </PaginationItem>
+          <PaginationItem>
+            <PaginationNext
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                if (currentPage < totalPages) handlePageChange(currentPage + 1);
+              }}
+              className={
+                currentPage === totalPages
+                  ? "pointer-events-none opacity-50"
+                  : ""
+              }
+            />
+          </PaginationItem>
+
+          <PaginationItem>
+            <PaginationLast
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                handlePageChange(totalPages);
+              }}
+              className={
+                currentPage === totalPages
+                  ? "pointer-events-none opacity-50"
+                  : ""
+              }
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>

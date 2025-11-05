@@ -1,3 +1,4 @@
+// src/components/features/admin/episode-management/episode-table-pagination.tsx
 "use client";
 
 import {
@@ -6,6 +7,8 @@ import {
   PaginationItem,
   PaginationPrevious,
   PaginationNext,
+  PaginationFirst, // <-- ADICIONADO
+  PaginationLast, // <-- ADICIONADO
 } from "@/src/components/ui/pagination";
 import {
   Select,
@@ -95,27 +98,27 @@ export function EpisodeTablePagination({
             ))}
           </SelectContent>
         </Select>
-        {/* <span className="text-muted-foreground">
-          Exibindo {startIndex}-{endIndex} de {totalCount}
-        </span> */}
       </div>
 
       {/* Navegação de páginas */}
       <Pagination>
         <PaginationContent className="flex items-center gap-1">
-          {showEdgeButtons && (
-            <PaginationItem>
-              <Button
-                variant="outline"
-                size="icon"
-                disabled={currentPage === 1 || isLoading}
-                onClick={handleFirst}
-                aria-label="Primeira página"
-              >
-                «
-              </Button>
-            </PaginationItem>
-          )}
+          {/* BOTÃO "INÍCIO" ADICIONADO */}
+          <PaginationItem>
+            <PaginationFirst
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                handleFirst();
+              }}
+              className={cn(
+                currentPage === 1 || isLoading
+                  ? "pointer-events-none opacity-50"
+                  : ""
+              )}
+            />
+          </PaginationItem>
+
           <PaginationItem>
             <PaginationPrevious
               href="#"
@@ -157,16 +160,33 @@ export function EpisodeTablePagination({
               <ChevronRight className="h-4 w-4" />
             </PaginationNext>
           </PaginationItem>
+
+          {/* BOTÃO "ÚLTIMO" ADICIONADO */}
+          <PaginationItem>
+            <PaginationLast
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                handleLast();
+              }}
+              className={cn(
+                currentPage === totalPages || isLoading
+                  ? "pointer-events-none opacity-50"
+                  : ""
+              )}
+            />
+          </PaginationItem>
+
           {showEdgeButtons && (
             <PaginationItem>
               <Button
                 variant="outline"
                 size="icon"
-                disabled={currentPage === totalPages || isLoading}
-                onClick={handleLast}
-                aria-label="Última página"
+                disabled={currentPage === 1 || isLoading}
+                onClick={handleFirst}
+                aria-label="Primeira página"
               >
-                »
+                «
               </Button>
             </PaginationItem>
           )}

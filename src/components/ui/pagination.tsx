@@ -1,5 +1,11 @@
 import * as React from "react";
-import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  MoreHorizontal,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 
 import { cn } from "@/src/lib/utils";
 import { ButtonProps, buttonVariants } from "../ui/button";
@@ -64,13 +70,12 @@ const PaginationPrevious = ({
   ...props
 }: React.ComponentProps<typeof PaginationLink>) => (
   <PaginationLink
-    aria-label="Go to previous page"
-    size="default"
-    className={cn("gap-1 pl-2.5", className)}
+    aria-label="Ir para a página anterior"
+    size="icon"
+    className={cn(className)}
     {...props}
   >
     <ChevronLeft className="h-4 w-4" />
-    <span>Previous</span>
   </PaginationLink>
 );
 PaginationPrevious.displayName = "PaginationPrevious";
@@ -80,12 +85,11 @@ const PaginationNext = ({
   ...props
 }: React.ComponentProps<typeof PaginationLink>) => (
   <PaginationLink
-    aria-label="Go to next page"
-    size="default"
-    className={cn("gap-1 pr-2.5", className)}
+    aria-label="Ir para a próxima página"
+    size="icon"
+    className={cn(className)}
     {...props}
   >
-    <span>Next</span>
     <ChevronRight className="h-4 w-4" />
   </PaginationLink>
 );
@@ -106,6 +110,39 @@ const PaginationEllipsis = ({
 );
 PaginationEllipsis.displayName = "PaginationEllipsis";
 
+// Novos componentes para navegação rápida
+const PaginationFirst = React.forwardRef<
+  HTMLAnchorElement,
+  React.ComponentProps<typeof PaginationLink>
+>(({ className, ...props }, ref) => (
+  <PaginationLink
+    ref={ref}
+    size="icon"
+    className={cn(className)}
+    {...props}
+    aria-label="Ir para a primeira página"
+  >
+    <ChevronsLeft className="h-4 w-4" />
+  </PaginationLink>
+));
+PaginationFirst.displayName = "PaginationFirst";
+
+const PaginationLast = React.forwardRef<
+  HTMLAnchorElement,
+  React.ComponentProps<typeof PaginationLink>
+>(({ className, ...props }, ref) => (
+  <PaginationLink
+    ref={ref}
+    size="icon"
+    className={cn(className)}
+    {...props}
+    aria-label="Ir para a última página"
+  >
+    <ChevronsRight className="h-4 w-4" />
+  </PaginationLink>
+));
+PaginationLast.displayName = "PaginationLast";
+
 export {
   Pagination,
   PaginationContent,
@@ -114,4 +151,6 @@ export {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  PaginationFirst,
+  PaginationLast,
 };

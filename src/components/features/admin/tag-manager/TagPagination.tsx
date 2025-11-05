@@ -1,3 +1,4 @@
+// src/components/features/admin/tag-manager/TagPagination.tsx
 "use client";
 import {
   Pagination,
@@ -5,6 +6,8 @@ import {
   PaginationItem,
   PaginationNext,
   PaginationPrevious,
+  PaginationFirst, // <-- ADICIONADO
+  PaginationLast, // <-- ADICIONADO
 } from "../../../ui/pagination";
 
 interface TagPaginationProps {
@@ -24,6 +27,22 @@ export function TagPagination({
     <div className="mt-4 flex justify-center">
       <Pagination>
         <PaginationContent>
+          {/* BOTÃO "INÍCIO" ADICIONADO */}
+          <PaginationItem>
+            <PaginationFirst
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                onPageChange(1);
+              }}
+              className={
+                currentPage === 1
+                  ? "pointer-events-none opacity-50"
+                  : "cursor-pointer"
+              }
+            />
+          </PaginationItem>
+
           <PaginationItem>
             <PaginationPrevious
               href="#"
@@ -49,6 +68,22 @@ export function TagPagination({
               onClick={(e) => {
                 e.preventDefault();
                 onPageChange(currentPage + 1);
+              }}
+              className={
+                currentPage === totalPages
+                  ? "pointer-events-none opacity-50"
+                  : "cursor-pointer"
+              }
+            />
+          </PaginationItem>
+
+          {/* BOTÃO "ÚLTIMO" ADICIONADO */}
+          <PaginationItem>
+            <PaginationLast
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                onPageChange(totalPages);
               }}
               className={
                 currentPage === totalPages
