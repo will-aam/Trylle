@@ -197,7 +197,21 @@ export async function createTagAction(
       .single();
 
     if (error) {
-      return { success: false, error: error.message, code: error.code };
+      // Verifica se o erro é de "unique constraint violation" (código 23505)
+      // E se a mensagem de erro menciona a nossa constraint "tags_name_key"
+      if (error.code === "23505" && error.message.includes("tags_name_key")) {
+        return {
+          success: false,
+          error: "Essa tag já existe. Tente um nome diferente.",
+        };
+      }
+
+      // Para todos os outros erros
+      console.error("Erro ao criar tag:", error.message);
+      return {
+        success: false,
+        error: "Ocorreu um erro no banco de dados. " + error.message,
+      };
     }
 
     revalidatePath("/admin/tags");
@@ -233,7 +247,21 @@ export async function updateTagAction(
       .single();
 
     if (error) {
-      return { success: false, error: error.message, code: error.code };
+      // Verifica se o erro é de "unique constraint violation" (código 23505)
+      // E se a mensagem de erro menciona a nossa constraint "tags_name_key"
+      if (error.code === "23505" && error.message.includes("tags_name_key")) {
+        return {
+          success: false,
+          error: "Uma tag com este nome já existe. Tente um nome diferente.",
+        };
+      }
+
+      // Para todos os outros erros
+      console.error("Erro ao atualizar tag:", error.message);
+      return {
+        success: false,
+        error: "Ocorreu um erro no banco de dados. " + error.message,
+      };
     }
 
     if (!data) {
@@ -566,7 +594,20 @@ export async function createTagAliasAction(
       .single();
 
     if (error) {
-      return { success: false, error: error.message, code: error.code };
+      // Verifica se o erro é de "unique constraint violation" (código 23505)
+      if (error.code === "23505") {
+        return {
+          success: false,
+          error: "Este sinônimo já existe. Tente um nome diferente.",
+        };
+      }
+
+      // Para todos os outros erros
+      console.error("Erro ao criar sinônimo:", error.message);
+      return {
+        success: false,
+        error: "Ocorreu um erro no banco de dados. " + error.message,
+      };
     }
 
     revalidatePath("/admin/tags");
