@@ -1,7 +1,7 @@
 // src/components/features/admin/program-management/ProgramPageClient.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import { ProgramForm } from "./ProgramForm";
 import { Button } from "@/src/components/ui/button";
 import { Category, Program, ProgramWithRelations } from "@/src/lib/types";
 import { PlusCircle } from "lucide-react";
-import { useToast } from "@/src/hooks/use-toast";
+import { toast } from "@/src/lib/safe-toast"; // 1. Mude para o safe-toast
 import { ConfirmationDialog } from "@/src/components/ui/confirmation-dialog";
 import { ProgramTable } from "./ProgramTable";
 import { useProgramManager } from "./useProgramManager";
@@ -23,6 +23,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/src/components/ui/pagination";
+import { deleteProgram } from "@/src/app/admin/programs/actions"; // 3. A Server Action
 
 export default function ProgramPageClient({
   categories,
@@ -45,7 +46,7 @@ export default function ProgramPageClient({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingProgram, setDeletingProgram] =
     useState<ProgramWithRelations | null>(null);
-  const { toast } = useToast();
+  const [isPending, startTransition] = useTransition(); // 2. Para estado de loading
 
   const handleEdit = (program: ProgramWithRelations) => {
     setEditingProgram(program);
@@ -58,19 +59,30 @@ export default function ProgramPageClient({
   };
 
   const confirmDelete = async () => {
-    if (deletingProgram) {
-      // Usaremos a Server Action diretamente aqui no futuro, por enquanto o console.log está ok
-      console.log("Deletar programa:", deletingProgram?.id);
+    if (!deletingProgram) return;
+
+    startTransition(async () => {
+      const result = await deleteProgram(deletingProgram.id);
+
+      if (result.success) {
+        toast.success("Programa deletado com sucesso.");
+        fetchData(); // Recarrega os dados da tabela
+      } else {
+        toast.error("Erro ao deletar", {
+          description: result.message || "Não foi possível deletar o programa.",
+        });
+      }
+
       setIsDeleteDialogOpen(false);
-      // Aqui chamaríamos a action de deletar e depois o fetchData()
-    }
+      setDeletingProgram(null);
+    });
   };
 
   const handleSuccess = (program: Program) => {
     setIsFormOpen(false);
     setEditingProgram(null);
     fetchData(); // Recarrega os dados da página atual após salvar
-    toast({ title: "Sucesso!", description: "Programa salvo." });
+    toast.success("Sucesso!", { description: "Programa salvo." });
   };
 
   const handleCancel = () => {
@@ -97,7 +109,7 @@ export default function ProgramPageClient({
 
       <ProgramTable
         programs={programs}
-        isLoading={loading}
+        isLoading={loading || isPending} // <-- Usa os dois
         onEdit={handleEdit}
         onDelete={handleDeleteRequest}
       />
