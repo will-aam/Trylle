@@ -249,7 +249,7 @@ export function EpisodeTable({
                 className="cursor-pointer w-40"
                 onClick={() => onSort("published_at")}
               >
-                Data de publicação
+                Data
               </TableHead>
               <TableHead className="text-right w-32">Ações</TableHead>
             </TableRow>
@@ -313,7 +313,9 @@ export function EpisodeTable({
                     </div>
                   </TableCell>
                   <TableCell className="w-40">
-                    {formatDate(ep.published_at)}
+                    {formatDate(
+                      ep.status === "draft" ? ep.created_at : ep.published_at
+                    )}
                   </TableCell>
                   <TableCell className="py-2 w-32">
                     <div className="flex items-center justify-end">
