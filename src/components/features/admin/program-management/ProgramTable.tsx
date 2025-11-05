@@ -13,7 +13,12 @@ import {
 } from "@/src/components/ui/table";
 import { Button } from "@/src/components/ui/button";
 import { Skeleton } from "@/src/components/ui/skeleton";
-import { Dialog, DialogContent } from "@/src/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader, // <-- ADICIONADO
+  DialogTitle, // <-- ADICIONADO
+} from "@/src/components/ui/dialog";
 import { cn } from "@/src/lib/utils";
 import { Pencil, Trash2, Eye, ImageIcon } from "lucide-react";
 import Image from "next/image";
@@ -56,7 +61,7 @@ export function ProgramTable({
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
-  // Versão mobile simplificada
+  // Versão mobile simplificada (apenas visualização)
   if (isMobile) {
     return (
       <div className="space-y-2">
@@ -75,22 +80,14 @@ export function ProgramTable({
                   {program._count?.episodes ?? 0} episódios
                 </p>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => onEdit(program)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  onClick={() => onDelete(program)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={!program.image_url}
+                onClick={() => setViewingImage(program.image_url)}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
             </div>
           ))}
           {programs.length === 0 && !isLoading && (
@@ -100,7 +97,7 @@ export function ProgramTable({
           )}
         </div>
 
-        {/* Modal para visualizar imagem */}
+        {/* Modal para visualizar imagem - Versão Mobile */}
         <Dialog
           open={!!viewingImage}
           onOpenChange={(isOpen) => {
@@ -110,6 +107,13 @@ export function ProgramTable({
           }}
         >
           <DialogContent className="max-w-xl">
+            {/* Título invisível para acessibilidade */}
+            <DialogHeader>
+              <DialogTitle className="sr-only">
+                Visualização da Imagem da Capa
+              </DialogTitle>
+            </DialogHeader>
+
             {viewingImage && (
               <Image
                 src={viewingImage}
@@ -219,7 +223,7 @@ export function ProgramTable({
         </Table>
       </div>
 
-      {/* Modal para visualizar imagem */}
+      {/* Modal para visualizar imagem - Versão Desktop */}
       <Dialog
         open={!!viewingImage}
         onOpenChange={(isOpen) => {
@@ -229,6 +233,13 @@ export function ProgramTable({
         }}
       >
         <DialogContent className="max-w-xl">
+          {/* Título invisível para acessibilidade */}
+          <DialogHeader>
+            <DialogTitle className="sr-only">
+              Visualização da Imagem da Capa
+            </DialogTitle>
+          </DialogHeader>
+
           {viewingImage && (
             <Image
               src={viewingImage}
