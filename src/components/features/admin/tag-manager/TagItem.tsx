@@ -1,7 +1,7 @@
 // src/components/features/admin/tag-manager/TagItem.tsx
 
 "use client";
-import { useState } from "react"; // Importe o useState
+import { useState } from "react";
 import { TagWithCount } from "@/src/components/features/admin/tag-manager/types";
 import { Badge } from "../../../ui/badge";
 import { Button } from "../../../ui/button";
@@ -31,16 +31,15 @@ export function TagItem({
   onTagAction,
   onDelete,
 }: TagItemProps) {
-  // --- ESTADO PARA CONTROLAR A VISIBILIDADE DO DIÁLOGO ---
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   return (
     <>
-      <div className="group relative p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200">
+      <div className="group relative flex justify-center min-w-[180px]">
         <Badge
           variant="secondary"
           className={cn(
-            "w-full justify-start cursor-pointer hover:bg-destructive/80 transition-colors active:bg-transparent active:scale-95",
+            "w-full justify-start cursor-pointer hover:bg-destructive/80 transition-colors active:bg-transparent active:scale-95 text-xs px-4 py-1.5",
             {
               "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-300":
                 tag.episode_count === 0,
@@ -74,7 +73,6 @@ export function TagItem({
                 Editar
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {/* --- ITEM DO MENU MODIFICADO PARA ABRIR O DIÁLOGO --- */}
               <DropdownMenuItem
                 className="text-destructive"
                 onSelect={(e) => {
@@ -90,7 +88,6 @@ export function TagItem({
         </div>
       </div>
 
-      {/* --- DIÁLOGO MOVIDO PARA FORA E CONTROLADO POR ESTADO --- */}
       <ConfirmationDialog
         isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}

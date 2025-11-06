@@ -395,7 +395,7 @@ export function TagManager() {
       </CardHeader>
 
       <CardContent>
-        <div className="border rounded-md p-4 space-y-2 min-h-[300px] max-h-[60vh] overflow-y-auto">
+        <div className="p-4 space-y-2 min-h-[300px] max-h-[60vh] overflow-y-auto">
           <TagList
             tags={tags}
             loading={busy}
