@@ -1,6 +1,9 @@
+// src/components/features/admin/tag-manager/TagForm.tsx
+
 import { useState, FormEvent } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
+import { Trash } from "lucide-react";
 
 interface TagFormProps {
   newTagName: string;
@@ -8,7 +11,7 @@ interface TagFormProps {
   onAddTag: () => void | Promise<void>;
   unusedTagCount: number;
   onDeleteUnusedTags: () => void | Promise<void>;
-  disabled?: boolean; // ADICIONADO
+  disabled?: boolean;
 }
 
 export function TagForm({
@@ -26,33 +29,32 @@ export function TagForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-2 w-full"
-      role="form"
-    >
-      <div className="flex gap-2">
-        <Input
-          value={newTagName}
-          onChange={(e) => onTagNameChange(e.target.value)}
-          placeholder="Nova tag..."
-          disabled={disabled}
-        />
-        <Button type="submit" disabled={disabled || !newTagName.trim()}>
-          Adicionar
-        </Button>
-      </div>
-      <div className="flex justify-between items-center text-xs text-muted-foreground">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => onDeleteUnusedTags()}
-          disabled={disabled || unusedTagCount === 0}
-        >
-          Limpar não usadas
-        </Button>
-      </div>
+    // O formulário continua sendo uma linha flexível
+    <form onSubmit={handleSubmit} className="flex items-center gap-2 w-full">
+      <Input
+        value={newTagName}
+        onChange={(e) => onTagNameChange(e.target.value)}
+        placeholder="Nova tag..."
+        disabled={disabled}
+        // MUDANÇA AQUI: Removido "w-full" e adicionado "flex-1"
+        className="flex-1 flex-shrink-0"
+      />
+      <Button type="submit" disabled={disabled || !newTagName.trim()}>
+        Adicionar
+      </Button>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={() => onDeleteUnusedTags()}
+        disabled={disabled || unusedTagCount === 0}
+        className="text-red-500 hover:text-red-600 hover:bg-transparent"
+        title="Limpar tags não utilizadas"
+      >
+        <Trash className="h-4 w-4" />
+        <span className="sr-only">Limpar tags não utilizadas</span>
+      </Button>
     </form>
   );
 }

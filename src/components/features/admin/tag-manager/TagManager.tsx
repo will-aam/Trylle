@@ -368,16 +368,18 @@ export function TagManager() {
             unusedTagCount={unusedTagCount}
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <TagForm
-              newTagName={newTagName}
-              onTagNameChange={setNewTagName}
-              onAddTag={handleAddTag}
-              unusedTagCount={unusedTagCount}
-              onDeleteUnusedTags={handleDeleteUnusedTags}
-              disabled={busy}
-            />
-            <div className="flex space-x-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex w-full sm:flex-1">
+              <TagForm
+                newTagName={newTagName}
+                onTagNameChange={setNewTagName}
+                onAddTag={handleAddTag}
+                unusedTagCount={unusedTagCount}
+                onDeleteUnusedTags={handleDeleteUnusedTags}
+                disabled={busy}
+              />
+            </div>
+            <div className="flex gap-2 flex-shrink-0">
               <FileInput onFileChange={handleFileImport} disabled={busy} />
               <Button
                 variant="outline"
