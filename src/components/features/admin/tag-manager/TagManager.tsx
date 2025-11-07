@@ -10,12 +10,31 @@ import {
   CardDescription,
 } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
-import { Check, Download } from "lucide-react";
-import { toast } from "@/src/lib/safe-toast"; // <-- Importação correta
-
-import { FileInput } from "./FileInput";
-import { TagFilters } from "./TagFilters";
-import { TagForm } from "./TagForm";
+import {
+  Check,
+  Download,
+  Search,
+  Plus,
+  Trash,
+  FileUp,
+  Filter, // <-- Add this
+  X, // <-- Add this
+} from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/src/components/ui/tooltip";
+import { Input } from "@/src/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/src/components/ui/dropdown-menu"; // <-- Add this
+import { toast } from "@/src/lib/safe-toast";
 import { TagList } from "./TagList";
 import { TagActionsDialog } from "./TagActionsDialog";
 import { TagMergeDialog } from "./TagMergeDialog";
@@ -70,6 +89,7 @@ export function TagManager() {
   const [selectedTags, setSelectedTags] = useState<TagWithCount[]>([]);
   const [mainTag, setMainTag] = useState<TagWithCount | null>(null);
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
+  const [showAddTagForm, setShowAddTagForm] = useState(false);
 
   /* Debounce de busca */
   useEffect(() => {
@@ -358,40 +378,189 @@ export function TagManager() {
           uso.
         </CardDescription>
 
-        <div className="flex flex-col gap-4 mt-4">
-          <TagFilters
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            filterMode={filterMode}
-            onFilterChange={setFilterMode}
-            totalTagCount={totalTagCount}
-            unusedTagCount={unusedTagCount}
-          />
+        <TooltipProvider>
+          {/* This is the new, correct toolbar. It REPLACES the old <div className="flex flex-col..."> */}
+          <div className="flex flex-col sm:flex-row gap-2 mt-4">
+            {/* Left Side: Filter + Search */}
+            <div className="flex flex-1 items-center">
+              {/* 1. Filter Dropdown (This was missing) */}
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="rounded-r-none flex-shrink-0"
+                        disabled={busy}
+                      >
+                        <Filter className="h-4 w-4" />
+                        <span className="sr-only">Filtrar tags</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Filtrar tags</p>
+                  </TooltipContent>
+                </Tooltip>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuRadioGroup
+                    value={filterMode}
+                    onValueChange={(value) =>
+                      setFilterMode(value as FilterMode)
+                    }
+                  >
+                    <DropdownMenuRadioItem value="all">
+                      Todas
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="used">
+                      Utilizadas
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="unused">
+                      Não Utilizadas
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="flex w-full sm:flex-1">
-              <TagForm
-                newTagName={newTagName}
-                onTagNameChange={setNewTagName}
-                onAddTag={handleAddTag}
-                unusedTagCount={unusedTagCount}
-                onDeleteUnusedTags={handleDeleteUnusedTags}
-                disabled={busy}
-              />
+              {/* 2. Search Input */}
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar tags..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8 rounded-l-none" // Grouped with filter
+                  disabled={busy}
+                />
+              </div>
             </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <FileInput onFileChange={handleFileImport} disabled={busy} />
-              <Button
-                variant="outline"
-                onClick={handleExportTags}
-                className="w-full"
-                disabled={busy}
-              >
-                <Download className="mr-2 h-4 w-4" /> Exportar
-              </Button>
+
+            {/* Right Side: Actions (All in one row) */}
+            <div className="flex items-center gap-2 justify-end">
+              {/* 3. Add Tag (Inline Form) - Using your 'showAddTagForm' state */}
+              {!showAddTagForm ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      onClick={() => setShowAddTagForm(true)}
+                      disabled={busy}
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span className="sr-only">Adicionar nova tag</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Adicionar nova tag</p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    await handleAddTag();
+                    setShowAddTagForm(false); // Hide form on submit
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Input
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    placeholder="Nova tag..."
+                    disabled={busy}
+                    className="h-9"
+                    autoFocus
+                  />
+                  <Button
+                    type="submit"
+                    size="icon"
+                    disabled={busy || !newTagName.trim()}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setShowAddTagForm(false);
+                      setNewTagName("");
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </form>
+              )}
+
+              {/* 4. Import CSV Button (Correctly styled) */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    asChild // Use asChild to make the Button the label
+                    disabled={busy}
+                    className="relative"
+                  >
+                    <label className="absolute inset-0 cursor-pointer">
+                      <FileUp className="h-4 w-4 m-auto" />
+                      <span className="sr-only">Importar CSV</span>
+                      <input
+                        type="file"
+                        accept=".csv,text/csv,text/plain"
+                        className="hidden"
+                        onChange={handleFileImport}
+                        disabled={busy}
+                      />
+                    </label>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Importar CSV</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* 5. Export CSV Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleExportTags}
+                    disabled={busy}
+                  >
+                    <Download className="h-4 w-4" />
+                    <span className="sr-only">Exportar tags</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Exportar tags</p>
+                </TooltipContent>
+              </Tooltip>
+
+              {/* 6. Delete Unused Tags Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleDeleteUnusedTags}
+                    disabled={busy || unusedTagCount === 0}
+                    className="text-red-500 hover:text-red-600 hover:bg-red-100/50"
+                  >
+                    <Trash className="h-4 w-4" />
+                    <span className="sr-only">Limpar tags não utilizadas</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Limpar tags não utilizadas ({unusedTagCount})</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
-        </div>
+        </TooltipProvider>
       </CardHeader>
 
       <CardContent>
