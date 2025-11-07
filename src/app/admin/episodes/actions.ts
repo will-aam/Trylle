@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateEpisodes } from "./revalidation";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
 import { Episode, Tag, EpisodeDocument, Program } from "@/src/lib/types";
@@ -421,10 +421,7 @@ export async function createEpisodeAction(
 
     const fullRow = full as unknown as RawEpisodeRow;
 
-    // Evitar revalidação do admin em DEV para não causar remount/refresh em cascata
-    if (process.env.NODE_ENV === "production") {
-      revalidatePath("/admin/episodes");
-    }
+    revalidateEpisodes();
 
     return { success: true, episode: mapRawToEpisode(fullRow) };
   } catch (e: any) {
@@ -626,10 +623,7 @@ export async function updateEpisodeAction(
 
   const updatedNorm = updatedRow as unknown as RawEpisodeRow;
 
-  // Evitar revalidação do admin em DEV para não causar remount/refresh em cascata
-  if (process.env.NODE_ENV === "production") {
-    revalidatePath("/admin/episodes");
-  }
+  revalidateEpisodes();
 
   return { success: true, episode: mapRawToEpisode(updatedNorm) };
 }
@@ -680,10 +674,7 @@ export async function deleteEpisodeAction(
       };
     }
 
-    // Evitar revalidação do admin em DEV para não causar remount/refresh em cascata
-    if (process.env.NODE_ENV === "production") {
-      revalidatePath("/admin/episodes");
-    }
+    revalidateEpisodes();
 
     return { success: true };
   } catch (e: any) {
@@ -1008,8 +999,7 @@ export async function scheduleEpisode(
     }
 
     // Revalida os caches para que as páginas mostrem os dados atualizados
-    revalidatePath("/programacao"); // A nova página pública
-    // NÃO revalidar /admin/episodes em dev
+    revalidateEpisodes();
 
     return { success: "Episódio agendado com sucesso!" };
   } catch (error) {

@@ -1,7 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
-import { revalidatePath } from "next/cache";
+import { revalidateEpisodes } from "./revalidation";
 
 const AUDIO_BUCKET = "episode-audios";
 
@@ -91,7 +91,7 @@ export async function registerUpdatedAudioAction(params: {
     };
   }
 
-  revalidatePath("/admin/episodes");
+  revalidateEpisodes();
 
   return { success: true, audio_url: publicUrl, file_name: newFileName };
 }

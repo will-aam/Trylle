@@ -1,7 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
-import { revalidatePath } from "next/cache";
+import { revalidateEpisodes } from "./revalidation";
 
 /* ================== CONFIG ================== */
 const DOCUMENT_BUCKET = "episode-documents";
@@ -148,7 +148,7 @@ export async function uploadDocumentAction(
       };
     }
 
-    revalidatePath("/admin/episodes");
+    revalidateEpisodes();
 
     return {
       success: true,
@@ -200,7 +200,7 @@ export async function deleteDocumentAction(
     return { success: false, error: dbError.message, code: dbError.code };
   }
 
-  revalidatePath("/admin/episodes");
+  revalidateEpisodes();
   return { success: true };
 }
 
@@ -264,7 +264,7 @@ export async function updateDocumentMetadataAction(
       };
     }
 
-    revalidatePath("/admin/episodes");
+    revalidateEpisodes();
     return {
       success: true,
       document: {
@@ -351,7 +351,7 @@ export async function updateAudioAction(
       return { success: false, error: updateError.message };
     }
 
-    revalidatePath("/admin/episodes");
+    revalidateEpisodes();
     return { success: true, audio_url: publicUrl, file_name: safeAudioName };
   } catch (e: any) {
     return { success: false, error: e?.message || "Erro inesperado." };
@@ -476,7 +476,7 @@ export async function registerUploadedDocumentAction(params: {
     };
   }
 
-  revalidatePath("/admin/episodes");
+  revalidateEpisodes();
 
   return {
     success: true,
