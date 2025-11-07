@@ -1,3 +1,4 @@
+// src/app/admin/episodes/audioActions.ts
 "use server";
 
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
@@ -91,7 +92,7 @@ export async function registerUpdatedAudioAction(params: {
     };
   }
 
-  revalidateEpisodes();
+  await revalidateEpisodes();
 
   return { success: true, audio_url: publicUrl, file_name: newFileName };
 }

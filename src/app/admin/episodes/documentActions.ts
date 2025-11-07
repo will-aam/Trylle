@@ -1,3 +1,4 @@
+// src/app/admin/episodes/documentActions.ts
 "use server";
 
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
@@ -148,7 +149,7 @@ export async function uploadDocumentAction(
       };
     }
 
-    revalidateEpisodes();
+    await revalidateEpisodes();
 
     return {
       success: true,
@@ -200,7 +201,7 @@ export async function deleteDocumentAction(
     return { success: false, error: dbError.message, code: dbError.code };
   }
 
-  revalidateEpisodes();
+  await revalidateEpisodes();
   return { success: true };
 }
 
@@ -264,7 +265,7 @@ export async function updateDocumentMetadataAction(
       };
     }
 
-    revalidateEpisodes();
+    await revalidateEpisodes();
     return {
       success: true,
       document: {
@@ -351,7 +352,7 @@ export async function updateAudioAction(
       return { success: false, error: updateError.message };
     }
 
-    revalidateEpisodes();
+    await revalidateEpisodes();
     return { success: true, audio_url: publicUrl, file_name: safeAudioName };
   } catch (e: any) {
     return { success: false, error: e?.message || "Erro inesperado." };
@@ -476,7 +477,7 @@ export async function registerUploadedDocumentAction(params: {
     };
   }
 
-  revalidateEpisodes();
+  await revalidateEpisodes();
 
   return {
     success: true,

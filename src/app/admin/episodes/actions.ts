@@ -1,3 +1,4 @@
+// src/app/admin/episodes/actions.ts
 "use server";
 
 import { revalidateEpisodes } from "./revalidation";
@@ -421,7 +422,7 @@ export async function createEpisodeAction(
 
     const fullRow = full as unknown as RawEpisodeRow;
 
-    revalidateEpisodes();
+    await revalidateEpisodes();
 
     return { success: true, episode: mapRawToEpisode(fullRow) };
   } catch (e: any) {
@@ -623,7 +624,7 @@ export async function updateEpisodeAction(
 
   const updatedNorm = updatedRow as unknown as RawEpisodeRow;
 
-  revalidateEpisodes();
+  await revalidateEpisodes();
 
   return { success: true, episode: mapRawToEpisode(updatedNorm) };
 }
@@ -674,7 +675,7 @@ export async function deleteEpisodeAction(
       };
     }
 
-    revalidateEpisodes();
+    await revalidateEpisodes();
 
     return { success: true };
   } catch (e: any) {
@@ -998,8 +999,7 @@ export async function scheduleEpisode(
       throw error;
     }
 
-    // Revalida os caches para que as páginas mostrem os dados atualizados
-    revalidateEpisodes();
+    await revalidateEpisodes();
 
     return { success: "Episódio agendado com sucesso!" };
   } catch (error) {
