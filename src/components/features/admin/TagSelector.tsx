@@ -121,28 +121,26 @@ export function TagSelector({
 
       {/* “Nuvem” de tags selecionadas abaixo do input */}
       {selectedTags.length > 0 && (
-        <div className="px-2 pb-2">
-          <div className="flex flex-wrap items-center gap-2">
-            {selectedTags.map((tag) => (
-              <Badge
-                key={tag.id}
-                variant="secondary"
-                className="flex items-center gap-1.5"
+        <div className="px-2 pb-2 flex flex-wrap items-center gap-2">
+          {selectedTags.map((tag) => (
+            <Badge
+              key={tag.id}
+              variant="secondary"
+              className="flex items-center gap-1.5"
+            >
+              {tag.name}
+              <button
+                type="button"
+                className="rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemoveTag(tag.id);
+                }}
               >
-                {tag.name}
-                <button
-                  type="button"
-                  className="rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveTag(tag.id);
-                  }}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
         </div>
       )}
 

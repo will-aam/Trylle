@@ -575,31 +575,29 @@ export function TagManager() {
         </div>
 
         {selectedTags.length > 0 && (
-          <div className="mt-2">
-            <div className="flex justify-between items-center p-3 rounded-md">
-              <div className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-blue-600" />
-                <span className="text-sm text-blue-700">
-                  {selectedTags.length} tag(s) selecionada(s)
-                </span>
-              </div>
-              <div className="flex gap-2">
+          <div className="mt-2 flex justify-between items-center p-3 rounded-md">
+            <div className="flex items-center gap-2">
+              <Check className="h-4 w-4 text-blue-600" />
+              <span className="text-sm text-blue-700">
+                {selectedTags.length} tag(s) selecionada(s)
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedTags([])}
+              >
+                Limpar seleção
+              </Button>
+              {selectedTags.length > 1 && (
                 <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedTags([])}
+                  onClick={() => setIsMergeDialogOpen(true)}
+                  className="text-sm"
                 >
-                  Limpar seleção
+                  Mesclar {selectedTags.length} Tags
                 </Button>
-                {selectedTags.length > 1 && (
-                  <Button
-                    onClick={() => setIsMergeDialogOpen(true)}
-                    className="text-sm"
-                  >
-                    Mesclar {selectedTags.length} Tags
-                  </Button>
-                )}
-              </div>
+              )}
             </div>
           </div>
         )}
