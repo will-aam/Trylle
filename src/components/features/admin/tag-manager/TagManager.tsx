@@ -53,7 +53,6 @@ import {
   listAllTagNamesAction,
 } from "@/src/app/admin/tags/actions";
 
-import { Tag } from "@/src/lib/types";
 import { TagWithCount, FilterMode, TagGroup } from "./types";
 
 const TAGS_PER_PAGE = 25;
@@ -572,7 +571,6 @@ export function TagManager() {
             selectedTags={selectedTags}
             onTagSelect={handleTagSelect}
             setSelectedTag={handleTagAction}
-            onDeleteTag={handleDeleteTag}
           />
         </div>
 

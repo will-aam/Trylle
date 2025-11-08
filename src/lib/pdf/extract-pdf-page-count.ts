@@ -13,7 +13,7 @@ export async function extractPdfPageCount(file: File): Promise<number | null> {
     // Heurística rápida
     const text = bufferToAsciiSlice(buffer, 0, 2_000_000);
     const heuristic = heuristicPageCount(text);
-    let fallback = heuristic > 0 ? heuristic : null;
+    const fallback = heuristic > 0 ? heuristic : null;
 
     try {
       // Import dinâmico do build legacy (evita erros no Webpack/Next)

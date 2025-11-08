@@ -1,6 +1,6 @@
 // Schedule Sonner toast calls outside the current render tick to avoid
 // "Cannot update a component while rendering a different component" in React 19.
-// eslint-disable-next-line no-restricted-imports
+ 
 import { toast as baseToast } from "sonner";
 
 // Use a microtask; falls back to immediate in SSR
