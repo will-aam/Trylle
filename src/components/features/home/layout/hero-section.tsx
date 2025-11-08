@@ -1,56 +1,35 @@
+// src/components/features/home/layout/hero-section.tsx
 "use client";
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+// 1. CORREÇÃO: Importando o tipo correto que você já tem
+import { ProgramWithRelations } from "@/src/lib/types";
 
-export function HeroSection() {
+interface HeroSectionProps {
+  // 2. CORREÇÃO: Usando o tipo correto na prop
+  programs: ProgramWithRelations[];
+}
+
+// 3. Recebemos a prop 'programs'
+export function HeroSection({ programs }: HeroSectionProps) {
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const podcasts = [
-    {
-      id: 1,
-      title: "Echoes of Midnight",
-      artist: "Jon Hickman",
-      image:
-        "https://img.freepik.com/vetores-premium/familia-observando-as-estrelas-com-telescopio-ilustracao-em-cores-planas_151150-4952.jpg",
-    },
-    {
-      id: 2,
-      title: "Night Vibes",
-      artist: "Sarah Johnson",
-      image:
-        "https://img.freepik.com/vetores-premium/homem-negocios-luta-um-dragao_24381-851.jpg",
-    },
-    {
-      id: 3,
-      title: "Urban Rhythms",
-      artist: "DJ Martinez",
-      image:
-        "https://img.freepik.com/vetores-gratis/ilustracao-de-metaverso-de-design-plano-desenhado-a-mao_23-2149243273.jpg?semt=ais_hybrid&w=740",
-    },
-    {
-      id: 4,
-      title: "Acoustic Sessions",
-      artist: "Emma Wilson",
-      image:
-        "https://st.depositphotos.com/1173077/52308/v/450/depositphotos_523081264-stock-illustration-trekkers-backpack-trekking-mountain-beautiful.jpg",
-    },
-    {
-      id: 5,
-      title: "Electronic Dreams",
-      artist: "Alex Chen",
-      image:
-        "https://img.freepik.com/vetores-premium/empresario-como-um-cavaleiro-do-dragao_24381-549.jpg?semt=ais_hybrid&w=740&q=80",
-    },
-  ];
-
   const handlePrev = () => {
-    setActiveIndex((prev) => (prev === 0 ? podcasts.length - 1 : prev - 1));
+    setActiveIndex((prev) => (prev === 0 ? programs.length - 1 : prev - 1));
   };
 
   const handleNext = () => {
-    setActiveIndex((prev) => (prev === podcasts.length - 1 ? 0 : prev + 1));
+    setActiveIndex((prev) => (prev === programs.length - 1 ? 0 : prev + 1));
   };
+
+  if (!programs || programs.length === 0) {
+    // Um placeholder simples
+    return (
+      <div className="relative w-full h-48 overflow-hidden rounded-2xl bg-muted" />
+    );
+  }
 
   return (
     <div className="relative w-full h-48 overflow-hidden rounded-2xl">
@@ -67,7 +46,7 @@ export function HeroSection() {
       />
 
       <div className="relative w-full h-full flex items-center justify-center">
-        {podcasts.map((podcast, index) => {
+        {programs.map((program, index) => {
           const isActive = index === activeIndex;
 
           let translateX: string = "0px";
@@ -83,7 +62,7 @@ export function HeroSection() {
             zIndex = 10;
           } else if (
             index ===
-            (activeIndex === 0 ? podcasts.length - 1 : activeIndex - 1)
+            (activeIndex === 0 ? programs.length - 1 : activeIndex - 1)
           ) {
             translateX = "calc(-100% - 1rem)";
             translateY = 0;
@@ -91,7 +70,7 @@ export function HeroSection() {
             zIndex = 5;
           } else if (
             index ===
-            (activeIndex === podcasts.length - 1 ? 0 : activeIndex + 1)
+            (activeIndex === programs.length - 1 ? 0 : activeIndex + 1)
           ) {
             translateX = "calc(100% + 1rem)";
             translateY = 0;
@@ -103,14 +82,16 @@ export function HeroSection() {
           }
 
           return (
-            <div
-              key={podcast.id}
+            <Link
+              key={program.id}
+              href={`/program/${program.id}`} // Rota de destino
               className="absolute transition-all duration-500 ease-out"
               style={{
                 transform: `translateX(${translateX}) translateY(${translateY}px) scale(${scale})`,
                 opacity,
                 zIndex,
               }}
+              aria-label={`Acessar programa ${program.title}`}
             >
               <div
                 className={`relative w-96 h-48 rounded-xl overflow-hidden ${
@@ -118,8 +99,8 @@ export function HeroSection() {
                 }`}
               >
                 <Image
-                  src={podcast.image}
-                  alt={podcast.title}
+                  src={program.image_url || "/placeholder-image.jpg"} // Imagem real
+                  alt={program.title}
                   fill
                   className="object-cover"
                 />
@@ -129,10 +110,11 @@ export function HeroSection() {
                 <div className="absolute inset-0 flex items-center p-6">
                   <div>
                     <h3 className="text-2xl font-bold text-white mb-1 drop-shadow-lg">
-                      {podcast.title}
+                      {program.title} {/* Título real */}
                     </h3>
                     <p className="text-white/90 text-sm drop-shadow">
-                      {podcast.artist}
+                      {/* 4. CORREÇÃO: Acessando o nome da categoria com segurança */}
+                      {program.categories?.name || "Sem categoria"}
                     </p>
                   </div>
                 </div>
@@ -141,7 +123,7 @@ export function HeroSection() {
                   <div className="absolute inset-0 bg-black/40 z-20" />
                 )}
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>

@@ -1,7 +1,14 @@
 // src/services/serverDataService.ts
 
 import { createSupabaseServerClient } from "@/src/lib/supabase-server";
-import { Category, Subcategory, Program, Tag, Episode } from "@/src/lib/types";
+import {
+  Category,
+  Subcategory,
+  Program,
+  Tag,
+  Episode,
+  ProgramWithRelations,
+} from "@/src/lib/types";
 
 // Este arquivo contém funções de busca de dados destinadas APENAS a Componentes de Servidor.
 
@@ -90,5 +97,36 @@ export async function getScheduledEpisodes(): Promise<ScheduledEpisode[]> {
 
   // O 'as any' é um truque para contornar um detalhe da tipagem do Supabase aqui.
   // Sabemos que os dados estão corretos, então forçamos a tipagem.
+  return data as any;
+}
+
+// NOVA FUNÇÃO PARA BUSCAR PROGRAMAS COM CATEGORIAS
+export async function getActiveProgramsWithCategories(): Promise<
+  ProgramWithRelations[]
+> {
+  const supabase = await createSupabaseServerClient();
+
+  // Vamos buscar os programas e incluir o nome da categoria relacionada
+  const { data, error } = await supabase
+    .from("programs")
+    .select(
+      `
+      *,
+      categories ( name )
+    `
+    )
+    // Você mencionou 5 programas, então estou limitando aos 5 mais recentes.
+    // Podemos remover ou ajustar o .limit(5) depois.
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (error) {
+    console.error("Error fetching programs with categories:", error.message);
+    return [];
+  }
+
+  // O Supabase retorna 'categories' como um objeto { name: '...' } ou null.
+  // O select "categories ( name )" garante que a forma bate com o esperado
+  // no tipo ProgramWithRelations { categories: { name: string } | null }
   return data as any;
 }
