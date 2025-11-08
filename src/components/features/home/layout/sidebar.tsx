@@ -18,7 +18,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
-import { cn } from "@/src/lib/utils"; // <-- NOVO: Importe o cn
+import { cn } from "@/src/lib/utils";
 
 // 1. Definimos as props que o componente agora espera
 interface SidebarProps {
@@ -38,9 +38,16 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
       <div
         className={cn(
           "py-4 px-4", // Mantém o padding para o botão
-          isCollapsed ? "flex justify-center" : "flex justify-end"
+          isCollapsed
+            ? "flex justify-center"
+            : "flex justify-between items-center"
         )}
       >
+        {/* Logo TRYLLE - só aparece quando expandido */}
+        {!isCollapsed && (
+          <h1 className="text-2xl font-bold text-foreground">TRYLLE</h1>
+        )}
+
         <Button
           variant="ghost"
           size="icon"
