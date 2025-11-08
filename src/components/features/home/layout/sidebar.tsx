@@ -30,7 +30,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "h-full w-full rounded-2xl bg-[#0f0f0f]/80 shadow-lg backdrop-blur-md flex flex-col transition-all duration-300",
+        "h-full w-full rounded-2xl bg-card/80 shadow-lg backdrop-blur-md flex flex-col transition-all duration-300",
         isCollapsed && "items-center" // Centraliza ícones quando encolhido
       )}
     >
@@ -45,7 +45,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
           variant="ghost"
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="h-8 w-8 text-gray-300 hover:bg-white/5 hover:text-white"
+          className="h-8 w-8 text-foreground hover:bg-muted/50 hover:text-foreground"
         >
           {isCollapsed ? (
             <ChevronsRight className="w-5 h-5" />
@@ -59,13 +59,13 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto px-4 space-y-6">
         {/* Search - Apenas ícone quando encolhido */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             placeholder="Buscar..."
             aria-label="Buscar"
             className={cn(
-              "w-full rounded-full bg-white/5 pl-9 pr-4 py-2 text-sm text-white placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-white/10",
+              "w-full rounded-full bg-muted/50 pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring",
               isCollapsed && "hidden" // Esconde o input quando encolhido
             )}
           />
@@ -74,7 +74,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="w-full h-10 text-gray-300 hover:bg-white/5 hover:text-white"
+              className="w-full h-10 text-foreground hover:bg-muted/50 hover:text-foreground"
             >
               <Search className="w-5 h-5" />
             </Button>
@@ -84,7 +84,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         {/* Menu Section */}
         <div>
           {!isCollapsed && (
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Menu
             </h3>
           )}
@@ -94,7 +94,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors",
+                    "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
                     isCollapsed ? "justify-center" : "justify-start"
                   )}
                 >
@@ -110,7 +110,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors",
+                    "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
                     isCollapsed ? "justify-center" : "justify-start"
                   )}
                 >
@@ -128,7 +128,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors",
+                    "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
                     isCollapsed ? "justify-center" : "justify-start"
                   )}
                 >
@@ -146,7 +146,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors",
+                    "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
                     isCollapsed ? "justify-center" : "justify-start"
                   )}
                 >
@@ -162,7 +162,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors",
+                    "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
                     isCollapsed ? "justify-center" : "justify-start"
                   )}
                 >
@@ -179,7 +179,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         {/* Library Section */}
         <div>
           {!isCollapsed && (
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Biblioteca
             </h3>
           )}
@@ -189,7 +189,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors",
+                    "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
                     isCollapsed ? "justify-center" : "justify-start"
                   )}
                 >
@@ -205,7 +205,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors",
+                    "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
                     isCollapsed ? "justify-center" : "justify-start"
                   )}
                 >
@@ -221,7 +221,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                 <Button
                   variant="ghost"
                   className={cn(
-                    "w-full gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors",
+                    "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
                     isCollapsed ? "justify-center" : "justify-start"
                   )}
                 >
@@ -238,7 +238,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         {/* Playlist Section */}
         <div>
           {!isCollapsed && (
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Playlist
             </h3>
           )}
@@ -247,7 +247,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
               <Button
                 variant="ghost"
                 className={cn(
-                  "w-full gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors",
+                  "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
                   isCollapsed ? "justify-center" : "justify-start"
                 )}
               >
@@ -266,7 +266,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         <Button
           variant="ghost"
           className={cn(
-            "w-full gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/5 hover:text-red-400 transition-colors",
+            "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-destructive transition-colors",
             isCollapsed ? "justify-center" : "justify-start"
           )}
         >

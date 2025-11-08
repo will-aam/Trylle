@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 // src/components/features/home/layout/right-sidebar.tsx
 "use client";
 
@@ -15,7 +16,7 @@ export function RightSidebar() {
   };
 
   return (
-    <aside className="h-full w-full rounded-2xl bg-[#0f0f0f]/80  shadow-lg backdrop-blur-md flex flex-col">
+    <aside className="h-full w-full rounded-2xl bg-card/80 shadow-lg backdrop-blur-md flex flex-col">
       {/* Header */}
       <div className="p-6">
         <div className="flex items-center justify-between">
@@ -27,22 +28,22 @@ export function RightSidebar() {
               className="w-10 h-10 rounded-full"
             />
             <div>
-              <p className="text-xs text-gray-500 font-medium">
+              <p className="text-xs text-muted-foreground font-medium">
                 {getGreeting()}
               </p>
-              <h3 className="text-sm font-semibold text-white">William</h3>
+              <h3 className="text-sm font-semibold text-foreground">William</h3>
             </div>
           </div>
 
           {/* Container dos botões - mesmo tamanho do perfil */}
           <div className="flex items-center gap-2">
-            <button className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all hover:scale-110">
-              <Bell className="w-5 h-5 text-gray-400" />
+            <button className="w-10 h-10 rounded-full bg-muted/50 hover:bg-muted/80 flex items-center justify-center transition-all hover:scale-110">
+              <Bell className="w-5 h-5 text-muted-foreground" />
             </button>
 
             <Link href="/settings">
-              <button className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all hover:scale-110">
-                <Settings className="w-5 h-5 text-gray-400" />
+              <button className="w-10 h-10 rounded-full bg-muted/50 hover:bg-muted/80 flex items-center justify-center transition-all hover:scale-110">
+                <Settings className="w-5 h-5 text-muted-foreground" />
               </button>
             </Link>
           </div>

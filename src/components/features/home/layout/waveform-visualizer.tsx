@@ -26,7 +26,10 @@ export function WaveformVisualizer() {
           className="w-1 rounded-full transition-all duration-200"
           style={{
             height: `${height}%`,
-            backgroundColor: index < 30 ? "#d4d4d4" : "#d4d4d4",
+            backgroundColor:
+              index < 30
+                ? "var(--muted-foreground)"
+                : "var(--muted-foreground)",
           }}
         />
       ))}

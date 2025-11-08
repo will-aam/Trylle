@@ -141,7 +141,7 @@ export default function AuthPage() {
 
   // O seu JSX permanece exatamente o mesmo.
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#021027]">
+    <div className="min-h-screen relative overflow-hidden bg-background">
       <div className="absolute inset-0 z-0">
         <ParticleBackground />
       </div>
@@ -149,28 +149,28 @@ export default function AuthPage() {
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         <div className="w-full max-w-md">
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-900/80 border-slate-800 backdrop-blur-sm">
+            <TabsList className="grid w-full grid-cols-2 bg-muted/80 border-border backdrop-blur-sm">
               <TabsTrigger
                 value="login"
-                className="data-[state=active]:bg-slate-800 data-[state=active]:text-slate-50 text-slate-400"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground"
               >
                 Conecte-se
               </TabsTrigger>
               <TabsTrigger
                 value="signup"
-                className="data-[state=active]:bg-slate-800 data-[state=active]:text-slate-50 text-slate-400"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground"
               >
                 Inscrever-se
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
-              <Card className="bg-slate-950/80 border-slate-800 shadow-2xl backdrop-blur-sm">
+              <Card className="bg-card/80 border-border shadow-2xl backdrop-blur-sm">
                 <CardHeader className="space-y-1 pb-6">
-                  <CardTitle className="text-2xl font-semibold text-slate-50">
+                  <CardTitle className="text-2xl font-semibold text-foreground">
                     Que bom ver você de novo!
                   </CardTitle>
-                  <CardDescription className="text-slate-400">
+                  <CardDescription className="text-muted-foreground">
                     Entre na sua conta para continuar
                   </CardDescription>
                 </CardHeader>
@@ -182,7 +182,7 @@ export default function AuthPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="login-email"
-                        className="text-slate-200 text-sm font-medium"
+                        className="text-foreground text-sm font-medium"
                       >
                         Email
                       </Label>
@@ -190,11 +190,11 @@ export default function AuthPage() {
                         id="login-email"
                         placeholder="nome@exemplo.com"
                         type="email"
-                        className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-slate-600 focus:ring-slate-600"
+                        className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                         {...loginForm.register("email")}
                       />
                       {loginForm.formState.errors.email && (
-                        <p className="text-xs text-red-400">
+                        <p className="text-xs text-destructive">
                           {loginForm.formState.errors.email.message}
                         </p>
                       )}
@@ -202,24 +202,24 @@ export default function AuthPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="login-password"
-                        className="text-slate-200 text-sm font-medium"
+                        className="text-foreground text-sm font-medium"
                       >
                         Senha
                       </Label>
                       <Input
                         id="login-password"
                         type="password"
-                        className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-slate-600 focus:ring-slate-600"
+                        className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                         {...loginForm.register("password")}
                       />
                       {loginForm.formState.errors.password && (
-                        <p className="text-xs text-red-400">
+                        <p className="text-xs text-destructive">
                           {loginForm.formState.errors.password.message}
                         </p>
                       )}
                     </div>
                     <Button
-                      className="w-full bg-slate-50 text-slate-950 hover:bg-slate-200 font-medium"
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
                       type="submit"
                       disabled={isLoginLoading}
                     >
@@ -228,17 +228,17 @@ export default function AuthPage() {
                   </form>
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-slate-700" />
+                      <span className="w-full border-t border-border" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-slate-950 px-2 text-slate-500">
+                      <span className="bg-card px-2 text-muted-foreground">
                         Ou continue com
                       </span>
                     </div>
                   </div>
                   <Button
                     variant="outline"
-                    className="w-full bg-transparent border-slate-700 text-slate-200 hover:bg-slate-900 hover:text-white"
+                    className="w-full bg-transparent border-border text-foreground hover:bg-muted hover:text-foreground"
                     onClick={handleGoogleLogin}
                     disabled={isGoogleLoading}
                   >
@@ -252,12 +252,12 @@ export default function AuthPage() {
             </TabsContent>
 
             <TabsContent value="signup">
-              <Card className="bg-slate-950/80 border-slate-800 shadow-2xl backdrop-blur-sm">
+              <Card className="bg-card/80 border-border shadow-2xl backdrop-blur-sm">
                 <CardHeader className="space-y-1 pb-6">
-                  <CardTitle className="text-2xl font-semibold text-slate-50">
+                  <CardTitle className="text-2xl font-semibold text-foreground">
                     Criar uma conta
                   </CardTitle>
-                  <CardDescription className="text-slate-400">
+                  <CardDescription className="text-muted-foreground">
                     Insira suas informações para começar
                   </CardDescription>
                 </CardHeader>
@@ -269,7 +269,7 @@ export default function AuthPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="signup-email"
-                        className="text-slate-200 text-sm font-medium"
+                        className="text-foreground text-sm font-medium"
                       >
                         Email
                       </Label>
@@ -277,11 +277,11 @@ export default function AuthPage() {
                         id="signup-email"
                         placeholder="nome@exemplo.com"
                         type="email"
-                        className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-slate-600 focus:ring-slate-600"
+                        className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                         {...signupForm.register("email")}
                       />
                       {signupForm.formState.errors.email && (
-                        <p className="text-xs text-red-400">
+                        <p className="text-xs text-destructive">
                           {signupForm.formState.errors.email.message}
                         </p>
                       )}
@@ -289,24 +289,24 @@ export default function AuthPage() {
                     <div className="space-y-2">
                       <Label
                         htmlFor="signup-password"
-                        className="text-slate-200 text-sm font-medium"
+                        className="text-foreground text-sm font-medium"
                       >
                         Senha
                       </Label>
                       <Input
                         id="signup-password"
                         type="password"
-                        className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-slate-600 focus:ring-slate-600"
+                        className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary"
                         {...signupForm.register("password")}
                       />
                       {signupForm.formState.errors.password && (
-                        <p className="text-xs text-red-400">
+                        <p className="text-xs text-destructive">
                           {signupForm.formState.errors.password.message}
                         </p>
                       )}
                     </div>
                     <Button
-                      className="w-full bg-slate-50 text-slate-950 hover:bg-slate-200 font-medium"
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
                       type="submit"
                       disabled={isSignupLoading}
                     >
@@ -315,17 +315,17 @@ export default function AuthPage() {
                   </form>
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-slate-700" />
+                      <span className="w-full border-t border-border" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-slate-950 px-2 text-slate-500">
+                      <span className="bg-card px-2 text-muted-foreground">
                         Ou inscreva-se com
                       </span>
                     </div>
                   </div>
                   <Button
                     variant="outline"
-                    className="w-full bg-transparent border-slate-700 text-slate-200 hover:bg-slate-900 hover:text-white"
+                    className="w-full bg-transparent border-border text-foreground hover:bg-muted hover:text-foreground"
                     onClick={handleGoogleLogin}
                     disabled={isGoogleLoading}
                   >
@@ -339,7 +339,7 @@ export default function AuthPage() {
             </TabsContent>
 
             {error && (
-              <p className="mt-4 text-center text-sm text-red-400 bg-red-950/50 border border-red-800/50 rounded-lg p-3 backdrop-blur-sm">
+              <p className="mt-4 text-center text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-3 backdrop-blur-sm">
                 {error}
               </p>
             )}

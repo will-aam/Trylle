@@ -25,11 +25,11 @@ const chartConfig = {
   },
   monthly: {
     label: "Mensal",
-    color: "#3b82f6",
+    color: "var(--chart-1)",
   },
   yearly: {
     label: "Anual",
-    color: "#16a34a",
+    color: "var(--chart-2)",
   },
 };
 
