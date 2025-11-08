@@ -1,13 +1,15 @@
+// eslint.config.mts
 import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 import pluginReact from "eslint-plugin-react";
+import nextPlugin from "@next/eslint-plugin-next"; // <-- 1. IMPORTAR O PLUGIN DO NEXT
 import { defineConfig } from "eslint/config";
 
 export default defineConfig([
   // Ignora pastas que não precisam ser analisadas
   {
-    ignores: ["node_modules", ".next", "dist", "build"],
+    ignores: ["node_modules", ".next", "dist", "build", ".vercel"],
   },
 
   // Configuração base para JS e TS
@@ -16,10 +18,13 @@ export default defineConfig([
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
     },
+    // 2. ADICIONAR PLUGINS DO NEXT NO EXTENDS
     extends: [
       js.configs.recommended,
       ...tseslint.configs.recommended,
       pluginReact.configs.flat.recommended,
+      nextPlugin.configs.recommended, // <-- Adicionado
+      nextPlugin.configs["core-web-vitals"], // <-- Adicionado
     ],
     settings: {
       react: {
@@ -59,6 +64,24 @@ export default defineConfig([
           ],
         },
       ],
+    },
+  },
+
+  // --- 3. ADICIONAR EXCEÇÕES PARA CORRIGIR O BUILD ---
+
+  // Permite 'sonner' APENAS nos arquivos que precisam dele
+  {
+    files: ["src/lib/safe-toast.ts", "src/components/ui/sonner.tsx"],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
+
+  // Desliga a regra 'no-unknown-property' APENAS para o command.tsx
+  {
+    files: ["src/components/ui/command.tsx"],
+    rules: {
+      "react/no-unknown-property": "off",
     },
   },
 ]);
