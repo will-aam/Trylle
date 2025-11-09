@@ -1,7 +1,7 @@
 // src/components/layout/admin-player-wrapper.tsx
 "use client";
 
-import { AudioPlayer } from "@/src/components/features/audio-player";
+import AudioPlayer from "@/src/components/features/audio-player";
 import { usePlayer } from "@/src/hooks/use-player";
 import { cn } from "@/src/lib/utils";
 

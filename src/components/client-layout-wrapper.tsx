@@ -2,7 +2,7 @@
 
 import { usePlayer } from "@/src/hooks/use-player";
 import { cn } from "@/src/lib/utils";
-import { AudioPlayer } from "@/src/components/features/audio-player";
+import AudioPlayer from "@/src/components/features/audio-player";
 
 export function ClientLayoutWrapper({
   children,
