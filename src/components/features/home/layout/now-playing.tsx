@@ -1,3 +1,4 @@
+// src/components/features/home/layout/now-playing.tsx
 import {
   SkipBack,
   RotateCcw,
@@ -10,28 +11,30 @@ import { WaveformVisualizer } from "./waveform-visualizer";
 
 export function NowPlaying() {
   return (
-    // EFEITO GLASS AQUI
-    <div className="bg-gray-900/40 backdrop-blur-2xl rounded-3xl p-6 shadow-2xl">
-      {/* Album Art - IMAGEM ATUALIZADA */}
-      <div className="relative w-56 h-56 mx-auto rounded-2xl overflow-hidden mb-6 shadow-xl">
+    // MUDANÇA PRINCIPAL: Adicione `flex-shrink-0` aqui.
+    // Isso impede que o card inteiro seja esmagado pelo container pai.
+    <div className="bg-gray-900/40 backdrop-blur-2xl rounded-3xl p-4 sm:p-6 shadow-2xl flex-shrink-0">
+      {/* Album Art */}
+      <div className="relative w-full aspect-square max-w-[200px] sm:max-w-[250px] mx-auto rounded-2xl overflow-hidden mb-6 shadow-xl">
         <Image
           src="https://img.freepik.com/vetores-gratis/ilustracoes-lo-fi-desenhadas-a-mao_23-2149325747.jpg"
           alt="Ilustração Lo-fi"
           fill
           className="object-cover"
+          sizes="(max-width: 640px) 200px, 250px"
         />
       </div>
 
       {/* Song Info */}
       <div className="text-center mb-6">
-        <h3 className="text-xl font-bold text-white mb-1 drop-shadow-md">
+        <h3 className="text-lg sm:text-xl font-bold text-white mb-1 drop-shadow-md">
           A Guerra das Certificações
         </h3>
         <p className="text-sm text-gray-300">Tecnologia</p>
       </div>
 
-      {/* Waveform */}
-      <div className="mb-6">
+      {/* Waveform - MUDANÇA SECUNDÁRIA: Adicione `flex-shrink-0` também aqui para garantir */}
+      <div className="mb-6 flex-shrink-0">
         <WaveformVisualizer />
       </div>
 
@@ -54,25 +57,21 @@ export function NowPlaying() {
         <button className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110">
           <SkipBack className="w-5 h-5 text-white fill-white" />
         </button>
-
         <button className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110 relative">
           <RotateCcw className="w-4 h-4 text-white" />
           <span className="text-xs text-white absolute -bottom-5 left-1/2 -translate-x-1/2">
             15
           </span>
         </button>
-
         <button className="w-14 h-14 rounded-full bg-white hover:bg-gray-200 flex items-center justify-center transition-all hover:scale-110 shadow-lg">
           <Pause className="w-6 h-6 text-blue-600 fill-blue-600" />
         </button>
-
         <button className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110 relative">
           <RotateCw className="w-4 h-4 text-white" />
           <span className="text-xs text-white absolute -bottom-5 left-1/2 -translate-x-1/2">
             15
           </span>
         </button>
-
         <button className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110">
           <SkipForward className="w-5 h-5 text-white fill-white" />
         </button>

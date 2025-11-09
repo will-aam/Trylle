@@ -1,3 +1,4 @@
+// src/components/features/home/layout/waveform-visualizer.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,7 +7,6 @@ export function WaveformVisualizer() {
   const [bars, setBars] = useState<number[]>([]);
 
   useEffect(() => {
-    // Generate random heights for waveform bars
     const generateBars = () => {
       const newBars = Array.from({ length: 60 }, () => Math.random() * 100);
       setBars(newBars);
@@ -19,17 +19,18 @@ export function WaveformVisualizer() {
   }, []);
 
   return (
-    <div className="flex items-center justify-center gap-1 h-24">
+    <div
+      // MUDANÇA: Adicionamos `min-h` para redundância e garantia.
+      // `h-24` = 96px. `min-h-[96px]` reforça que essa é a altura mínima.
+      className="flex items-center justify-center gap-1 h-24 min-h-[96px] flex-shrink-0"
+    >
       {bars.map((height, index) => (
         <div
           key={index}
-          className="w-1 rounded-full transition-all duration-200"
+          className="w-1 rounded-full transition-all duration-200 ease-out"
           style={{
             height: `${height}%`,
-            backgroundColor:
-              index < 30
-                ? "var(--muted-foreground)"
-                : "var(--muted-foreground)",
+            backgroundColor: "white",
           }}
         />
       ))}
