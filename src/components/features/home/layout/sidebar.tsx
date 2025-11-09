@@ -10,7 +10,7 @@ import {
   Heart,
   Download,
   Clock,
-  LogOut,
+  // LogOut removido das importações
   Home,
   Trophy,
   Brain,
@@ -268,19 +268,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         </div>
       </nav>
 
-      {/* Logout */}
-      <div className="p-4">
-        <Button
-          variant="ghost"
-          className={cn(
-            "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-destructive transition-colors",
-            isCollapsed ? "justify-center" : "justify-start"
-          )}
-        >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
-          {!isCollapsed && <span className="text-sm font-medium">Sair</span>}
-        </Button>
-      </div>
+      {/* Bloco de Logout REMOVIDO */}
     </aside>
   );
 }

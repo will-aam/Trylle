@@ -9,6 +9,7 @@ import { RightSidebar } from "@/src/components/features/home/layout/right-sideba
 import { NavbarLoggedOut } from "@/src/components/layout/NavbarLoggedOut";
 import { BottomNavbar } from "@/src/components/layout/bottom-navbar";
 import { cn } from "@/src/lib/utils";
+import AudioPlayer from "@/src/components/features/audio-player"; // 1. Importamos o Player
 
 export default function MainLayout({ children }: { children: ReactNode }) {
   const supabase = createSupabaseBrowserClient();
@@ -58,12 +59,15 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-col min-h-screen bg-black text-white">
         <NavbarLoggedOut />
         <main className="flex-grow">{children}</main>
+        {/* Player não é renderizado se não há usuário */}
       </div>
     );
   }
 
+  // LAYOUT LOGADO
   return (
     <div className="h-screen w-full flex flex-col bg-black text-white">
+      {/* 2. Container principal 'flex-1' com 'overflow-hidden' (correto) */}
       <div className="flex-1 flex gap-4 overflow-hidden p-4">
         <div
           className={cn(
@@ -75,19 +79,34 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
         </div>
 
-        <main className="flex-1 rounded-2xl overflow-y-auto overflow-x-hidden">
+        {/* 3. PADDING ADICIONADO AO <main>
+           O padding-bottom vai aqui, no elemento que scrolla.
+           Mobile: pb-36 (h-20 player + h-16 nav)
+           Desktop: md:pb-20 (só o h-20 player)
+        */}
+        <main className="flex-1 rounded-2xl overflow-y-auto overflow-x-hidden pb-36 md:pb-20">
           {children}
         </main>
 
-        {/* LARGURA DA RIGHT SIDEBAR PADRONIZADA */}
         <div className="w-[260px] flex-shrink-0 hidden lg:block">
           <RightSidebar />
         </div>
       </div>
 
-      <div className="md:hidden">
+      {/* 4. CONTAINER DA BOTTOMNAVBAR MODIFICADO
+           Movemos ela do fluxo normal para 'fixed'.
+           Ela agora fica no 'bottom-20' (acima do player) e 'z-40'.
+           (Estou assumindo h-16 (4rem) para a BottomNavbar)
+      */}
+      <div className="fixed bottom-20 left-0 right-0 z-40 md:hidden">
         <BottomNavbar />
       </div>
+
+      {/* 5. PLAYER ADICIONADO
+           Ele renderiza aqui. O componente (do Passo 1) já é 
+           'fixed bottom-0 z-50 h-20'.
+      */}
+      <AudioPlayer />
     </div>
   );
 }

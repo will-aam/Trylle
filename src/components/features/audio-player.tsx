@@ -1,151 +1,355 @@
+// src/components/features/audio-player.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { usePlayer } from "@/src/hooks/use-player";
+import {
+  Music2,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  Repeat,
+  Repeat1,
+  List, // 1. Ícone de lista importado
+} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/src/components/ui/avatar";
 import { Slider } from "@/src/components/ui/slider";
 import { Button } from "@/src/components/ui/button";
-import { Play, Pause, Volume2, VolumeX, X } from "lucide-react";
-import { formatTime } from "@/src/lib/utils";
-import Image from "next/image";
+import { cn } from "@/src/lib/utils";
 
-export function AudioPlayer() {
-  const { activeEpisode, isPlaying, play, pause, reset } = usePlayer();
+const formatTime = (seconds: number) => {
+  const flooredSeconds = Math.floor(seconds);
+  const minutes = Math.floor(flooredSeconds / 60);
+  const remainingSeconds = flooredSeconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+};
+
+const SKIP_AMOUNT = 15;
+
+const AudioPlayer = () => {
+  const { activeEpisode, isPlaying, play, pause } = usePlayer();
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
-  const [volume, setVolume] = useState(0.8);
-  const [isMuted, setIsMuted] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.5);
+  const [isLooping, setIsLooping] = useState(false);
+
+  const isDisabled = !activeEpisode;
 
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    if (activeEpisode && audioRef.current) {
+      audioRef.current.src = activeEpisode.audio_url;
+      audioRef.current.volume = volume;
+      setCurrentTime(0);
+      setDuration(0);
+    }
+  }, [activeEpisode, volume]);
 
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.play().catch((e) => {
+          console.error("Erro ao tentar reproduzir o áudio:", e);
+          pause();
+        });
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isPlaying, pause]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.loop = isLooping;
+    }
+  }, [isLooping]);
+
+  const handlePlayPause = () => {
+    if (isDisabled) return;
     if (isPlaying) {
-      audio.play().catch((e) => console.error("Erro ao tocar o áudio:", e));
+      pause();
     } else {
-      audio.pause();
+      play();
     }
-  }, [isPlaying, activeEpisode]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.volume = isMuted ? 0 : volume;
-    }
-  }, [volume, isMuted]);
+  };
 
   const handleTimeUpdate = () => {
-    setCurrentTime(audioRef.current?.currentTime || 0);
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
   };
 
   const handleLoadedMetadata = () => {
-    setDuration(audioRef.current?.duration || 0);
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
   };
 
-  const handleSeek = (value: number[]) => {
+  const handleAudioEnd = () => {
+    if (!isLooping) {
+      pause();
+    }
+  };
+
+  const handleProgressChange = (value: number[]) => {
     if (audioRef.current) {
-      audioRef.current.currentTime = value[0];
-      setCurrentTime(value[0]);
+      const newTime = value[0];
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
     }
   };
 
   const handleVolumeChange = (value: number[]) => {
-    const newVolume = value[0];
+    const newVolume = value[0] / 100;
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+    }
     setVolume(newVolume);
-    if (isMuted && newVolume > 0) {
-      setIsMuted(false);
-    } else if (newVolume === 0) {
-      setIsMuted(true);
+  };
+
+  const handleSkipForward = () => {
+    if (audioRef.current) {
+      const newTime = Math.min(
+        audioRef.current.currentTime + SKIP_AMOUNT,
+        duration
+      );
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
     }
   };
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
+  const handleSkipBack = () => {
+    if (audioRef.current) {
+      const newTime = Math.max(audioRef.current.currentTime - SKIP_AMOUNT, 0);
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
   };
 
-  if (!activeEpisode) {
-    return null;
-  }
+  const toggleLooping = () => {
+    setIsLooping((prev) => !prev);
+  };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-20 bg-background/95 backdrop-blur-sm border-t z-50">
+    <footer className="fixed bottom-0 left-0 right-0 z-50 h-20 border-t bg-background/95 backdrop-blur-sm">
       <audio
         ref={audioRef}
-        src={activeEpisode.audio_url}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={pause}
-        key={activeEpisode.id}
+        onEnded={handleAudioEnd}
       />
-      <div className="container mx-auto h-full flex items-center justify-between gap-4">
-        {/* Informações do Episódio */}
-        <div className="flex items-center gap-3 w-1/4">
-          {/* <Image
-            src="/"
-            alt={activeEpisode.title}
-            width={56}
-            height={56}
-            className="rounded-md h-14 w-14 object-cover"
-          /> */}
-          <div className="truncate">
-            <p className="font-bold text-sm truncate">{activeEpisode.title}</p>
-            <p className="text-xs text-muted-foreground truncate">
-              {activeEpisode.categories?.name || "Sem categoria"}
+
+      {/* ============================================================
+        LAYOUT DESKTOP
+        ============================================================
+      */}
+      <div className="hidden h-full grid-cols-3 items-center px-4 md:grid md:px-6">
+        {/* Seção Esquerda */}
+        <div className="flex items-center gap-3">
+          <Avatar className="h-12 w-12 rounded">
+            <AvatarFallback className="rounded bg-muted">
+              <Music2 className="h-6 w-6 text-muted-foreground" />
+            </AvatarFallback>
+          </Avatar>
+          <div className="block">
+            <p
+              className={`truncate text-sm font-medium ${
+                isDisabled ? "text-muted-foreground/60" : "text-foreground"
+              }`}
+            >
+              {activeEpisode?.title || "Nenhum episódio"}
+            </p>
+            <p
+              className={`truncate text-xs ${
+                isDisabled
+                  ? "text-muted-foreground/40"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {activeEpisode ? "Trylle" : "Selecione um play"}
             </p>
           </div>
         </div>
 
-        {/* Controles Principais */}
-        <div className="flex-1 flex items-center justify-center gap-2 max-w-2xl">
+        {/* Seção Central */}
+        <div className="flex flex-col items-center justify-center gap-2">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              disabled={isDisabled}
+              onClick={handleSkipBack}
+            >
+              <SkipBack className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="default"
+              size="icon"
+              className="h-10 w-10 rounded-full"
+              disabled={isDisabled}
+              onClick={handlePlayPause}
+            >
+              {isPlaying ? (
+                <Pause className="h-5 w-5 fill-white" />
+              ) : (
+                <Play className="h-5 w-5 fill-white" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              disabled={isDisabled}
+              onClick={handleSkipForward}
+            >
+              <SkipForward className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleLooping}
+              disabled={isDisabled}
+              data-active={isLooping}
+              className={cn("rounded-full", "data-[active=true]:text-primary")}
+            >
+              {isLooping ? (
+                <Repeat1 className="h-5 w-5" />
+              ) : (
+                <Repeat className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
+          <div className="flex w-full max-w-sm items-center gap-2">
+            <span
+              className={`text-xs ${
+                isDisabled
+                  ? "text-muted-foreground/40"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {formatTime(currentTime)}
+            </span>
+            <Slider
+              value={[currentTime]}
+              max={duration || 100}
+              step={1}
+              className="w-full"
+              disabled={isDisabled}
+              onValueChange={handleProgressChange}
+            />
+            <span
+              className={`text-xs ${
+                isDisabled
+                  ? "text-muted-foreground/40"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {formatTime(duration)}
+            </span>
+          </div>
+        </div>
+
+        {/* Seção Direita */}
+        <div className="flex items-center justify-end gap-2">
+          {/* 2. Novo botão de lista adicionado */}
           <Button
-            onClick={() => (isPlaying ? pause() : play())}
+            variant="ghost"
             size="icon"
-            className="rounded-full h-10 w-10"
+            className="rounded-full"
+            disabled={isDisabled}
+          >
+            <List className="h-5 w-5" />
+          </Button>
+          <Volume2 className="h-5 w-5 text-muted-foreground" />
+          <Slider
+            value={[volume * 100]}
+            max={100}
+            step={1}
+            className="w-24"
+            disabled={isDisabled}
+            onValueChange={handleVolumeChange}
+          />
+        </div>
+      </div>
+
+      {/* ============================================================
+        LAYOUT MOBILE
+        ============================================================
+      */}
+      <div className="flex h-full flex-col justify-center px-4 py-2 md:hidden">
+        {/* Linha 1 */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-1 items-center gap-3 overflow-hidden">
+            <Avatar className="h-10 w-10 rounded">
+              <AvatarFallback className="rounded bg-muted">
+                <Music2 className="h-5 w-5 text-muted-foreground" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 overflow-hidden">
+              <p
+                className={`truncate text-sm font-medium ${
+                  isDisabled ? "text-muted-foreground/60" : "text-foreground"
+                }`}
+              >
+                {activeEpisode?.title || "Nenhum episódio"}
+              </p>
+              <p
+                className={`truncate text-xs ${
+                  isDisabled
+                    ? "text-muted-foreground/40"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {activeEpisode ? "Trylle" : "Selecione um play"}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="default"
+            size="icon"
+            className="h-10 w-10 flex-shrink-0 rounded-full"
+            disabled={isDisabled}
+            onClick={handlePlayPause}
           >
             {isPlaying ? (
-              <Pause className="h-5 w-5" />
+              <Pause className="h-5 w-5 fill-white" />
             ) : (
-              <Play className="h-5 w-5 fill-current" />
+              <Play className="h-5 w-5 fill-white" />
             )}
           </Button>
-          <span className="text-xs w-12 text-right text-muted-foreground">
+        </div>
+        {/* Linha 2 */}
+        <div className="flex w-full items-center gap-2 pt-1">
+          <span
+            className={`text-xs ${
+              isDisabled ? "text-muted-foreground/40" : "text-muted-foreground"
+            }`}
+          >
             {formatTime(currentTime)}
           </span>
           <Slider
             value={[currentTime]}
-            max={duration || 1}
+            max={duration || 100}
             step={1}
-            onValueChange={handleSeek}
             className="w-full"
+            disabled={isDisabled}
+            onValueChange={handleProgressChange}
           />
-          <span className="text-xs w-12 text-muted-foreground">
+          <span
+            className={`text-xs ${
+              isDisabled ? "text-muted-foreground/40" : "text-muted-foreground"
+            }`}
+          >
             {formatTime(duration)}
           </span>
         </div>
-
-        {/* Controles de Volume e Fechar */}
-        <div className="flex items-center gap-3 w-1/4 justify-end">
-          <div className="flex items-center gap-2 w-32">
-            <Button onClick={toggleMute} variant="ghost" size="icon">
-              {isMuted || volume === 0 ? (
-                <VolumeX className="h-5 w-5" />
-              ) : (
-                <Volume2 className="h-5 w-5" />
-              )}
-            </Button>
-            <Slider
-              value={[isMuted ? 0 : volume]}
-              max={1}
-              step={0.01}
-              onValueChange={handleVolumeChange}
-            />
-          </div>
-          <Button onClick={reset} variant="ghost" size="icon">
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
       </div>
-    </div>
+    </footer>
   );
-}
+};
+
+export default AudioPlayer;

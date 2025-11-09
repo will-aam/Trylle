@@ -6,8 +6,8 @@ import { Play } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
 
-// O hook do player que já temos no projeto
-// import { usePlayer } from "@/src/hooks/use-player";
+// 1. Importação do hook descomentada e ativada
+import { usePlayer } from "@/src/hooks/use-player";
 
 interface EpisodeListProps {
   // A lista de episódios vinda do nosso getProgramWithEpisodes
@@ -15,13 +15,13 @@ interface EpisodeListProps {
 }
 
 export function EpisodeList({ episodes }: EpisodeListProps) {
-  // Vamos instanciar o player (descomente quando for integrar)
-  // const player = usePlayer();
+  // 2. Instanciamos o hook e pegamos a função 'setEpisode'
+  const { setEpisode } = usePlayer();
 
   const handlePlay = (episode: Episode) => {
-    // Aqui é onde chamamos o player global
-    // player.playEpisode(episode); // (ou a função que criamos no hook)
-    console.log("Tocar episódio:", episode.title);
+    // 3. Chamamos a função do hook para definir o episódio ativo
+    //    Isso vai atualizar o estado global e "ligar" o audio-player.tsx
+    setEpisode(episode);
   };
 
   if (!episodes || episodes.length === 0) {
@@ -36,9 +36,7 @@ export function EpisodeList({ episodes }: EpisodeListProps) {
 
   return (
     <div className="flex flex-col gap-1">
-      {/* HEADER DA TABELA - Visível apenas em desktop (md:)
-        Isso imita o layout do Spotify
-      */}
+      {/* HEADER DA TABELA - Visível apenas em desktop (md:) */}
       <div
         className={cn(
           "hidden md:grid items-center gap-4 px-4 py-2",
