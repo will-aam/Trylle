@@ -3,7 +3,7 @@
 "use client";
 
 import { Bell, Settings } from "lucide-react";
-import { NowPlaying } from "./now-playing";
+
 import Link from "next/link";
 import { useMemo } from "react";
 
@@ -66,11 +66,6 @@ export function RightSidebar() {
             </Link>
           </div>
         </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        <NowPlaying />
       </div>
     </aside>
   );
