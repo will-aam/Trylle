@@ -1,6 +1,7 @@
+// src/components/features/home/layout/new-episodes-carousel.tsx
 "use client";
 
-import { ChevronLeft, ChevronRight, Clock, Play, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Play } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import type React from "react";
 import { Button } from "@/src/components/ui/button";
@@ -98,14 +99,21 @@ function EpisodeCard({
         <h3 className="truncate text-xs font-bold leading-tight text-foreground">
           Ep. {episode.episodeNumber} - {episode.title}
         </h3>
-        <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-foreground/80 h-5">
-          <span className="font-medium">{episode.category}</span>
-          <Separator orientation="vertical" className=" bg-gray-700" />
-          <div className="flex items-center gap-1.5">
+
+        <div className="mt-2 flex items-center gap-x-2 text-xs text-foreground/80">
+          <span className="font-medium truncate min-w-0">
+            {episode.category}
+          </span>
+
+          <Separator
+            orientation="vertical"
+            className="h-3 bg-gray-700 flex-shrink-0"
+          />
+
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <Clock className="h-3 w-3" />
             <span className="font-medium">{episode.duration}</span>
           </div>
-          <div className="hidden md:flex items-center gap-1.5"></div>
         </div>
       </div>
     </div>
@@ -119,21 +127,37 @@ export function NewEpisodesCarousel() {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [mobileIndex, setMobileIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+
+  const desktopContainerRef = useRef<HTMLDivElement>(null); // Ref para o desktop
+  const containerRef = useRef<HTMLDivElement>(null); // Ref para o mobile
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
   useEffect(() => {
-    const getItemsPerView = () => (window.innerWidth < 1024 ? 2 : 3);
-    const handleResize = () => setItemsPerView(getItemsPerView());
-    window.addEventListener("resize", handleResize);
-    handleResize();
-    return () => window.removeEventListener("resize", handleResize);
+    const container = desktopContainerRef.current;
+    if (!container) return;
+
+    const getItemsPerView = (width: number) => {
+      if (width < 800) {
+        return 2;
+      }
+      return 3;
+    };
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        const width = entries[0].contentRect.width;
+        setItemsPerView(getItemsPerView(width));
+      }
+    });
+
+    resizeObserver.observe(container);
+
+    return () => resizeObserver.unobserve(container);
   }, []);
 
   const maxIndex = Math.max(0, newEpisodes.length - itemsPerView);
 
-  // Auto-avanço para desktop
   useEffect(() => {
     if (isPaused || isDragging) return;
     const interval = setInterval(() => {
@@ -142,7 +166,6 @@ export function NewEpisodesCarousel() {
     return () => clearInterval(interval);
   }, [isPaused, isDragging, maxIndex]);
 
-  // Auto-avanço para mobile
   useEffect(() => {
     if (isPaused) return;
     const interval = setInterval(() => {
@@ -182,7 +205,6 @@ export function NewEpisodesCarousel() {
     setIsPaused(false);
   };
 
-  // Touch events para mobile
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.targetTouches[0].clientX;
     setIsPaused(true);
@@ -214,20 +236,16 @@ export function NewEpisodesCarousel() {
   return (
     <section className="relative overflow-hidden py-8">
       <div>
-        {/* --- CONTÊINER PRINCIPAL (ESTILO DE VIDRO) --- */}
         <div>
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3 md:gap-4">
               <div>
                 <h2 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-xl font-bold text-transparent md:text-3xl">
-                  Novos Episódios
+                  Próximos Episódios
                 </h2>
-                {/* <p className="text-xs font-medium text-muted-foreground md:text-sm">
-                  Novos conteúdos toda semana
-                </p> */}
               </div>
             </div>
-            {/* Botões de navegação do Desktop - visíveis apenas em telas maiores */}
+
             <div className="hidden sm:flex items-center gap-3">
               <Button
                 variant="outline"
@@ -249,9 +267,11 @@ export function NewEpisodesCarousel() {
           </div>
 
           {/* --- Layout do Carrossel (Desktop) --- */}
+
           <div className="hidden md:block">
             <div
               className="cursor-grab overflow-hidden"
+              ref={desktopContainerRef}
               onMouseDown={handleMouseDown}
               onMouseUp={handleDragEnd}
               onMouseLeave={handleDragEnd}
