@@ -1,4 +1,4 @@
-// src/components/features/home/layout/new-episodes-carousel.tsx
+// src/components/features/home/layout/next-episodes-carousel.tsx
 "use client";
 
 import { ChevronLeft, ChevronRight, Clock, Play } from "lucide-react";
@@ -7,7 +7,7 @@ import type React from "react";
 import { Button } from "@/src/components/ui/button";
 import { Separator } from "@/src/components/ui/separator";
 
-// Tipagem para um episódio
+// Tipagem para um episódio (revertido para isNext)
 type Episode = {
   id: number;
   title: string;
@@ -15,11 +15,12 @@ type Episode = {
   episodeNumber: number;
   duration: string;
   color: string;
-  isNew: boolean;
+  isNext: boolean; // <-- Revertido para isNext
 };
 
-// Dados dos episódios
-const newEpisodes: Episode[] = [
+// Dados dos episódios (revertido para nextEpisodes e isNext)
+const nextEpisodes: Episode[] = [
+  // <-- Revertido para nextEpisodes
   {
     id: 1,
     title: "Psicologia das Vendas B2B: Conectando com a Mente do Cliente",
@@ -27,7 +28,7 @@ const newEpisodes: Episode[] = [
     episodeNumber: 8,
     duration: "18 min",
     color: "bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600",
-    isNew: true,
+    isNext: true, // <-- Revertido para isNext
   },
   {
     id: 2,
@@ -36,7 +37,7 @@ const newEpisodes: Episode[] = [
     episodeNumber: 12,
     duration: "22 min",
     color: "bg-gradient-to-br from-purple-500 via-purple-600 to-pink-600",
-    isNew: true,
+    isNext: true, // <-- Revertido para isNext
   },
   {
     id: 3,
@@ -45,7 +46,7 @@ const newEpisodes: Episode[] = [
     episodeNumber: 5,
     duration: "20 min",
     color: "bg-gradient-to-br from-orange-500 via-red-500 to-pink-500",
-    isNew: true,
+    isNext: true, // <-- Revertido para isNext
   },
   {
     id: 4,
@@ -54,7 +55,7 @@ const newEpisodes: Episode[] = [
     episodeNumber: 9,
     duration: "36 min",
     color: "bg-gradient-to-br from-green-500 via-emerald-600 to-teal-600",
-    isNew: true,
+    isNext: true, // <-- Revertido para isNext
   },
   {
     id: 5,
@@ -63,7 +64,7 @@ const newEpisodes: Episode[] = [
     episodeNumber: 13,
     duration: "24 min",
     color: "bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-600",
-    isNew: true,
+    isNext: true, // <-- Revertido para isNext
   },
   {
     id: 6,
@@ -72,7 +73,7 @@ const newEpisodes: Episode[] = [
     episodeNumber: 7,
     duration: "19 min",
     color: "bg-gradient-to-br from-pink-500 via-rose-600 to-red-600",
-    isNew: true,
+    isNext: true, // <-- Revertido para isNext
   },
 ];
 
@@ -100,16 +101,15 @@ function EpisodeCard({
           Ep. {episode.episodeNumber} - {episode.title}
         </h3>
 
+        {/* --- Card com truncamento e Separador --- */}
         <div className="mt-2 flex items-center gap-x-2 text-xs text-foreground/80">
           <span className="font-medium truncate min-w-0">
             {episode.category}
           </span>
-
           <Separator
             orientation="vertical"
-            className="h-3 bg-gray-700 flex-shrink-0"
+            className="h-3 bg-gray-700 flex-shrink-0" // Separador está aqui
           />
-
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <Clock className="h-3 w-3" />
             <span className="font-medium">{episode.duration}</span>
@@ -120,7 +120,9 @@ function EpisodeCard({
   );
 }
 
-export function NewEpisodesCarousel() {
+// Componente com o nome correto
+export function NextEpisodesCarousel() {
+  // <-- Revertido para NextEpisodesCarousel
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerView, setItemsPerView] = useState(3);
   const [isPaused, setIsPaused] = useState(false);
@@ -128,8 +130,8 @@ export function NewEpisodesCarousel() {
   const [startX, setStartX] = useState(0);
   const [mobileIndex, setMobileIndex] = useState(0);
 
-  const desktopContainerRef = useRef<HTMLDivElement>(null); // Ref para o desktop
-  const containerRef = useRef<HTMLDivElement>(null); // Ref para o mobile
+  const desktopContainerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
@@ -144,19 +146,25 @@ export function NewEpisodesCarousel() {
       return 3;
     };
 
+    // =======================================================
+    // A CORREÇÃO DO BUG (new em vez de next)
+    // =======================================================
     const resizeObserver = new ResizeObserver((entries) => {
+      // <-- CORRIGIDO
       if (entries[0]) {
         const width = entries[0].contentRect.width;
         setItemsPerView(getItemsPerView(width));
       }
     });
+    // =======================================================
 
     resizeObserver.observe(container);
 
     return () => resizeObserver.unobserve(container);
   }, []);
 
-  const maxIndex = Math.max(0, newEpisodes.length - itemsPerView);
+  // Ajustado para usar nextEpisodes
+  const maxIndex = Math.max(0, nextEpisodes.length - itemsPerView); // <-- Revertido
 
   useEffect(() => {
     if (isPaused || isDragging) return;
@@ -169,8 +177,10 @@ export function NewEpisodesCarousel() {
   useEffect(() => {
     if (isPaused) return;
     const interval = setInterval(() => {
-      setMobileIndex((prev) =>
-        prev === newEpisodes.length - 1 ? 0 : prev + 1
+      setMobileIndex(
+        (prev) =>
+          // Ajustado para usar nextEpisodes
+          prev === nextEpisodes.length - 1 ? 0 : prev + 1 // <-- Revertido
       );
     }, 4000);
     return () => clearInterval(interval);
@@ -226,11 +236,12 @@ export function NewEpisodesCarousel() {
     setIsPaused(false);
   };
 
+  // Ajustado para usar nextEpisodes
   const nextMobileCard = () => {
-    setMobileIndex((prev) => (prev === newEpisodes.length - 1 ? 0 : prev + 1));
+    setMobileIndex((prev) => (prev === nextEpisodes.length - 1 ? 0 : prev + 1)); // <-- Revertido
   };
   const prevMobileCard = () => {
-    setMobileIndex((prev) => (prev === 0 ? newEpisodes.length - 1 : prev - 1));
+    setMobileIndex((prev) => (prev === 0 ? nextEpisodes.length - 1 : prev - 1)); // <-- Revertido
   };
 
   return (
@@ -240,6 +251,7 @@ export function NewEpisodesCarousel() {
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3 md:gap-4">
               <div>
+                {/* Título Revertido */}
                 <h2 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-xl font-bold text-transparent md:text-3xl">
                   Próximos Episódios
                 </h2>
@@ -286,18 +298,23 @@ export function NewEpisodesCarousel() {
                   pointerEvents: isDragging ? "none" : "auto",
                 }}
               >
-                {newEpisodes.map((episode) => (
-                  <div
-                    key={episode.id}
-                    className="flex-none px-3"
-                    style={{ width: `${100 / itemsPerView}%` }}
-                  >
-                    <EpisodeCard
-                      episode={episode}
-                      onClick={() => handleCardClick(episode.id)}
-                    />
-                  </div>
-                ))}
+                {/* Ajustado para usar nextEpisodes */}
+                {nextEpisodes.map(
+                  (
+                    episode // <-- Revertido
+                  ) => (
+                    <div
+                      key={episode.id}
+                      className="flex-none px-3"
+                      style={{ width: `${100 / itemsPerView}%` }}
+                    >
+                      <EpisodeCard
+                        episode={episode}
+                        onClick={() => handleCardClick(episode.id)}
+                      />
+                    </div>
+                  )
+                )}
               </div>
             </div>
           </div>
@@ -315,30 +332,41 @@ export function NewEpisodesCarousel() {
                 className="flex transition-transform duration-500 ease-out"
                 style={{ transform: `translateX(-${mobileIndex * 100}%)` }}
               >
-                {newEpisodes.map((episode) => (
-                  <div key={episode.id} className="w-full flex-none px-1">
-                    <EpisodeCard
-                      episode={episode}
-                      onClick={() => handleCardClick(episode.id)}
-                    />
-                  </div>
-                ))}
+                {/* Ajustado para usar nextEpisodes */}
+                {nextEpisodes.map(
+                  (
+                    episode // <-- Revertido
+                  ) => (
+                    <div key={episode.id} className="w-full flex-none px-1">
+                      <EpisodeCard
+                        episode={episode}
+                        onClick={() => handleCardClick(episode.id)}
+                      />
+                    </div>
+                  )
+                )}
               </div>
             </div>
             {/* Controles de navegação e paginação do Mobile */}
             <div className="mt-3 flex items-center justify-center">
               <div className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 p-1.5 backdrop-blur-md">
-                {newEpisodes.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setMobileIndex(index)}
-                    className={`h-1.5 rounded-full transition-all duration-500 ${
-                      mobileIndex === index
-                        ? "w-6 bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg shadow-blue-500/30"
-                        : "w-1.5 bg-muted-foreground/40 hover:bg-muted-foreground/60"
-                    }`}
-                  />
-                ))}
+                {/* Ajustado para usar nextEpisodes */}
+                {nextEpisodes.map(
+                  (
+                    _,
+                    index // <-- Revertido
+                  ) => (
+                    <button
+                      key={index}
+                      onClick={() => setMobileIndex(index)}
+                      className={`h-1.5 rounded-full transition-all duration-500 ${
+                        mobileIndex === index
+                          ? "w-6 bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg shadow-blue-500/30"
+                          : "w-1.5 bg-muted-foreground/40 hover:bg-muted-foreground/60"
+                      }`}
+                    />
+                  )
+                )}
               </div>
             </div>
           </div>
