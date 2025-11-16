@@ -54,7 +54,7 @@ export default function AdminLayout({
   // Versão para desktop - mantida exatamente como estava
   if (!isMobile) {
     return (
-      <div className="flex h-screen bg-muted/40">
+      <div className="flex h-screen">
         <AdminSidebar
           isCollapsed={isSidebarCollapsed}
           setCollapsed={() => setSidebarCollapsed((prev) => !prev)}
