@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
-// 1. DESCOMENTE AS IMPORTAÇÕES
 import { getProgramWithEpisodes } from "@/src/services/programService";
 import { ProgramHeader } from "@/src/components/features/program/ProgramHeader";
 import { EpisodeList } from "@/src/components/features/program/EpisodeList";
-import { ProgramWithRelations } from "@/src/lib/types"; // Precisamos do tipo completo
+import { ProgramWithRelations } from "@/src/lib/types";
 
 // Tipos para os parâmetros da página
 interface ProgramPageProps {

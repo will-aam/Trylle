@@ -1,23 +1,29 @@
 // src/components/layout/admin-player-wrapper.tsx
 "use client";
 
+// Corrigido: Usando a importação 'default' que seu projeto utiliza
 import AudioPlayer from "@/src/components/features/audio-player";
-import { usePlayer } from "@/src/hooks/use-player";
-import { cn } from "@/src/lib/utils";
+import { ReactNode } from "react";
 
-export function AdminPlayerWrapper({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { activeEpisode } = usePlayer();
-
+/**
+ * Este wrapper garante que o contexto do player e a lógica de áudio
+ * estejam ativos no painel de admin, mas esconde a UI (a barra fixa).
+ */
+export function AdminPlayerWrapper({ children }: { children: ReactNode }) {
   return (
-    <div
-      className={cn("relative h-full w-full", activeEpisode ? "pb-20" : "pb-0")}
-    >
+    <>
+      {/* 1. Renderiza o conteúdo principal da página (seus {children}) 
+            sem o wrapper <div cm padding> que existia antes.
+      */}
       {children}
-      <AudioPlayer />
-    </div>
+
+      {/* 2. Renderiza o AudioPlayer dentro de uma div com "hidden".
+           Isso carrega a LÓGICA do player (para o som tocar)
+           mas esconde a INTERFACE (a barra fixa).
+      */}
+      <div className="hidden">
+        <AudioPlayer />
+      </div>
+    </>
   );
 }
