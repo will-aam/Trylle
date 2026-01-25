@@ -26,7 +26,8 @@ export const createSupabaseServerClient = async () => {
           try {
             cookieStore.set({ name, value: "", ...options });
           } catch {
-            // O erro é ignorado intencionalmente.
+            // O erro é ignorado intencionalmente pois o método remove
+            // pode ser chamado de um Server Component onde não é permitido.
           }
         },
       },
