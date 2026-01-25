@@ -24,7 +24,6 @@ import {
 } from "@/src/components/ui/tooltip";
 import { Button } from "@/src/components/ui/button";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
-import { ThemeToggle } from "@/src/components/layout/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
   Accordion,
@@ -79,7 +78,6 @@ export function AdminSidebar({
             )}
             {isCollapsed && <div className="flex-1" />}
             <div className="flex items-center gap-2">
-              {!isCollapsed && <ThemeToggle />}
               {!isMobile && (
                 <Button
                   onClick={setCollapsed}

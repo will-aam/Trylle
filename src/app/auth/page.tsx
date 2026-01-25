@@ -6,7 +6,6 @@ import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useTheme } from "next-themes";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
@@ -45,15 +44,6 @@ export default function AuthPage() {
   const router = useRouter();
   // CRIE O CLIENTE SUPABASE USANDO A NOVA FUNÇÃO
   const supabase = createSupabaseBrowserClient();
-  const { theme, setTheme } = useTheme();
-
-  useEffect(() => {
-    const originalTheme = theme;
-    setTheme("dark");
-    return () => {
-      setTheme(originalTheme || "dark");
-    };
-  }, [setTheme, theme]);
 
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);

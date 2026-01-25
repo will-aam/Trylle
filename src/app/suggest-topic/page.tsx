@@ -25,8 +25,6 @@ import {
   AlertCircle, // Ícone de erro que vamos usar
 } from "lucide-react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
-import { ThemeToggle } from "@/src/components/layout/theme-toggle";
 
 const categories = [
   { name: "Negócios", icon: Briefcase, color: "bg-blue-500 dark:bg-blue-600" },
@@ -74,17 +72,8 @@ export default function SugerirTemaPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { setTheme } = useTheme();
-
   useEffect(() => {
     setMounted(true);
-    const savedTheme = localStorage.getItem("theme");
-    if (!savedTheme) {
-      setTheme("dark");
-    }
-  }, [setTheme]);
-
-  useEffect(() => {
     setShowTipsModal(true);
   }, []);
 
@@ -225,7 +214,6 @@ export default function SugerirTemaPage() {
               <h1 className="text-lg sm:text-xl md:text-2xl lg:text-5xl font-bold text-slate-900 dark:text-zinc-100">
                 Trylle
               </h1>
-              <ThemeToggle />
             </div>
           </div>
         </div>

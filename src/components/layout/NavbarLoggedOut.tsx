@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Button } from "@/src/components/ui/button";
 import { AudioLines, Menu, X, Lightbulb } from "lucide-react";
-import { ThemeToggle } from "./theme-toggle";
 import { useState } from "react";
 
 const navLinks = [
@@ -39,7 +38,6 @@ export function NavbarLoggedOut() {
 
         {/* Ações e Menu Mobile */}
         <div className="flex items-center gap-2">
-          <ThemeToggle />
           {/* <Link href="/suggest-topic" legacyBehavior passHref>
             <Button
               variant="ghost"

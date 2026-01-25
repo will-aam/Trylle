@@ -2,7 +2,6 @@
 "use client";
 
 import { Button } from "@/src/components/ui/button";
-import { ThemeToggle } from "@/src/components/layout/theme-toggle";
 import Link from "next/link";
 import {
   Search,
@@ -45,7 +44,6 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
         {!isCollapsed && (
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-foreground">TRYLLE</h1>
-            <ThemeToggle />
           </div>
         )}
 
