@@ -1,0 +1,17 @@
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    # Executa todos os dias às 12:00 UTC (09:00 BRT)
+    - cron: "0 12 * * *"
+  workflow_dispatch: # Permite que você clique em "Run workflow" manualmente para testar
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Monitoring Endpoint
+        run: |
+          # IMPORTANTE: Substitua a URL abaixo pelo seu domínio real de produção
+          # O comando curl faz uma requisição simples para acordar o banco
+          curl -I https://trylle.vercel.app
