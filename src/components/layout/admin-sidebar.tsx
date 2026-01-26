@@ -24,7 +24,6 @@ import {
 } from "@/src/components/ui/tooltip";
 import { Button } from "@/src/components/ui/button";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
-import { ThemeToggle } from "@/src/components/layout/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
   Accordion,
@@ -68,7 +67,7 @@ export function AdminSidebar({
     <aside
       className={cn(
         "fixed inset-y-0 left-0 z-10 flex flex-col border-r bg-background transition-all duration-300",
-        isCollapsed && !isMobile ? "w-16" : "w-64"
+        isCollapsed && !isMobile ? "w-16" : "w-64",
       )}
     >
       <TooltipProvider>
@@ -79,7 +78,6 @@ export function AdminSidebar({
             )}
             {isCollapsed && <div className="flex-1" />}
             <div className="flex items-center gap-2">
-              {!isCollapsed && <ThemeToggle />}
               {!isMobile && (
                 <Button
                   onClick={setCollapsed}
@@ -148,8 +146,8 @@ export function AdminSidebar({
                     pathname.startsWith("/admin/episodes")
                       ? "episodes-manager"
                       : pathname.startsWith("/admin/programs")
-                      ? "programs-manager"
-                      : ""
+                        ? "programs-manager"
+                        : ""
                   }
                 >
                   <AccordionItem
@@ -160,7 +158,7 @@ export function AdminSidebar({
                       className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground hover:no-underline",
                         pathname.startsWith("/admin/episodes") &&
-                          "bg-accent text-foreground"
+                          "bg-accent text-foreground",
                       )}
                     >
                       <Link
@@ -199,7 +197,7 @@ export function AdminSidebar({
                       className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground hover:no-underline",
                         pathname.startsWith("/admin/programs") &&
-                          "bg-accent text-foreground"
+                          "bg-accent text-foreground",
                       )}
                     >
                       <Link
@@ -320,7 +318,7 @@ function SidebarLink({
             href={href}
             className={cn(
               "flex items-center justify-center rounded-lg p-3 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-              isActive && "bg-accent text-foreground"
+              isActive && "bg-accent text-foreground",
             )}
             onClick={onClick}
           >
@@ -338,7 +336,7 @@ function SidebarLink({
       href={href}
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-        isActive && "bg-accent text-foreground"
+        isActive && "bg-accent text-foreground",
       )}
       onClick={onClick}
     >

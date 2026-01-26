@@ -2,7 +2,6 @@
 "use client";
 
 import { Button } from "@/src/components/ui/button";
-import { ThemeToggle } from "@/src/components/layout/theme-toggle";
 import Link from "next/link";
 import {
   Search,
@@ -30,7 +29,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
     <aside
       className={cn(
         "h-full w-full rounded-2xl bg-card/80 shadow-lg backdrop-blur-md flex flex-col transition-all duration-300",
-        isCollapsed && "items-center"
+        isCollapsed && "items-center",
       )}
     >
       <div
@@ -38,14 +37,13 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
           "py-4 px-4",
           isCollapsed
             ? "flex justify-center"
-            : "flex justify-between items-center"
+            : "flex justify-between items-center",
         )}
       >
         {/* 2. Logo e Toggle agrupados à esquerda */}
         {!isCollapsed && (
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-foreground">TRYLLE</h1>
-            <ThemeToggle />
           </div>
         )}
 
@@ -73,7 +71,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
             aria-label="Buscar"
             className={cn(
               "w-full rounded-full bg-muted/50 pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring",
-              isCollapsed && "hidden"
+              isCollapsed && "hidden",
             )}
           />
           {isCollapsed && (
@@ -100,7 +98,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                   variant="ghost"
                   className={cn(
                     "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors group",
-                    isCollapsed ? "justify-center" : "justify-start"
+                    isCollapsed ? "justify-center" : "justify-start",
                   )}
                 >
                   <Home className="w-5 h-5 flex-shrink-0 group-hover:text-blue-500" />
@@ -116,7 +114,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                   variant="ghost"
                   className={cn(
                     "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors group",
-                    isCollapsed ? "justify-center" : "justify-start"
+                    isCollapsed ? "justify-center" : "justify-start",
                   )}
                 >
                   <Library className="w-5 h-5 flex-shrink-0 group-hover:text-purple-500" />
@@ -134,7 +132,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                   variant="ghost"
                   className={cn(
                     "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors group",
-                    isCollapsed ? "justify-center" : "justify-start"
+                    isCollapsed ? "justify-center" : "justify-start",
                   )}
                 >
                   <Trophy className="w-5 h-5 flex-shrink-0 group-hover:text-yellow-500" />
@@ -152,7 +150,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                   variant="ghost"
                   className={cn(
                     "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors group",
-                    isCollapsed ? "justify-center" : "justify-start"
+                    isCollapsed ? "justify-center" : "justify-start",
                   )}
                 >
                   <Brain className="w-5 h-5 flex-shrink-0 group-hover:text-pink-500" />
@@ -168,7 +166,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                   variant="ghost"
                   className={cn(
                     "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors group",
-                    isCollapsed ? "justify-center" : "justify-start"
+                    isCollapsed ? "justify-center" : "justify-start",
                   )}
                 >
                   <Users className="w-5 h-5 flex-shrink-0 group-hover:text-teal-500" />
@@ -194,7 +192,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                   variant="ghost"
                   className={cn(
                     "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
-                    isCollapsed ? "justify-center" : "justify-start"
+                    isCollapsed ? "justify-center" : "justify-start",
                   )}
                 >
                   <Clock className="w-5 h-5 flex-shrink-0" />
@@ -210,7 +208,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                   variant="ghost"
                   className={cn(
                     "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
-                    isCollapsed ? "justify-center" : "justify-start"
+                    isCollapsed ? "justify-center" : "justify-start",
                   )}
                 >
                   <Heart className="w-5 h-5 flex-shrink-0" />
@@ -226,7 +224,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                   variant="ghost"
                   className={cn(
                     "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
-                    isCollapsed ? "justify-center" : "justify-start"
+                    isCollapsed ? "justify-center" : "justify-start",
                   )}
                 >
                   <Download className="w-5 h-5 flex-shrink-0" />
@@ -251,7 +249,7 @@ export function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                 variant="ghost"
                 className={cn(
                   "w-full gap-3 px-3 py-2 rounded-lg text-foreground hover:bg-muted/50 hover:text-foreground transition-colors",
-                  isCollapsed ? "justify-center" : "justify-start"
+                  isCollapsed ? "justify-center" : "justify-start",
                 )}
               >
                 <Plus className="w-5 h-5 flex-shrink-0" />
