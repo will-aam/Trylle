@@ -1,6 +1,17 @@
+import withSerwistInit from "@serwist/next";
+
+const withSerwist = withSerwistInit({
+  swSrc: "src/app/sw.ts",
+  swDest: "public/sw.js",
+  // CORREÇÃO 1: Alterado conforme o aviso do Serwist pede
+  disable: process.env.NODE_ENV !== "production",
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Sua configuração de imagens
+  // CORREÇÃO 2: Avisa ao Next.js 16 que sabemos sobre o Turbopack e silencia o erro
+  turbopack: {},
+
   images: {
     remotePatterns: [
       {
@@ -9,7 +20,6 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
-      // permitir imagens (TEMPORARIO)
       {
         protocol: "https",
         hostname: "pub-ce0ce0293b9b45198e1f9086e196d8e9.r2.dev",
@@ -35,21 +45,34 @@ const nextConfig = {
     ],
   },
 
-  // Função de redirecionamento aqui
   async redirects() {
     return [
       {
-        source: "/login", // Se alguém tentar ir para /login...
-        destination: "/auth", // ...mande-o para /auth
-        permanent: true, // Avisa aos navegadores e ao Google que a mudança é definitiva
+        source: "/login",
+        destination: "/auth",
+        permanent: true,
       },
       {
-        source: "/signup", // Se alguém tentar ir para /signup...
-        destination: "/auth", // ...mande-o para /auth também
+        source: "/signup",
+        destination: "/auth",
         permanent: true,
+      },
+    ];
+  },
+
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate, proxy-revalidate",
+          },
+        ],
       },
     ];
   },
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);
