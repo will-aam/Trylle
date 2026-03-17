@@ -1,3 +1,4 @@
+// src/components/layout/navbar.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -8,7 +9,6 @@ import { Search, Bell, AudioLines, Download, Home } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { User } from "@supabase/supabase-js";
 import { Skeleton } from "@/src/components/ui/skeleton";
-import { NavbarLoggedOut } from "./NavbarLoggedOut";
 import { UserMenu } from "./user-menu";
 import { usePathname } from "next/navigation";
 import {
@@ -89,8 +89,9 @@ export function Navbar() {
     );
   }
 
+  // Se não tem usuário, não renderiza a Navbar. O redirect da página já vai jogá-lo pro /auth
   if (!user) {
-    return <NavbarLoggedOut />;
+    return null;
   }
 
   return (
@@ -123,7 +124,7 @@ export function Navbar() {
                   passHref
                   className={cn(
                     "flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-accent",
-                    pathname === "/"
+                    pathname === "/",
                   )}
                 >
                   <Home className="h-6 w-6" />

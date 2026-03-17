@@ -1,4 +1,4 @@
-// Caminho: src/app/api/suggest-topic/route.ts
+// src/app/api/suggest-topic/route.ts
 
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
           cookieStore.set({ name, value: "", ...options });
         },
       },
-    }
+    },
   );
 
   try {
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     if (!validationResult.success) {
       return NextResponse.json(
         { error: validationResult.error.errors[0].message },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     console.error("Erro na API de sugestões:", error);
     return NextResponse.json(
       { error: "Não foi possível processar sua sugestão." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

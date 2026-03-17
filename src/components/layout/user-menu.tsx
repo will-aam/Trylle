@@ -8,7 +8,7 @@ import { createSupabaseBrowserClient } from "@/src/lib/supabase-client"; // 1. I
 
 export function UserMenu() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const supabase = createSupabaseBrowserClient(); // 2. Criar o cliente supabase
+  const supabase = createSupabaseBrowserClient();
 
   // Seus dados de usuário virão de algum contexto ou hook, mas para o teste, vamos usar um mock
   const user = {

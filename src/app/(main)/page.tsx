@@ -1,8 +1,8 @@
 // src/app/(main)/page.tsx
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { HomeLoggedIn } from "@/src/components/features/home/home-logged-in";
-import { HomeLoggedOut } from "@/src/components/features/home-logged-out";
 import { Episode } from "@/src/lib/types";
 
 export default async function HomePage() {
@@ -16,27 +16,26 @@ export default async function HomePage() {
           return cookieStore.get(name)?.value;
         },
       },
-    }
+    },
   );
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
+  // SE NÃO ESTIVER LOGADO: Redireciona imediatamente para a tela de autenticação
+  if (!session) {
+    redirect("/auth");
+  }
+
+  // SE ESTIVER LOGADO: Busca apenas os episódios necessários para o dashboard
   const { data: publishedEpisodes } = await supabase
     .from("episodes")
     .select("*, categories(name), subcategories(name), tags(name)")
     .eq("status", "published")
     .order("published_at", { ascending: false });
 
-  const { data: scheduledEpisodes } = await supabase
-    .from("episodes")
-    .select("*, categories(name), subcategories(name), tags(name)")
-    .eq("status", "scheduled")
-    .order("published_at", { ascending: true });
-
-  return session ? (
+  return (
     <HomeLoggedIn publishedEpisodes={(publishedEpisodes as Episode[]) || []} />
-  ) : (
-    <HomeLoggedOut scheduledEpisodes={(scheduledEpisodes as Episode[]) || []} />
   );
 }
