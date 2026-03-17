@@ -1,3 +1,4 @@
+// src/app/auth/callback/route.ts
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
           cookieStore.set({ name, value: "", ...options });
         },
       },
-    }
+    },
   );
 
   if (code) {
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error("Supabase exchange code error:", error);
       return NextResponse.redirect(
-        new URL("/auth?error=Could not authenticate user", request.url)
+        new URL("/auth?error=Could not authenticate user", request.url),
       );
     }
   }

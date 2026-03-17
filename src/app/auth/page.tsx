@@ -1,6 +1,7 @@
+// src/app/auth/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/src/lib/supabase-client";
 import { zodResolver } from "@hookform/resolvers/zod";

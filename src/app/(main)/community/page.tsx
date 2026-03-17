@@ -1,9 +1,10 @@
+// src/app/community/page.tsx
 "use client";
 
 import React from "react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
-export default function SettingsPage() {
+export default function CommunityPage() {
   return (
     <div className="flex flex-col items-center justify-center h-full p-6 text-center">
       <div className="w-64 h-64 md:w-80 md:h-80 mb-8">

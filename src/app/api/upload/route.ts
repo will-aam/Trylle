@@ -1,3 +1,4 @@
+// src/app/api/upload/route.ts
 import { NextResponse } from "next/server";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
@@ -6,7 +7,7 @@ async function getS3Client() {
     const accountId = process.env.R2_ACCOUNT_ID;
     if (!accountId) {
       throw new Error(
-        "A variável de ambiente R2_ACCOUNT_ID não está definida."
+        "A variável de ambiente R2_ACCOUNT_ID não está definida.",
       );
     }
 
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     if (!audioFile) {
       return NextResponse.json(
         { error: "Audio file is required." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
