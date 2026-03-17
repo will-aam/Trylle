@@ -1,3 +1,4 @@
+// src/components/ui/scroll-area.tsx
 "use client";
 
 import * as React from "react";
@@ -32,15 +33,17 @@ const ScrollBar = React.forwardRef<
     orientation={orientation}
     className={cn(
       "flex touch-none select-none transition-colors",
+      // Deixei a barra mais fina (w-1.5) e ajustei o padding
       orientation === "vertical" &&
         "h-full w-2.5 border-l border-l-transparent p-[1px]",
       orientation === "horizontal" &&
-        "h-2.5 flex-col border-t border-t-transparent p-[1px]",
-      className
+        "h-1.5 flex-col border-t border-t-transparent p-[1px]",
+      className,
     )}
     {...props}
   >
-    <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-border" />
+    {/* Removi o rounded-full para deixar as pontas QUADRADAS */}
+    <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 bg-border/50 hover:bg-border transition-colors" />
   </ScrollAreaPrimitive.ScrollAreaScrollbar>
 ));
 ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName;

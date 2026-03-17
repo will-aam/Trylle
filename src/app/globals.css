@@ -144,3 +144,12 @@ html {
     scrollbar-color: rgba(156, 163, 175, 0.3) transparent; /* Cor da barra e cor do trilho */
   }
 }
+/* Oculta scrollbar mas mantém scroll funcional */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE e Edge */
+  scrollbar-width: none; /* Firefox */
+}

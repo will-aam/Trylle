@@ -114,7 +114,7 @@ const AudioPlayer = () => {
     if (audioRef.current) {
       const newTime = Math.min(
         audioRef.current.currentTime + SKIP_AMOUNT,
-        duration
+        duration,
       );
       audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
@@ -134,14 +134,14 @@ const AudioPlayer = () => {
   };
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 z-50 h-20 border-t bg-background/95 backdrop-blur-sm">
+    <footer className="fixed bottom-0 left-0 right-0 z-50 h-20 bg-black border-t-0 shadow-[0_-1px_10px_rgba(0,0,0,0.1)]">
+      {" "}
       <audio
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={handleAudioEnd}
       />
-
       {/* ============================================================
         LAYOUT DESKTOP
         ============================================================
@@ -275,7 +275,6 @@ const AudioPlayer = () => {
           />
         </div>
       </div>
-
       {/* ============================================================
         LAYOUT MOBILE
         ============================================================
