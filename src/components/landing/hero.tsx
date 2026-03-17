@@ -1,12 +1,8 @@
-import Link from "next/link";
-import { Button } from "../ui/button";
-import { Play } from "lucide-react";
-
 export function Hero() {
   return (
     <section
       className="relative bg-cover bg-[25%_center] lg:bg-center bg-no-repeat -mt-14 pt-28 pb-20 -mx-4 sm:-mx-6 md:-mx-8" // [!code ++]
-      style={{ backgroundImage: "url('/hero-background.jpg')" }}
+      style={{ backgroundImage: "url('/images/hero-background.jpg')" }}
     >
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/60 z-0" />
