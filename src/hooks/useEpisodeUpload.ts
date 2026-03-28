@@ -425,6 +425,8 @@ export function useEpisodeUpload(
       const { signedUrl, storagePath, sanitizedFileName } = raw;
 
       transitionPhase("document-uploading");
+      
+      // BLOCO DA PROMISE CORRIGIDO (INÍCIO)
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         documentXhrRef.current = xhr;
@@ -456,7 +458,7 @@ export function useEpisodeUpload(
           setLastError(err);
           reject(err);
         };
-       xhr.open("PUT", signedUrl, true);
+        xhr.open("PUT", signedUrl, true);
         xhr.setRequestHeader("apikey", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
         xhr.setRequestHeader("Authorization", `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`);
         xhr.setRequestHeader(
@@ -464,6 +466,8 @@ export function useEpisodeUpload(
           documentFile.type || "application/octet-stream"
         );
         xhr.send(documentFile);
+      }); 
+      // BLOCO DA PROMISE CORRIGIDO (FIM) - O FECHAMENTO }); É OBRIGATÓRIO AQUI
 
       transitionPhase("document-registering");
       const register = await registerUploadedDocumentAction({
@@ -540,6 +544,8 @@ export function useEpisodeUpload(
       } = raw;
 
       transitionPhase("audio-uploading");
+      
+      // BLOCO DA PROMISE DO ÁUDIO CORRIGIDO (INÍCIO)
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         audioXhrRef.current = xhr;
@@ -571,11 +577,13 @@ export function useEpisodeUpload(
           setLastError(err);
           reject(err);
         };
-     xhr.open("PUT", audioSignedUrl, true);
+        xhr.open("PUT", audioSignedUrl, true);
         xhr.setRequestHeader("apikey", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
         xhr.setRequestHeader("Authorization", `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`);
         xhr.setRequestHeader("Content-Type", audioFile.type || "audio/mp4");
         xhr.send(audioFile);
+      }); 
+      // BLOCO DA PROMISE DO ÁUDIO CORRIGIDO (FIM) - FECHAMENTO });
 
       transitionPhase("audio-done");
       transitionPhase("episode-creating");
