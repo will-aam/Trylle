@@ -456,13 +456,14 @@ export function useEpisodeUpload(
           setLastError(err);
           reject(err);
         };
-        xhr.open("PUT", signedUrl, true);
+       xhr.open("PUT", signedUrl, true);
+        xhr.setRequestHeader("apikey", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+        xhr.setRequestHeader("Authorization", `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`);
         xhr.setRequestHeader(
           "Content-Type",
           documentFile.type || "application/octet-stream"
         );
         xhr.send(documentFile);
-      });
 
       transitionPhase("document-registering");
       const register = await registerUploadedDocumentAction({
@@ -570,10 +571,11 @@ export function useEpisodeUpload(
           setLastError(err);
           reject(err);
         };
-        xhr.open("PUT", audioSignedUrl, true);
-        xhr.setRequestHeader("Content-Type", audioFile.type);
+     xhr.open("PUT", audioSignedUrl, true);
+        xhr.setRequestHeader("apikey", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+        xhr.setRequestHeader("Authorization", `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`);
+        xhr.setRequestHeader("Content-Type", audioFile.type || "audio/mp4");
         xhr.send(audioFile);
-      });
 
       transitionPhase("audio-done");
       transitionPhase("episode-creating");
